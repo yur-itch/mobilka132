@@ -26,8 +26,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
+import kotlin.math.min
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,24 +71,55 @@ fun contentToScreen(contentOffset: Offset, scale: Float, scrollOffset: Offset): 
 private fun MapContainer(modifier: Modifier = Modifier) {
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
+    var containerSize by remember { mutableStateOf(IntSize.Zero) }
+
+    val painter = painterResource(id = R.drawable.dummy_map)
+    val imageIntrinsicSize = painter.intrinsicSize
 
     Box(
         modifier = modifier
             .clipToBounds()
             .fillMaxWidth()
+            .onSizeChanged { containerSize = it }
             .pointerInput(Unit) {
                 detectTransformGestures { centroid, pan, zoom, _ ->
                     val oldScale = scale
                     scale = (scale * zoom).coerceIn(0.5f, 5.0f)
+
                     val panInContentSpace = pan / scale
                     val zoomAdjustment = (centroid / scale) - (centroid / oldScale)
-                    offset += panInContentSpace + zoomAdjustment
+                    val newOffset = offset + panInContentSpace + zoomAdjustment
+
+                    val factorX = containerSize.width / imageIntrinsicSize.width
+                    val factorY = containerSize.height / imageIntrinsicSize.height
+                    val fitScale = min(factorX, factorY)
+
+                    val mapWidthOnScreen = imageIntrinsicSize.width * fitScale
+                    val mapHeightOnScreen = imageIntrinsicSize.height * fitScale
+
+                    val extraSpaceX = (containerSize.width - mapWidthOnScreen) / 2f
+                    val extraSpaceY = (containerSize.height - mapHeightOnScreen) / 2f
+
+                    val centerX = containerSize.width / 2f
+                    val centerY = containerSize.height / 2f
+
+                    val maxX = (centerX - extraSpaceX) / scale
+                    val minX = maxX - (mapWidthOnScreen)
+
+                    val maxY = (centerY - extraSpaceY) / scale
+                    val minY = maxY - (mapHeightOnScreen)
+
+                    offset = Offset(
+                        x = newOffset.x.coerceIn(minX, maxX),
+                        y = newOffset.y.coerceIn(minY, maxY)
+                    )
                 }
             }
     ) {
         Image(
-            painter = painterResource(R.drawable.dummy_map),
+            painter = painter,
             contentDescription = null,
+            contentScale = ContentScale.Fit,
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer(
