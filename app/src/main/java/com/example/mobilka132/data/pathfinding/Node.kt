@@ -1,10 +1,8 @@
-#!/usr/bin/env kotlin
-
+package com.example.mobilka132.data.pathfinding
 class Node : Comparable<Node> {
 
     val x : Int
     val y : Int
-
 
     var cost : Int = Int.MAX_VALUE
     var heuristicCost : Int = Int.MAX_VALUE
