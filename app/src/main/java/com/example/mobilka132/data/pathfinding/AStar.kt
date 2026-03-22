@@ -1,4 +1,4 @@
-#!/usr/bin/env kotlin
+package com.example.mobilka132.data.pathfinding
 
 import java.util.*
 import kotlin.math.abs
@@ -9,15 +9,10 @@ class AStar {
     val grid : Array<Array<Node>>
 
     constructor(map : Array<Array<Int>>) {
-
-        grid = arrayOfNulls<Array<Node>>(map.size) as Array<Array<Node>>
-
-        for (i in 0 until map.size) {
-            val row = arrayOfNulls<Node>(map[i].size)
-            for (j in 0 until map[i].size) {
-                row[j] = Node(i, j, 256 - map[i][j])
+        grid = Array(map.size) { i ->
+            Array(map[i].size) { j ->
+                Node(i, j, 256 - map[i][j])
             }
-            grid[i] = row as Array<Node>
         }
     }
 
@@ -30,16 +25,16 @@ class AStar {
         val closed : MutableSet<Node> = mutableSetOf()
         val minHeap = PriorityQueue<Node>()
         minHeap.add(start)
-        
+
         while (minHeap.isNotEmpty()) {
- 			
+
             val current = minHeap.poll()
-            closed.add(current)
+            closed.add(current!!)
             if (current == destination) {
                 found = true
                 break
             }
-			
+
             val neighbours = mutableListOf<Node>()
             for (x in -1 until 2){
                 for(y in -1 until 2){
@@ -51,11 +46,11 @@ class AStar {
                 }
             }
             for (i in neighbours.indices){
-                
+
                 if (closed.contains(neighbours[i])){
                     continue
                 }
-                
+
                 val newCost : Int = current.cost + getDistance(current, neighbours[i]) + neighbours[i].penalty
                 if (newCost < neighbours[i].cost) {
                     neighbours[i].cost = newCost
@@ -71,8 +66,8 @@ class AStar {
                 }
             }
         }
-		if (found) {
-        	var current : Node = destination
+        if (found) {
+            var current : Node = destination
             while (current != start) {
                 path.add(current)
                 current = current.parent!!
@@ -89,30 +84,3 @@ class AStar {
     }
 }
 
-class Node : Comparable<Node> {
-
-    val x : Int
-    val y : Int
-
-
-    var cost : Int = Int.MAX_VALUE
-    var heuristicCost : Int = Int.MAX_VALUE
-    val totalCost : Int
-        get() = cost + heuristicCost
-	var parent : Node? = null
-    val penalty : Int
-
-    constructor(x : Int, y: Int, penalty : Int) {
-        this.x = x
-        this.y = y
-        this.penalty = penalty
-    }
-
-    override fun compareTo(other: Node): Int {
-        val c = this.totalCost.compareTo(other.totalCost)
-        if (c == 0) {
-            return this.heuristicCost.compareTo(other.heuristicCost)
-        }
-        return -c
-    }
-}
