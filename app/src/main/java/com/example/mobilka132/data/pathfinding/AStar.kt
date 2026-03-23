@@ -11,15 +11,16 @@ class AStar {
     constructor(map : Array<Array<Int>>) {
         grid = Array(map.size) { i ->
             Array(map[i].size) { j ->
-                Node(i, j, 256 - map[i][j])
+                Node(i, j, 1 - map[i][j])
             }
         }
+        println(grid.size)
     }
 
     public fun find(start : Node, destination : Node) : List<Node> {
         var found = false
         val path : MutableList<Node> = mutableListOf()
-        if (start.penalty == 256 && destination.penalty == 256) {
+        if (start.penalty == 0 && destination.penalty == 0) {
             return path;
         }
         val closed : MutableSet<Node> = mutableSetOf()
@@ -74,6 +75,7 @@ class AStar {
             }
             path.add(current)
         }
+        println(path.size)
         return path.reversed()
     }
 
