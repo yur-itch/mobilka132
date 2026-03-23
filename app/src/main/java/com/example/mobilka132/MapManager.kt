@@ -19,8 +19,8 @@ class MapManager(val context: Context) {
         for(x in 0 until bitmap.width){
             for(y in 0 until bitmap.height){
                 val pixel = bitmap.getPixel(x,y);
-                val red = Color.red(pixel);
-                if(red > 200){
+                val blue = Color.blue(pixel);
+                if(blue > 200){
                     grid[x][y] = 1;
                 }
                 else{
