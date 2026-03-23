@@ -40,7 +40,6 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.mobilka132.MapManager
 import com.example.mobilka132.data.pathfinding.AStar
 import kotlinx.coroutines.launch
 
