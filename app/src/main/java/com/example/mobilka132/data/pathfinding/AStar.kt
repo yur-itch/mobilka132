@@ -14,7 +14,7 @@ class AStar {
     constructor(map : Array<Array<Int>>) {
         grid = Array(map.size) { i ->
             Array(map[i].size) { j ->
-                Node(i.toShort(), j.toShort(), (1 - map[i][j]).toShort())
+                Node(i.toShort(), j.toShort(), ((1-map[i][j]) * 10).toShort())
             }
         }
         println(grid.size)
@@ -30,22 +30,20 @@ class AStar {
     public fun find(start : Node, destination : Node) : List<Node> {
         var found = false
         val path : MutableList<Node> = mutableListOf()
-        if (start.penalty == 0.toShort() && destination.penalty == 0.toShort()) {
-            return path;
-        }
+
         val closed : MutableSet<Node> = mutableSetOf()
         val minHeap = PriorityQueue<Node>()
         minHeap.add(start)
 
-        while (minHeap.isNotEmpty()) {
+        start.cost = 0
 
+        while (minHeap.isNotEmpty()) {
             val current = minHeap.poll()
             closed.add(current!!)
             if (current == destination) {
                 found = true
                 break
             }
-
             val neighbours = mutableListOf<Node>()
             for (x in -1 until 2){
                 for(y in -1 until 2){
@@ -64,6 +62,7 @@ class AStar {
 
                 val newCost : Int = current.cost.toInt() + getDistance(current, neighbours[i]) + neighbours[i].penalty
                 if (newCost < neighbours[i].cost) {
+
                     neighbours[i].cost = newCost.toShort()
                     neighbours[i].heuristicCost = getDistance(current, neighbours[i]).toShort()
                     neighbours[i].parent = current

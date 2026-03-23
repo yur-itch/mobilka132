@@ -92,12 +92,13 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                MapContainer(state, algorithm, dummyBitmap, Modifier.weight(1f)) { pressOffset ->
+                MapContainer(state, algorithm, maskBitmap, Modifier.weight(1f)) { pressOffset ->
                     scope.launch {
                         val contentPoint = state.screenToContent(pressOffset)
                         state.addPoint(contentPoint, maskBitmap)
                         val points = state.selectedPoints.toList()
                         if (points.size >= 2) {
+                            println(algorithm.lastPath.size)
                             algorithm.findPath(points[points.size - 2].x.toInt(), points[points.size - 2].y.toInt(),
                             points[points.size - 1].x.toInt(), points[points.size - 1].y.toInt())
                         }
@@ -142,7 +143,7 @@ private fun MapContainer(
         modifier = modifier
             .clipToBounds()
             .fillMaxWidth()
-            .background(Color.Black)
+            .background(Color.White)
             .onSizeChanged { state.containerSize = it }
             .pointerInput(state.isSelectionMode, state.isProcessing) {
                 if (state.isSelectionMode && !state.isProcessing) {
