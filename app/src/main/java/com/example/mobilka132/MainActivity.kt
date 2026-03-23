@@ -1,9 +1,14 @@
 package com.example.mobilka132
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,45 +16,100 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.mobilka132.MapManager
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val manager = MapManager(this)
 
-        manager.loadData()
         setContent {
+            val context = LocalContext.current
+            val state = remember { MapState() }
+            val scope = rememberCoroutineScope()
+
+            val maskBitmap = remember {
+                val options = BitmapFactory.Options().apply { inScaled = false }
+                BitmapFactory.decodeResource(context.resources, R.drawable.map, options)
+            }
+
+
+            val dummyBitmap = remember {
+                val options = BitmapFactory.Options().apply { inScaled = false }
+                BitmapFactory.decodeResource(context.resources, R.drawable.dummy_map, options)
+            }
+
+
+            LaunchedEffect(maskBitmap) {
+                state.imageSize = Size(maskBitmap.width.toFloat(), maskBitmap.height.toFloat())
+            }
+
             Column(
-                modifier = Modifier
-                    .fillMaxSize(),
+                modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("Title", fontSize = 24.sp)
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = if (state.isProcessing) "Снаппинг к дороге..."
+                        else if (state.isSelectionMode) "Выберите точку на карте"
+                        else "Черно-белая карта (Разметка)",
+                        fontSize = 20.sp
+                    )
+                    if (state.isProcessing) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp).align(Alignment.CenterEnd))
+                    }
+                }
 
-                MapContainer(Modifier.weight(1f))
+                MapContainer(state, dummyBitmap, Modifier.weight(1f)) { pressOffset ->
+                    scope.launch {
+                        val contentPoint = state.screenToContent(pressOffset)
+                        state.addPoint(contentPoint, maskBitmap)
+                    }
+                }
 
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    Button(onClick = {}) { Text("Button 1") }
-                    Button(onClick = {}) { Text("Button 2") }
+                    Button(
+                        onClick = { state.isSelectionMode = !state.isSelectionMode },
+                        enabled = !state.isProcessing,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (state.isSelectionMode) Color.Red else Color.Blue
+                        )
+                    ) {
+                        Text(if (state.isSelectionMode) "Отмена" else "Выбрать точку")
+                    }
+
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Точек: ${state.selectedPoints.size}")
+                        Button(onClick = { state.selectedPoints.clear() }) {
+                            Text("Очистить")
+                        }
+                    }
                 }
             }
         }
@@ -57,26 +117,30 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun MapContainer(modifier: Modifier = Modifier) {
-    val state = remember { MapState() }
-
-    val painter = painterResource(id = R.drawable.dummy_map)
-    val imageIntrinsicSize = painter.intrinsicSize
-    val imageSize = Size(imageIntrinsicSize.width, imageIntrinsicSize.height)
-
+private fun MapContainer(
+    state: MapState,
+    bitmap: Bitmap,
+    modifier: Modifier = Modifier,
+    onPointSelected: (androidx.compose.ui.geometry.Offset) -> Unit
+) {
     Box(
         modifier = modifier
             .clipToBounds()
             .fillMaxWidth()
+            .background(Color.Black)
             .onSizeChanged { state.containerSize = it }
-            .pointerInput(Unit) {
-                detectTransformGestures { centroid, pan, zoom, _ ->
-                    state.updateTransform(centroid, pan, zoom, imageSize)
+            .pointerInput(state.isSelectionMode, state.isProcessing) {
+                if (state.isSelectionMode && !state.isProcessing) {
+                    detectTapGestures { onPointSelected(it) }
+                } else {
+                    detectTransformGestures { centroid, pan, zoom, _ ->
+                        state.updateTransform(centroid, pan, zoom)
+                    }
                 }
             }
     ) {
         Image(
-            painter = painter,
+            bitmap = bitmap.asImageBitmap(),
             contentDescription = null,
             contentScale = ContentScale.Fit,
             modifier = Modifier
@@ -89,5 +153,13 @@ private fun MapContainer(modifier: Modifier = Modifier) {
                     transformOrigin = TransformOrigin(0f, 0f)
                 )
         )
+
+        state.selectedPoints.forEach { point ->
+            val screenPos = state.contentToScreen(point)
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                drawCircle(color = Color.Red, radius = 15f, center = screenPos)
+                drawCircle(color = Color.White, radius = 5f, center = screenPos)
+            }
+        }
     }
 }
