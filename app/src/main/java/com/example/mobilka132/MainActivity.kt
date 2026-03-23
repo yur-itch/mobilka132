@@ -27,13 +27,17 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.sp
 import com.example.mobilka132.MapManager
+import com.example.mobilka132.data.pathfinding.AStar
 
 class MainActivity : ComponentActivity() {
+
+    val mapManager : MapManager = MapManager(this)
+    val algorithm : AStar = AStar(mapManager.loadData())
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val manager = MapManager(this)
 
-        manager.loadData()
+        mapManager.loadData()
         setContent {
             Column(
                 modifier = Modifier

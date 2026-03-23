@@ -18,10 +18,10 @@ class Node : Comparable<Node> {
     }
 
     override fun compareTo(other: Node): Int {
-        val c = this.totalCost.compareTo(other.totalCost)
+        var c = this.totalCost.compareTo(other.totalCost)
         if (c == 0) {
-            return this.heuristicCost.compareTo(other.heuristicCost)
+            c = this.heuristicCost.compareTo(other.heuristicCost)
         }
-        return -c
+        return c
     }
 }
