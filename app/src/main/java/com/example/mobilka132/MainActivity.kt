@@ -53,8 +53,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         mapManager = MapManager(this)
-        val map = mapManager.loadData()
-        algorithm = AStar(map)
+        mapManager.loadData()
+        algorithm = AStar(mapManager.grid)
 
         setContent {
             val context = LocalContext.current
