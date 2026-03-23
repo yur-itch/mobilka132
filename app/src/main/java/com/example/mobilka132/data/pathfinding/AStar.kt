@@ -1,5 +1,6 @@
 package com.example.mobilka132.data.pathfinding
 
+import androidx.compose.ui.geometry.Offset
 import java.util.*
 import kotlin.math.abs
 
@@ -8,19 +9,28 @@ class AStar {
 
     val grid : Array<Array<Node>>
 
+    var lastPath : List<Node> = emptyList()
+
     constructor(map : Array<Array<Int>>) {
         grid = Array(map.size) { i ->
             Array(map[i].size) { j ->
-                Node(i, j, 1 - map[i][j])
+                Node(i.toShort(), j.toShort(), (1 - map[i][j]).toShort())
             }
         }
         println(grid.size)
     }
 
+    public fun findPath(x1 : Int, y1 : Int, x2 : Int, y2 : Int) {
+        val startNode : Node = grid[x1][y1]
+        val destinationNode : Node = grid[x2][y2]
+
+        lastPath = find(startNode, destinationNode)
+    }
+
     public fun find(start : Node, destination : Node) : List<Node> {
         var found = false
         val path : MutableList<Node> = mutableListOf()
-        if (start.penalty == 0 && destination.penalty == 0) {
+        if (start.penalty == 0.toShort() && destination.penalty == 0.toShort()) {
             return path;
         }
         val closed : MutableSet<Node> = mutableSetOf()
@@ -41,7 +51,7 @@ class AStar {
                 for(y in -1 until 2){
                     val i : Int = x + current.x
                     val j : Int = y + current.y
-                    if (i >= 0 && i < grid.size && j >= 0 && j < grid[current.x].size && !(x == 0 && y == 0)){
+                    if (i >= 0 && i < grid.size && j >= 0 && j < grid[current.x.toInt()].size && !(x == 0 && y == 0)){
                         neighbours.add(grid[i][j])
                     }
                 }
@@ -52,10 +62,10 @@ class AStar {
                     continue
                 }
 
-                val newCost : Int = current.cost + getDistance(current, neighbours[i]) + neighbours[i].penalty
+                val newCost : Int = current.cost.toInt() + getDistance(current, neighbours[i]) + neighbours[i].penalty
                 if (newCost < neighbours[i].cost) {
-                    neighbours[i].cost = newCost
-                    neighbours[i].heuristicCost = getDistance(current, neighbours[i])
+                    neighbours[i].cost = newCost.toShort()
+                    neighbours[i].heuristicCost = getDistance(current, neighbours[i]).toShort()
                     neighbours[i].parent = current
                     if (!minHeap.contains(neighbours[i])){
                         minHeap.add(neighbours[i])

@@ -1,17 +1,17 @@
 package com.example.mobilka132.data.pathfinding
 class Node : Comparable<Node> {
 
-    val x : Int
-    val y : Int
+    val x : Short
+    val y : Short
 
-    var cost : Int = Int.MAX_VALUE
-    var heuristicCost : Int = Int.MAX_VALUE
+    var cost : Short = Short.MAX_VALUE
+    var heuristicCost : Short = Short.MAX_VALUE
     val totalCost : Int
         get() = cost + heuristicCost
 	var parent : Node? = null
-    val penalty : Int
+    val penalty : Short
 
-    constructor(x : Int, y: Int, penalty : Int) {
+    constructor(x : Short, y: Short, penalty : Short) {
         this.x = x
         this.y = y
         this.penalty = penalty
