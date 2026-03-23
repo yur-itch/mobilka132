@@ -5,13 +5,15 @@ import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.content.Context
 import com.example.mobilka132.data.pathfinding.Node
+import androidx.core.graphics.get
+import kotlin.math.min
 
 class MapManager(val context: Context) {
-    var grid = Array(3000) { i ->
-        Array(3000) { j -> 0 }
+    var grid = Array(1500) { i ->
+        Array(1500) { j -> 0 }
     }
 
-    fun loadData() : Array<Array<Int>> {
+    fun loadData(){
         val cont = context.assets.open("test.png");
 
         println(cont);
@@ -20,9 +22,9 @@ class MapManager(val context: Context) {
         println("Ширина: ${bitmap.width}, Высота: ${bitmap.height}")
         cont.close();
 
-        for(x in 0 until bitmap.width){
-            for(y in 0 until bitmap.height){
-                val pixel = bitmap.getPixel(x,y);
+        for(x in 0 until min(bitmap.width, grid.size)){
+            for(y in 0 until min(bitmap.height, grid[0].size)){
+                val pixel = bitmap[x, y];
                 val blue = Color.blue(pixel);
                 if(blue > 127){
                     grid[x][y] = 1;
@@ -32,6 +34,5 @@ class MapManager(val context: Context) {
                 }
             }
         }
-        return grid
     }
 }
