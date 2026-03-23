@@ -29,6 +29,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
@@ -45,16 +46,18 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
-    val mapManager : MapManager = MapManager(this)
+    lateinit var mapManager : MapManager
     lateinit var algorithm : AStar
+    val state : MapState = MapState()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        algorithm = AStar(mapManager.loadData())
+        mapManager = MapManager(this)
+        val map = mapManager.loadData()
+        algorithm = AStar(map)
 
         setContent {
             val context = LocalContext.current
-            val state = remember { MapState() }
             val scope = rememberCoroutineScope()
 
             val maskBitmap = remember {
@@ -89,10 +92,15 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                MapContainer(state, dummyBitmap, Modifier.weight(1f)) { pressOffset ->
+                MapContainer(state, algorithm, dummyBitmap, Modifier.weight(1f)) { pressOffset ->
                     scope.launch {
                         val contentPoint = state.screenToContent(pressOffset)
                         state.addPoint(contentPoint, maskBitmap)
+                        val points = state.selectedPoints.toList()
+                        if (points.size >= 2) {
+                            algorithm.findPath(points[points.size - 2].x.toInt(), points[points.size - 2].y.toInt(),
+                            points[points.size - 1].x.toInt(), points[points.size - 1].y.toInt())
+                        }
                     }
                 }
 
@@ -125,6 +133,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun MapContainer(
     state: MapState,
+    algorithm : AStar,
     bitmap: Bitmap,
     modifier: Modifier = Modifier,
     onPointSelected: (androidx.compose.ui.geometry.Offset) -> Unit
@@ -167,5 +176,16 @@ private fun MapContainer(
                 drawCircle(color = Color.White, radius = 5f, center = screenPos)
             }
         }
+
+        algorithm.lastPath.forEach { node ->
+            val point : Offset = Offset(node.x.toFloat(), node.y.toFloat())
+            val screenPos = state.contentToScreen(point)
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                drawCircle(color = Color.Red, radius = 5f, center = screenPos)
+                drawCircle(color = Color.White, radius = 3f, center = screenPos)
+            }
+        }
     }
+
+
 }
