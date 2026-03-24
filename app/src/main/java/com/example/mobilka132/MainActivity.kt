@@ -98,7 +98,6 @@ class MainActivity : ComponentActivity() {
                         state.addPoint(contentPoint, maskBitmap)
                         val points = state.selectedPoints.toList()
                         if (points.size >= 2) {
-                            println(algorithm.lastPath.size)
                             algorithm.findPath(points[points.size - 2].x.toInt(), points[points.size - 2].y.toInt(),
                             points[points.size - 1].x.toInt(), points[points.size - 1].y.toInt())
                         }

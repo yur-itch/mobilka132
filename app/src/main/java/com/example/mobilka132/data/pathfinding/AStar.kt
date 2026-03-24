@@ -7,37 +7,40 @@ import kotlin.math.abs
 
 class AStar {
 
-    val grid : Array<Array<Node>>
+    val map : Array<Array<Int>>
 
     var lastPath : List<Node> = emptyList()
 
     constructor(map : Array<Array<Int>>) {
-        grid = Array(map.size) { i ->
-            Array(map[i].size) { j ->
-                Node(i.toShort(), j.toShort(), ((1-map[i][j]) * 10).toShort())
-            }
-        }
-        println(grid.size)
+        this.map = map
     }
 
     public fun findPath(x1 : Int, y1 : Int, x2 : Int, y2 : Int) {
+        if (x1 >= map.size || x2 >= map.size || y1 >= map.size || y2 >= map.size) {
+            println("Coordinate(s) out of array's bounds ($x1, $y1) ($x2, $y2)")
+            return
+        }
+        val grid = Array(map.size) { i ->
+            Array(map[i].size) { j ->
+                Node(i.toShort(), j.toShort(), ((1-map[i][j]) * 100).toShort())
+            }
+        }
+
         val startNode : Node = grid[x1][y1]
         val destinationNode : Node = grid[x2][y2]
-
-        lastPath = find(startNode, destinationNode)
+        lastPath = find(startNode, destinationNode, grid)
     }
 
-    public fun find(start : Node, destination : Node) : List<Node> {
+    public fun find(start : Node, destination : Node, grid : Array<Array<Node>>) : List<Node> {
         var found = false
         val path : MutableList<Node> = mutableListOf()
 
         val closed : MutableSet<Node> = mutableSetOf()
         val minHeap = PriorityQueue<Node>()
         minHeap.add(start)
-
-        start.cost = 0
-
+        var c : Int = 0
         while (minHeap.isNotEmpty()) {
+            c += 1
             val current = minHeap.poll()
             closed.add(current!!)
             if (current == destination) {
@@ -56,12 +59,12 @@ class AStar {
             }
             for (i in neighbours.indices){
 
-                if (closed.contains(neighbours[i])){
+                if (closed.contains(neighbours[i]) || neighbours[i].penalty.toInt() == 100){
                     continue
                 }
 
                 val newCost : Int = current.cost.toInt() + getDistance(current, neighbours[i]) + neighbours[i].penalty
-                if (newCost < neighbours[i].cost) {
+                if (newCost < neighbours[i].cost || !minHeap.contains(neighbours[i])) {
 
                     neighbours[i].cost = newCost.toShort()
                     neighbours[i].heuristicCost = getDistance(current, neighbours[i]).toShort()
@@ -84,7 +87,8 @@ class AStar {
             }
             path.add(current)
         }
-        println(path.size)
+        println("Количество итераций " + c)
+        println("Длина найденного пути: " + path.size)
         return path.reversed()
     }
 
