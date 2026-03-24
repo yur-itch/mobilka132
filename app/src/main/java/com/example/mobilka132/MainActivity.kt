@@ -124,7 +124,10 @@ class MainActivity : ComponentActivity() {
 
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("Точек: ${state.selectedPoints.size}")
-                        Button(onClick = { state.selectedPoints.clear() }) {
+                        Button(onClick = {
+                            state.selectedPoints.clear()
+                            algorithm.lastPath = emptyList()
+                        }) {
                             Text("Очистить")
                         }
                     }
