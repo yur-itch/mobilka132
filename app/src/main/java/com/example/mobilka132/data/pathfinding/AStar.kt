@@ -1,0 +1,101 @@
+package com.example.mobilka132.data.pathfinding
+
+import androidx.compose.ui.geometry.Offset
+import java.util.*
+import kotlin.math.abs
+
+
+class AStar {
+
+    val map : Array<Array<Int>>
+
+    var lastPath : List<Node> = emptyList()
+
+    constructor(map : Array<Array<Int>>) {
+        this.map = map
+    }
+
+    public fun findPath(x1 : Int, y1 : Int, x2 : Int, y2 : Int) {
+        if (x1 >= map.size || x2 >= map.size || y1 >= map.size || y2 >= map.size) {
+            println("Coordinate(s) out of array's bounds ($x1, $y1) ($x2, $y2)")
+            return
+        }
+        val grid = Array(map.size) { i ->
+            Array(map[i].size) { j ->
+                Node(i.toShort(), j.toShort(), ((1-map[i][j]) * 100).toShort())
+            }
+        }
+
+        val startNode : Node = grid[x1][y1]
+        val destinationNode : Node = grid[x2][y2]
+        lastPath = find(startNode, destinationNode, grid)
+    }
+
+    public fun find(start : Node, destination : Node, grid : Array<Array<Node>>) : List<Node> {
+        var found = false
+        val path : MutableList<Node> = mutableListOf()
+
+        val closed : MutableSet<Node> = mutableSetOf()
+        val minHeap = PriorityQueue<Node>()
+        minHeap.add(start)
+        var c : Int = 0
+        while (minHeap.isNotEmpty()) {
+            c += 1
+            val current = minHeap.poll()
+            closed.add(current!!)
+            if (current == destination) {
+                found = true
+                break
+            }
+            val neighbours = mutableListOf<Node>()
+            for (x in -1 until 2){
+                for(y in -1 until 2){
+                    val i : Int = x + current.x
+                    val j : Int = y + current.y
+                    if (i >= 0 && i < grid.size && j >= 0 && j < grid[current.x.toInt()].size && !(x == 0 && y == 0)){
+                        neighbours.add(grid[i][j])
+                    }
+                }
+            }
+            for (i in neighbours.indices){
+
+                if (closed.contains(neighbours[i]) || neighbours[i].penalty.toInt() == 100){
+                    continue
+                }
+
+                val newCost : Int = current.cost.toInt() + getDistance(current, neighbours[i]) + neighbours[i].penalty
+                if (newCost < neighbours[i].cost || !minHeap.contains(neighbours[i])) {
+
+                    neighbours[i].cost = newCost.toShort()
+                    neighbours[i].heuristicCost = getDistance(current, neighbours[i]).toShort()
+                    neighbours[i].parent = current
+                    if (!minHeap.contains(neighbours[i])){
+                        minHeap.add(neighbours[i])
+                    }
+                    else{
+                        minHeap.remove(neighbours[i])
+                        minHeap.add(neighbours[i])
+                    }
+                }
+            }
+        }
+        if (found) {
+            var current : Node = destination
+            while (current != start) {
+                path.add(current)
+                current = current.parent!!
+            }
+            path.add(current)
+        }
+        println("Количество итераций " + c)
+        println("Длина найденного пути: " + path.size)
+        return path.reversed()
+    }
+
+    private fun getDistance(start : Node, destination : Node) : Int {
+        val dX = abs(start.x - destination.x)
+        val dY = abs(start.y - destination.y)
+        return if (dX >= dY) 14 * dY + 10 * (dX - dY) else 14 * dX + 10 * (dY - dX)
+    }
+}
+

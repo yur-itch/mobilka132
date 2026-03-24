@@ -1,32 +1,48 @@
 package com.example.mobilka132
 
+import android.graphics.Bitmap
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.unit.IntSize
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlin.math.min
 
 class MapState {
     var offset by mutableStateOf(Offset.Zero)
     var scale by mutableFloatStateOf(1f)
     var containerSize by mutableStateOf(IntSize.Zero)
+    var imageSize by mutableStateOf(Size.Zero)
 
-    fun updateTransform(centroid: Offset, pan: Offset, zoom: Float, imageSize: Size) {
+    val fitScale: Float
+        get() = if (containerSize == IntSize.Zero || imageSize == Size.Zero) 1f 
+                else min(containerSize.width.toFloat() / imageSize.width, containerSize.height.toFloat() / imageSize.height)
+
+    private val extraSpaceX: Float
+        get() = (containerSize.width - imageSize.width * fitScale) / 2f
+    private val extraSpaceY: Float
+        get() = (containerSize.height - imageSize.height * fitScale) / 2f
+
+    val selectedPoints = mutableStateListOf<Offset>()
+    var isSelectionMode by mutableStateOf(false)
+    var isProcessing by mutableStateOf(false)
+
+    private var maskPixels: IntArray? = null
+    private var maskWidth: Int = 0
+    private var maskHeight: Int = 0
+
+    fun updateTransform(centroid: Offset, pan: Offset, zoom: Float) {
+        if (imageSize == Size.Zero) return
         val oldScale = scale
         scale = (scale * zoom).coerceIn(1f, 50.0f)
 
-        val factorX = containerSize.width / imageSize.width
-        val factorY = containerSize.height / imageSize.height
-        val fitScale = min(factorX, factorY)
-
         val mapWidthOnScreen = imageSize.width * fitScale
         val mapHeightOnScreen = imageSize.height * fitScale
-
-        val extraSpaceX = (containerSize.width - mapWidthOnScreen) / 2f
-        val extraSpaceY = (containerSize.height - mapHeightOnScreen) / 2f
 
         val panInContentSpace = pan / scale
         val zoomAdjustment = (centroid / scale) - (centroid / oldScale)
@@ -37,7 +53,6 @@ class MapState {
 
         val maxX = (centerX / scale) - extraSpaceX
         val minX = (centerX / scale) - extraSpaceX - mapWidthOnScreen
-
         val maxY = (centerY / scale) - extraSpaceY
         val minY = (centerY / scale) - extraSpaceY - mapHeightOnScreen
 
@@ -48,10 +63,79 @@ class MapState {
     }
 
     fun screenToContent(screenOffset: Offset): Offset {
-        return (screenOffset / scale) - offset
+        val inFittedSpace = (screenOffset / scale) - offset
+        return Offset(
+            x = (inFittedSpace.x - extraSpaceX) / fitScale,
+            y = (inFittedSpace.y - extraSpaceY) / fitScale
+        )
+    }
+    fun contentToScreen(contentOffset: Offset): Offset {
+        val inFittedSpace = Offset(
+            x = contentOffset.x * fitScale + extraSpaceX,
+            y = contentOffset.y * fitScale + extraSpaceY
+        )
+        return (inFittedSpace + offset) * scale
     }
 
-    fun contentToScreen(contentOffset: Offset): Offset {
-        return (contentOffset + offset) * scale
+    suspend fun addPoint(contentPoint: Offset, mask: Bitmap?) = withContext(Dispatchers.Default) {
+        isProcessing = true
+        try {
+            if (mask != null && maskPixels == null) {
+                maskWidth = mask.width
+                maskHeight = mask.height
+                val p = IntArray(maskWidth * maskHeight)
+                mask.getPixels(p, 0, maskWidth, 0, 0, maskWidth, maskHeight)
+                maskPixels = p
+            }
+
+            val finalPoint = findNearestAvailablePoint(contentPoint)
+            withContext(Dispatchers.Main) {
+                selectedPoints.add(finalPoint)
+                isSelectionMode = false
+            }
+        } finally {
+            isProcessing = false
+        }
+    }
+
+    private fun findNearestAvailablePoint(startPoint: Offset): Offset {
+        val pixels = maskPixels ?: return startPoint
+        val w = maskWidth
+        val h = maskHeight
+
+        val centerX = startPoint.x.toInt().coerceIn(0, w - 1)
+        val centerY = startPoint.y.toInt().coerceIn(0, h - 1)
+
+        if (isColorWhite(pixels[centerY * w + centerX])) return startPoint
+
+        val maxRadius = maxOf(w, h)
+        for (radius in 1..maxRadius) {
+            for (i in -radius..radius) {
+                checkPixel(centerX + i, centerY - radius, w, h, pixels)?.let { return it }
+                checkPixel(centerX + i, centerY + radius, w, h, pixels)?.let { return it }
+                checkPixel(centerX - radius, centerY + i, w, h, pixels)?.let { return it }
+                checkPixel(centerX + radius, centerY + i, w, h, pixels)?.let { return it }
+            }
+            if (radius > 1500) break 
+        }
+        return startPoint
+    }
+
+    private fun checkPixel(x: Int, y: Int, w: Int, h: Int, pixels: IntArray): Offset? {
+        if (x in 0 until w && y in 0 until h) {
+            val color = pixels[y * w + x]
+            val r = (color shr 16) and 0xFF
+            val g = (color shr 8) and 0xFF
+            val b = color and 0xFF
+            if (r > 200 && g > 200 && b > 200) return Offset(x.toFloat(), y.toFloat())
+        }
+        return null
+    }
+
+    private fun isColorWhite(color: Int): Boolean {
+        val r = (color shr 16) and 0xFF
+        val g = (color shr 8) and 0xFF
+        val b = color and 0xFF
+        return r > 200 && g > 200 && b > 200
     }
 }
