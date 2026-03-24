@@ -98,12 +98,12 @@ class AStar {
     }
 
     private fun walkable(node : Node) : Boolean {
-        return node.weight < 10
+        return node.weight < 100
     }
 
     private fun getOrCreateNode(coords : Pair<Int, Int>, map : Array<Array<Int>>, allNodes :  MutableMap<Pair<Int, Int>, Node>) : Node {
         return allNodes.getOrPut(coords) {
-            Node(coords.first, coords.second, 10 - map[coords.first][coords.second] * 10)
+            Node(coords.first, coords.second, 100 - map[coords.first][coords.second] * 100)
         }
     }
 }
