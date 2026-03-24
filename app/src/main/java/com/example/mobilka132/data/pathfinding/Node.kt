@@ -4,8 +4,8 @@ class Node : Comparable<Node> {
     val x : Short
     val y : Short
 
-    var cost : Short = Short.MAX_VALUE
-    var heuristicCost : Short = Short.MAX_VALUE
+    var cost : Short = 0
+    var heuristicCost : Short = 0
     val totalCost : Int
         get() = cost + heuristicCost
 	var parent : Node? = null
