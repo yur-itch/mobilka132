@@ -66,12 +66,10 @@ class MainActivity : ComponentActivity() {
                 BitmapFactory.decodeResource(context.resources, R.drawable.map, options)
             }
 
-
             val dummyBitmap = remember {
                 val options = BitmapFactory.Options().apply { inScaled = false }
-                BitmapFactory.decodeResource(context.resources, R.drawable.dummy_map, options)
+                BitmapFactory.decodeResource(context.resources, R.drawable.user_map, options)
             }
-
 
             LaunchedEffect(maskBitmap) {
                 state.imageSize = Size(maskBitmap.width.toFloat(), maskBitmap.height.toFloat())
@@ -146,6 +144,10 @@ private fun MapContainer(
     onPointSelected: (Offset) -> Unit,
     overlay: MapOverlayRenderer
 ) {
+    val cachedPath = remember(algorithm.lastPath) {
+        overlay.generatePath(algorithm.lastPath)
+    }
+
     Box(
         modifier = modifier
             .clipToBounds()
@@ -162,10 +164,7 @@ private fun MapContainer(
                 }
             }
     ) {
-        Image(
-            bitmap = bitmap.asImageBitmap(),
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer(
@@ -175,11 +174,23 @@ private fun MapContainer(
                     translationY = state.offset.y * state.scale,
                     transformOrigin = TransformOrigin(0f, 0f)
                 )
-        )
+        ) {
+            Image(
+                bitmap = bitmap.asImageBitmap(),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize()
+            )
+
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                with(overlay) {
+                    drawPathScaled(cachedPath)
+                }
+            }
+        }
 
         Canvas(modifier = Modifier.fillMaxSize()) {
             with(overlay) {
-                drawPathScaled(algorithm.lastPath)
                 drawMarkersUnscaled(state.selectedPoints)
             }
         }

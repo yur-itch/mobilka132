@@ -3,21 +3,37 @@ package com.example.mobilka132
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path // Use Compose Path, not kotlin.io
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.withTransform
 import com.example.mobilka132.data.pathfinding.Node
 
 class MapOverlayRenderer(private val state: MapState) {
-    fun DrawScope.drawPathScaled(pathNodes: List<Node>) {
-        val pixelSize = state.fitScale * state.scale
-        val pathColor = Color.Red
+    fun generatePath(nodes: List<Node>): Path {
+        val path = Path()
+        if (nodes.isEmpty()) return path
 
-        pathNodes.forEach { node ->
-            val screenPos = state.contentToScreen(Offset(node.x.toFloat(), node.y.toFloat()))
-            drawRect(
-                color = pathColor,
-                topLeft = screenPos - Offset(pixelSize, pixelSize),
-                size = Size(pixelSize * 3f, pixelSize * 3f)
+        path.moveTo(nodes[0].x.toFloat(), nodes[0].y.toFloat())
+        for (i in 1 until nodes.size) {
+            path.lineTo(nodes[i].x.toFloat(), nodes[i].y.toFloat())
+        }
+        return path
+    }
+
+    fun DrawScope.drawPathScaled(
+        path: Path,
+        color: Color = Color.Red,
+        thickness: Float = 3f
+    ) {
+        withTransform({
+            translate(state.extraSpaceX, state.extraSpaceY)
+            scale(state.fitScale, state.fitScale, pivot = Offset.Zero)
+        }) {
+            drawPath(
+                path = path,
+                color = color,
+                style = Stroke(width = thickness / state.fitScale)
             )
         }
     }
@@ -28,5 +44,6 @@ class MapOverlayRenderer(private val state: MapState) {
         drawCircle(color = Color.White, radius = 10f, center = screenPos)
     }
 
-    fun DrawScope.drawMarkersUnscaled(points: List<Offset>) = points.forEach { point -> drawMarkerUnscaled(point) }
+    fun DrawScope.drawMarkersUnscaled(points: List<Offset>) =
+        points.forEach { drawMarkerUnscaled(it) }
 }
