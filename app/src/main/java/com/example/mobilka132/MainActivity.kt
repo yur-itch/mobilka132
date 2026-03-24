@@ -68,7 +68,7 @@ class MainActivity : ComponentActivity() {
 
             val dummyBitmap = remember {
                 val options = BitmapFactory.Options().apply { inScaled = false }
-                BitmapFactory.decodeResource(context.resources, R.drawable.user_map, options)
+                BitmapFactory.decodeResource(context.resources, R.drawable.user_map_contrast, options)
             }
 
             LaunchedEffect(maskBitmap) {
