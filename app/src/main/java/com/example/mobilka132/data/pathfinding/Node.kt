@@ -1,20 +1,20 @@
 package com.example.mobilka132.data.pathfinding
 class Node : Comparable<Node> {
 
-    val x : Short
-    val y : Short
+    val x : Int
+    val y : Int
 
-    var cost : Short = 0
-    var heuristicCost : Short = 0
+    var cost : Int = 0
+    var heuristicCost : Int = 0
     val totalCost : Int
         get() = cost + heuristicCost
 	var parent : Node? = null
-    val penalty : Short
+    val weight : Int
 
-    constructor(x : Short, y: Short, penalty : Short) {
+    constructor(x : Int, y: Int, weight : Int) {
         this.x = x
         this.y = y
-        this.penalty = penalty
+        this.weight = weight
     }
 
     override fun compareTo(other: Node): Int {

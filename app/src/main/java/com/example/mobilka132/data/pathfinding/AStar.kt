@@ -1,14 +1,15 @@
 package com.example.mobilka132.data.pathfinding
 
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.text.Paragraph
 import java.util.*
+import kotlin.collections.mutableMapOf
 import kotlin.math.abs
 
 
 class AStar {
 
     val map : Array<Array<Int>>
-
     var lastPath : List<Node> = emptyList()
 
     constructor(map : Array<Array<Int>>) {
@@ -20,18 +21,14 @@ class AStar {
             println("Coordinate(s) out of array's bounds ($x1, $y1) ($x2, $y2)")
             return
         }
-        val grid = Array(map.size) { i ->
-            Array(map[i].size) { j ->
-                Node(i.toShort(), j.toShort(), ((1-map[i][j]) * 100).toShort())
-            }
-        }
 
-        val startNode : Node = grid[x1][y1]
-        val destinationNode : Node = grid[x2][y2]
-        lastPath = find(startNode, destinationNode, grid)
+        val allNodes = mutableMapOf<Pair<Int, Int>, Node>()
+        val startNode : Node = getOrCreateNode(Pair(x1, y1), map, allNodes)
+        val destinationNode : Node = getOrCreateNode(Pair(x2, y2), map, allNodes)
+        lastPath = find(startNode, destinationNode, map, allNodes)
     }
 
-    public fun find(start : Node, destination : Node, grid : Array<Array<Node>>) : List<Node> {
+    public fun find(start : Node, destination : Node, map : Array<Array<Int>>, allNodes :  MutableMap<Pair<Int, Int>, Node>) : List<Node> {
         var found = false
         val path : MutableList<Node> = mutableListOf()
 
@@ -41,6 +38,7 @@ class AStar {
         var c : Int = 0
         while (minHeap.isNotEmpty()) {
             c += 1
+            if (c % 100000 == 0) println(c)
             val current = minHeap.poll()
             closed.add(current!!)
             if (current == destination) {
@@ -52,22 +50,22 @@ class AStar {
                 for(y in -1 until 2){
                     val i : Int = x + current.x
                     val j : Int = y + current.y
-                    if (i >= 0 && i < grid.size && j >= 0 && j < grid[current.x.toInt()].size && !(x == 0 && y == 0)){
-                        neighbours.add(grid[i][j])
+                    if (i >= 0 && i < map.size && j >= 0 && j < map[current.x].size && !(x == 0 && y == 0)){
+                        neighbours.add(getOrCreateNode(Pair(x + current.x, y + current.y), map, allNodes))
                     }
                 }
             }
             for (i in neighbours.indices){
 
-                if (closed.contains(neighbours[i]) || neighbours[i].penalty.toInt() == 100){
+                if (closed.contains(neighbours[i]) || !walkable(neighbours[i])){
                     continue
                 }
 
-                val newCost : Int = current.cost.toInt() + getDistance(current, neighbours[i]) + neighbours[i].penalty
+                val newCost : Int = current.cost + getDistance(current, neighbours[i]) + neighbours[i].weight
                 if (newCost < neighbours[i].cost || !minHeap.contains(neighbours[i])) {
 
-                    neighbours[i].cost = newCost.toShort()
-                    neighbours[i].heuristicCost = getDistance(current, neighbours[i]).toShort()
+                    neighbours[i].cost = newCost
+                    neighbours[i].heuristicCost = getDistance(current, neighbours[i])
                     neighbours[i].parent = current
                     if (!minHeap.contains(neighbours[i])){
                         minHeap.add(neighbours[i])
@@ -87,7 +85,8 @@ class AStar {
             }
             path.add(current)
         }
-        println("Количество итераций " + c)
+        println("Количество созданных Node: " + allNodes.size)
+        println("Количество итераций $c")
         println("Длина найденного пути: " + path.size)
         return path.reversed()
     }
@@ -96,6 +95,16 @@ class AStar {
         val dX = abs(start.x - destination.x)
         val dY = abs(start.y - destination.y)
         return if (dX >= dY) 14 * dY + 10 * (dX - dY) else 14 * dX + 10 * (dY - dX)
+    }
+
+    private fun walkable(node : Node) : Boolean {
+        return node.weight < 10
+    }
+
+    private fun getOrCreateNode(coords : Pair<Int, Int>, map : Array<Array<Int>>, allNodes :  MutableMap<Pair<Int, Int>, Node>) : Node {
+        return allNodes.getOrPut(coords) {
+            Node(coords.first, coords.second, 10 - map[coords.first][coords.second] * 10)
+        }
     }
 }
 
