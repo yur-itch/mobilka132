@@ -23,9 +23,9 @@ class MapState {
         get() = if (containerSize == IntSize.Zero || imageSize == Size.Zero) 1f 
                 else min(containerSize.width.toFloat() / imageSize.width, containerSize.height.toFloat() / imageSize.height)
 
-    private val extraSpaceX: Float
+    public val extraSpaceX: Float
         get() = (containerSize.width - imageSize.width * fitScale) / 2f
-    private val extraSpaceY: Float
+    public val extraSpaceY: Float
         get() = (containerSize.height - imageSize.height * fitScale) / 2f
 
     val selectedPoints = mutableStateListOf<Offset>()
