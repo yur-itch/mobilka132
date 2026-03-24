@@ -186,6 +186,4 @@ private fun MapContainer(
             }
         }
     }
-
-
 }
