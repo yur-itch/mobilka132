@@ -83,7 +83,7 @@ class MainActivity : ComponentActivity() {
                     Text(
                         text = if (state.isProcessing) "Снаппинг к дороге..."
                         else if (state.isSelectionMode) "Выберите точку на карте"
-                        else "Черно-белая карта (Разметка)",
+                        else "Карта",
                         fontSize = 20.sp
                     )
                     if (state.isProcessing) {

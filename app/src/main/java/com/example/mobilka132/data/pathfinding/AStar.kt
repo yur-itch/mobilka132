@@ -1,16 +1,16 @@
 package com.example.mobilka132.data.pathfinding
 
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.text.Paragraph
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import java.util.*
 import kotlin.collections.mutableMapOf
 import kotlin.math.abs
 
-
 class AStar {
 
     val map : Array<Array<Int>>
-    var lastPath : List<Node> = emptyList()
+    var lastPath by mutableStateOf<List<Node>>(emptyList())
 
     constructor(map : Array<Array<Int>>) {
         this.map = map
@@ -107,4 +107,3 @@ class AStar {
         }
     }
 }
-
