@@ -19,7 +19,7 @@ class MapState {
     var containerSize by mutableStateOf(IntSize.Zero)
     var imageSize by mutableStateOf(Size.Zero)
 
-    private val fitScale: Float
+    val fitScale: Float
         get() = if (containerSize == IntSize.Zero || imageSize == Size.Zero) 1f 
                 else min(containerSize.width.toFloat() / imageSize.width, containerSize.height.toFloat() / imageSize.height)
 

@@ -49,6 +49,7 @@ class MainActivity : ComponentActivity() {
     lateinit var mapManager : MapManager
     lateinit var algorithm : AStar
     val state : MapState = MapState()
+    val overlay = MapOverlayRenderer(state)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -92,17 +93,20 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                MapContainer(state, algorithm, maskBitmap, Modifier.weight(1f)) { pressOffset ->
-                    scope.launch {
-                        val contentPoint = state.screenToContent(pressOffset)
-                        state.addPoint(contentPoint, maskBitmap)
-                        val points = state.selectedPoints.toList()
-                        if (points.size >= 2) {
-                            algorithm.findPath(points[points.size - 2].x.toInt(), points[points.size - 2].y.toInt(),
-                            points[points.size - 1].x.toInt(), points[points.size - 1].y.toInt())
+                MapContainer(
+                    state, algorithm, dummyBitmap, Modifier.weight(1f),
+                    { pressOffset ->
+                        scope.launch {
+                            val contentPoint = state.screenToContent(pressOffset)
+                            state.addPoint(contentPoint, maskBitmap)
+                            val points = state.selectedPoints.toList()
+                            if (points.size >= 2) {
+                                algorithm.findPath(points[points.size - 2].x.toInt(), points[points.size - 2].y.toInt(),
+                                    points[points.size - 1].x.toInt(), points[points.size - 1].y.toInt())
+                            }
                         }
-                    }
-                }
+                    }, overlay
+                )
 
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -133,10 +137,11 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun MapContainer(
     state: MapState,
-    algorithm : AStar,
+    algorithm: AStar,
     bitmap: Bitmap,
     modifier: Modifier = Modifier,
-    onPointSelected: (androidx.compose.ui.geometry.Offset) -> Unit
+    onPointSelected: (Offset) -> Unit,
+    overlay: MapOverlayRenderer
 ) {
     Box(
         modifier = modifier
@@ -169,20 +174,10 @@ private fun MapContainer(
                 )
         )
 
-        state.selectedPoints.forEach { point ->
-            val screenPos = state.contentToScreen(point)
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                drawCircle(color = Color.Red, radius = 15f, center = screenPos)
-                drawCircle(color = Color.White, radius = 5f, center = screenPos)
-            }
-        }
-
-        algorithm.lastPath.forEach { node ->
-            val point : Offset = Offset(node.x.toFloat(), node.y.toFloat())
-            val screenPos = state.contentToScreen(point)
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                drawCircle(color = Color.Red, radius = 5f, center = screenPos)
-                drawCircle(color = Color.White, radius = 3f, center = screenPos)
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            with(overlay) {
+                drawPathScaled(algorithm.lastPath)
+                drawMarkersUnscaled(state.selectedPoints)
             }
         }
     }
