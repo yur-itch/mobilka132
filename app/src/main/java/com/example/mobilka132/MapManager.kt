@@ -9,8 +9,9 @@ import androidx.core.graphics.get
 import kotlin.math.min
 
 class MapManager(val context: Context) {
-    var grid = Array(1500) { i ->
-        Array(1500) { j -> 0 }
+    // 1 - white, 0 - black
+    var grid = Array(3000) { i ->
+        Array(3000) { j -> 0 }
     }
 
     fun loadData(){
