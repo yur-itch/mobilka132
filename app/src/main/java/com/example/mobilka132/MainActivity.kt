@@ -47,17 +47,18 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
 
     lateinit var mapManager : MapManager
-    lateinit var algorithm : AStar
-    val state : MapState = MapState()
-    val overlay = MapOverlayRenderer(state)
+    val viewModel: MapViewModel = MapViewModel()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         mapManager = MapManager(this)
         mapManager.loadData()
-        algorithm = AStar(mapManager.grid)
+        viewModel.init(mapManager.grid)
 
         setContent {
+            val state = viewModel.state
+            val overlay = viewModel.overlay
+
             val context = LocalContext.current
             val scope = rememberCoroutineScope()
 
@@ -66,12 +67,10 @@ class MainActivity : ComponentActivity() {
                 BitmapFactory.decodeResource(context.resources, R.drawable.map, options)
             }
 
-
             val dummyBitmap = remember {
                 val options = BitmapFactory.Options().apply { inScaled = false }
-                BitmapFactory.decodeResource(context.resources, R.drawable.dummy_map, options)
+                BitmapFactory.decodeResource(context.resources, R.drawable.user_map_contrast, options)
             }
-
 
             LaunchedEffect(maskBitmap) {
                 state.imageSize = Size(maskBitmap.width.toFloat(), maskBitmap.height.toFloat())
@@ -85,7 +84,7 @@ class MainActivity : ComponentActivity() {
                     Text(
                         text = if (state.isProcessing) "Снаппинг к дороге..."
                         else if (state.isSelectionMode) "Выберите точку на карте"
-                        else "Черно-белая карта (Разметка)",
+                        else "Карта",
                         fontSize = 20.sp
                     )
                     if (state.isProcessing) {
@@ -94,18 +93,15 @@ class MainActivity : ComponentActivity() {
                 }
 
                 MapContainer(
-                    state, algorithm, dummyBitmap, Modifier.weight(1f),
-                    { pressOffset ->
-                        scope.launch {
-                            val contentPoint = state.screenToContent(pressOffset)
-                            state.addPoint(contentPoint, maskBitmap)
-                            val points = state.selectedPoints.toList()
-                            if (points.size >= 2) {
-                                algorithm.findPath(points[points.size - 2].x.toInt(), points[points.size - 2].y.toInt(),
-                                    points[points.size - 1].x.toInt(), points[points.size - 1].y.toInt())
-                            }
-                        }
-                    }, overlay
+                    state = state,
+                    bitmap = dummyBitmap,
+                    modifier = Modifier.weight(1f),
+                    onPointSelected = { pressOffset ->
+                        val contentPoint = state.screenToContent(pressOffset)
+                        viewModel.onPointSelected(contentPoint, maskBitmap)
+                    },
+                    overlay = overlay,
+                    viewModel
                 )
 
                 Row(
@@ -124,7 +120,9 @@ class MainActivity : ComponentActivity() {
 
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("Точек: ${state.selectedPoints.size}")
-                        Button(onClick = { state.selectedPoints.clear() }) {
+                        Button(onClick = {
+                            viewModel.clear()
+                        }) {
                             Text("Очистить")
                         }
                     }
@@ -137,12 +135,16 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun MapContainer(
     state: MapState,
-    algorithm: AStar,
     bitmap: Bitmap,
     modifier: Modifier = Modifier,
     onPointSelected: (Offset) -> Unit,
-    overlay: MapOverlayRenderer
+    overlay: MapOverlayRenderer,
+    viewModel : MapViewModel
 ) {
+    val cachedPath = remember(viewModel.lastPath) {
+        overlay.generatePath(viewModel.lastPath)
+    }
+
     Box(
         modifier = modifier
             .clipToBounds()
@@ -159,10 +161,7 @@ private fun MapContainer(
                 }
             }
     ) {
-        Image(
-            bitmap = bitmap.asImageBitmap(),
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer(
@@ -172,11 +171,23 @@ private fun MapContainer(
                     translationY = state.offset.y * state.scale,
                     transformOrigin = TransformOrigin(0f, 0f)
                 )
-        )
+        ) {
+            Image(
+                bitmap = bitmap.asImageBitmap(),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize()
+            )
+
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                with(overlay) {
+                    drawPathScaled(cachedPath)
+                }
+            }
+        }
 
         Canvas(modifier = Modifier.fillMaxSize()) {
             with(overlay) {
-                drawPathScaled(algorithm.lastPath)
                 drawMarkersUnscaled(state.selectedPoints)
             }
         }
