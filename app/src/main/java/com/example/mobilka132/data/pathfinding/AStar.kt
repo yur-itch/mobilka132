@@ -1,5 +1,6 @@
 package com.example.mobilka132.data.pathfinding
 
+import android.graphics.Point
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -10,22 +11,26 @@ import kotlin.math.abs
 class AStar {
 
     val map : Array<Array<Int>>
-    var lastPath by mutableStateOf<List<Node>>(emptyList())
+
 
     constructor(map : Array<Array<Int>>) {
         this.map = map
     }
 
-    public fun findPath(x1 : Int, y1 : Int, x2 : Int, y2 : Int) {
+    public fun findPath(x1 : Int, y1 : Int, x2 : Int, y2 : Int) : List<Pair<Int, Int>> {
         if (x1 >= map.size || x2 >= map.size || y1 >= map.size || y2 >= map.size) {
             println("Coordinate(s) out of array's bounds ($x1, $y1) ($x2, $y2)")
-            return
+            return emptyList()
         }
 
         val allNodes = mutableMapOf<Pair<Int, Int>, Node>()
         val startNode : Node = getOrCreateNode(Pair(x1, y1), map, allNodes)
         val destinationNode : Node = getOrCreateNode(Pair(x2, y2), map, allNodes)
-        lastPath = find(startNode, destinationNode, map, allNodes)
+        val path : List<Node> = find(startNode, destinationNode, map, allNodes)
+        val points: List<Pair<Int, Int>> = path.map { node ->
+            Pair(node.x, node.y)
+        }
+        return points
     }
 
     public fun find(start : Node, destination : Node, map : Array<Array<Int>>, allNodes :  MutableMap<Pair<Int, Int>, Node>) : List<Node> {
