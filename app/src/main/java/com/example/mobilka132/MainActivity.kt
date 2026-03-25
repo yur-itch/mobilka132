@@ -47,17 +47,18 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
 
     lateinit var mapManager : MapManager
-    lateinit var algorithm : AStar
-    val state : MapState = MapState()
-    val overlay = MapOverlayRenderer(state)
+    val viewModel: MapViewModel = MapViewModel()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         mapManager = MapManager(this)
         mapManager.loadData()
-        algorithm = AStar(mapManager.grid)
+        viewModel.init(mapManager.grid)
 
         setContent {
+            val state = viewModel.state
+            val overlay = viewModel.overlay
+
             val context = LocalContext.current
             val scope = rememberCoroutineScope()
 
@@ -92,18 +93,15 @@ class MainActivity : ComponentActivity() {
                 }
 
                 MapContainer(
-                    state, algorithm, dummyBitmap, Modifier.weight(1f),
-                    { pressOffset ->
-                        scope.launch {
-                            val contentPoint = state.screenToContent(pressOffset)
-                            state.addPoint(contentPoint, maskBitmap)
-                            val points = state.selectedPoints.toList()
-                            if (points.size >= 2) {
-                                algorithm.findPath(points[points.size - 2].x.toInt(), points[points.size - 2].y.toInt(),
-                                    points[points.size - 1].x.toInt(), points[points.size - 1].y.toInt())
-                            }
-                        }
-                    }, overlay
+                    state = state,
+                    bitmap = dummyBitmap,
+                    modifier = Modifier.weight(1f),
+                    onPointSelected = { pressOffset ->
+                        val contentPoint = state.screenToContent(pressOffset)
+                        viewModel.onPointSelected(contentPoint, maskBitmap)
+                    },
+                    overlay = overlay,
+                    viewModel
                 )
 
                 Row(
@@ -123,8 +121,7 @@ class MainActivity : ComponentActivity() {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("Точек: ${state.selectedPoints.size}")
                         Button(onClick = {
-                            state.selectedPoints.clear()
-                            algorithm.lastPath = emptyList()
+                            viewModel.clear()
                         }) {
                             Text("Очистить")
                         }
@@ -138,14 +135,14 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun MapContainer(
     state: MapState,
-    algorithm: AStar,
     bitmap: Bitmap,
     modifier: Modifier = Modifier,
     onPointSelected: (Offset) -> Unit,
-    overlay: MapOverlayRenderer
+    overlay: MapOverlayRenderer,
+    viewModel : MapViewModel
 ) {
-    val cachedPath = remember(algorithm.lastPath) {
-        overlay.generatePath(algorithm.lastPath)
+    val cachedPath = remember(viewModel.lastPath) {
+        overlay.generatePath(viewModel.lastPath)
     }
 
     Box(
