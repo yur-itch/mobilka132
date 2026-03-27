@@ -1,0 +1,125 @@
+package com.example.mobilka132
+
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.dp
+import androidx.core.graphics.createBitmap
+import com.example.mobilka132.data.digit_recognition.DigitRecognitionPrep
+
+class TestActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        setContent {
+            val drawPaint = remember {
+                Paint().apply {
+                    color = android.graphics.Color.WHITE
+                    strokeWidth = 4f
+                    strokeCap = Paint.Cap.ROUND
+                    strokeJoin = Paint.Join.ROUND
+                    style = Paint.Style.STROKE
+                }
+            }
+
+            val drawingBitmap = remember {
+                val b = createBitmap(50, 50)
+                Canvas(b).drawColor(android.graphics.Color.BLACK)
+                b
+            }
+            val drawingCanvas = remember { Canvas(drawingBitmap) }
+
+            var processedBitmap by remember { mutableStateOf<Bitmap?>(null) }
+            var drawCount by remember { mutableIntStateOf(0) }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.White)
+                    .systemBarsPadding()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterVertically)
+            ) {
+                Text("Draw Digit (Input 50x50)", style = MaterialTheme.typography.headlineSmall, color = Color.Black)
+
+                Box(
+                    modifier = Modifier
+                        .size(280.dp)
+                        .border(2.dp, Color.Black)
+                        .pointerInput(Unit) {
+                            detectDragGestures { change, dragAmount ->
+                                change.consume()
+                                val start = change.position - dragAmount
+                                val end = change.position
+                                val scale = 50f / size.width.toFloat()
+                                drawingCanvas.drawLine(
+                                    start.x * scale, start.y * scale,
+                                    end.x * scale, end.y * scale,
+                                    drawPaint
+                                )
+                                drawCount++
+                                processedBitmap = DigitRecognitionPrep.prepareBitmap(drawingBitmap, 1)
+                            }
+                        }
+                ) {
+                    key(drawCount) {
+                        Image(
+                            bitmap = drawingBitmap.asImageBitmap(),
+                            contentDescription = "Drawing Area",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.FillBounds
+                        )
+                    }
+                }
+
+                Text("Pipeline Result (Output)", style = MaterialTheme.typography.headlineSmall, color = Color.Black)
+
+                Box(
+                    modifier = Modifier
+                        .size(280.dp)
+                        .background(Color.DarkGray)
+                        .border(1.dp, Color.Gray),
+                    contentAlignment = Alignment.Center
+                ) {
+                    processedBitmap?.let {
+                        Image(
+                            bitmap = it.asImageBitmap(),
+                            contentDescription = "Processed Result",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
+                }
+
+                Button(
+                    onClick = {
+                        drawingCanvas.drawColor(android.graphics.Color.BLACK)
+                        processedBitmap = null
+                        drawCount++
+                    },
+                    modifier = Modifier.padding(top = 8.dp)
+                ) {
+                    Text("Clear Canvas")
+                }
+            }
+        }
+    }
+}
