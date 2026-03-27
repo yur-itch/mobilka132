@@ -12,6 +12,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,11 +24,36 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.createBitmap
+import androidx.core.graphics.get
 import com.example.mobilka132.data.digit_recognition.DigitRecognitionPrep
+import com.example.mobilka132.data.digit_recognition.ModelLoader
+import com.example.mobilka132.data.digit_recognition.NeuralNetwork
 
 class TestActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        val loader = ModelLoader(this)
+        val layer1weights = loader.loadMatrix("weights/layer_1_weights.csv")
+        val layer1bias = loader.loadVector("weights/layer_1_biases.csv")
+        val layer2weights = loader.loadMatrix("weights/layer_2_weights.csv")
+        val layer2bias = loader.loadVector("weights/layer_2_biases.csv")
+        val layer3weights = loader.loadMatrix("weights/layer_3_weights.csv")
+        val layer3bias = loader.loadVector("weights/layer_3_biases.csv")
+        
+        val nn = NeuralNetwork(
+            arrayOf(
+                layer1weights,
+                layer2weights,
+                layer3weights
+            ),
+            arrayOf(
+                layer1bias,
+                layer2bias,
+                layer3bias
+            )
+        )
+        
         enableEdgeToEdge()
         setContent {
             val drawPaint = remember {
@@ -47,6 +74,7 @@ class TestActivity : ComponentActivity() {
             val drawingCanvas = remember { Canvas(drawingBitmap) }
 
             var processedBitmap by remember { mutableStateOf<Bitmap?>(null) }
+            var prediction by remember { mutableStateOf<Int?>(null) }
             var drawCount by remember { mutableIntStateOf(0) }
 
             Column(
@@ -54,9 +82,10 @@ class TestActivity : ComponentActivity() {
                     .fillMaxSize()
                     .background(Color.White)
                     .systemBarsPadding()
-                    .padding(16.dp),
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterVertically)
+                verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)
             ) {
                 Text("Draw Digit (Input 50x50)", style = MaterialTheme.typography.headlineSmall, color = Color.Black)
 
@@ -76,7 +105,13 @@ class TestActivity : ComponentActivity() {
                                     drawPaint
                                 )
                                 drawCount++
-                                processedBitmap = DigitRecognitionPrep.prepareBitmap(drawingBitmap, 1)
+                                
+                                val result = DigitRecognitionPrep.prepareBitmap(drawingBitmap, 1)
+                                processedBitmap = result
+                                
+                                val input = bitmapToFloatArray(result)
+                                val output = nn.forward(input)
+                                prediction = output.indices.maxByOrNull { i -> output[i] }
                             }
                         }
                 ) {
@@ -90,11 +125,17 @@ class TestActivity : ComponentActivity() {
                     }
                 }
 
-                Text("Pipeline Result (Output)", style = MaterialTheme.typography.headlineSmall, color = Color.Black)
+                Text(
+                    text = "Prediction: ${prediction ?: "-"}",
+                    style = MaterialTheme.typography.displayMedium,
+                    color = Color.Blue
+                )
+
+                Text("Pipeline Result (28x28)", style = MaterialTheme.typography.titleMedium, color = Color.Black)
 
                 Box(
                     modifier = Modifier
-                        .size(280.dp)
+                        .size(140.dp)
                         .background(Color.DarkGray)
                         .border(1.dp, Color.Gray),
                     contentAlignment = Alignment.Center
@@ -113,6 +154,7 @@ class TestActivity : ComponentActivity() {
                     onClick = {
                         drawingCanvas.drawColor(android.graphics.Color.BLACK)
                         processedBitmap = null
+                        prediction = null
                         drawCount++
                     },
                     modifier = Modifier.padding(top = 8.dp)
@@ -121,5 +163,19 @@ class TestActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private fun bitmapToFloatArray(bitmap: Bitmap): FloatArray {
+        val width = bitmap.width
+        val height = bitmap.height
+        val floatArray = FloatArray(width * height)
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                val pixel = bitmap[x, y]
+                val gray = (pixel and 0xff).toFloat() / 255.0f
+                floatArray[y * width + x] = gray
+            }
+        }
+        return floatArray
     }
 }
