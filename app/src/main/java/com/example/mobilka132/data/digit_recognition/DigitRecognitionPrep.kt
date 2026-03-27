@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Matrix
+import android.graphics.Paint
 import android.graphics.Rect
 import androidx.compose.ui.geometry.Offset
 import androidx.core.graphics.createBitmap
@@ -32,6 +33,7 @@ class DigitRecognitionPrep {
             }
 
             val result = createBitmap(img.width, img.height, Bitmap.Config.ARGB_8888)
+            Canvas(result).drawColor(android.graphics.Color.BLACK)
             val canvas = Canvas(result)
 
             for (i in 0 until img.width) {
@@ -54,7 +56,7 @@ class DigitRecognitionPrep {
             val matrix = Matrix().apply {
                 postRotate(angle, source.width / 2f, source.height / 2f)
             }
-            return Bitmap.createBitmap(
+            val res = Bitmap.createBitmap(
                 source,
                 0,
                 0,
@@ -63,6 +65,8 @@ class DigitRecognitionPrep {
                 matrix,
                 true
             )
+            Canvas(res).drawColor(android.graphics.Color.BLACK)
+            return res
         }
 
         private fun otsuBinarize(src: Bitmap): Bitmap {
@@ -76,16 +80,15 @@ class DigitRecognitionPrep {
                     val r = (pixel shr 16) and 0xff
                     val g = (pixel shr 8) and 0xff
                     val b = pixel and 0xff
-                    val gray = (0.299 * r + 0.587 * g + 0.114 * b).toInt()
+                    val gray = (0.299 * r + 0.587 * g + 0.114 * b).toInt().coerceIn(0, 255)
                     histogram[gray]++
                 }
             }
 
             val total = width * height
             var sum = 0.0
-            for (i in 0..255) {
-                sum += i * histogram[i]
-            }
+            for (i in 0..255) sum += i * histogram[i]
+
             var sumB = 0.0
             var wB = 0
             var wF: Int
@@ -97,10 +100,11 @@ class DigitRecognitionPrep {
                 if (wB == 0) continue
                 wF = total - wB
                 if (wF == 0) break
-                sumB += t * histogram[t]
+                sumB += t.toDouble() * histogram[t]
                 val mB = sumB / wB
                 val mF = (sum - sumB) / wF
-                val varianceBetween = wB * wF * (mB - mF) * (mB - mF)
+                val varianceBetween = wB.toDouble() * wF.toDouble() * (mB - mF) * (mB - mF)
+
                 if (varianceBetween > maxVariance) {
                     maxVariance = varianceBetween
                     threshold = t
@@ -108,6 +112,7 @@ class DigitRecognitionPrep {
             }
 
             val result = createBitmap(width, height)
+            Canvas(result).drawColor(android.graphics.Color.BLACK)
 
             for (y in 0 until height) {
                 for (x in 0 until width) {
@@ -116,7 +121,9 @@ class DigitRecognitionPrep {
                     val g = (pixel shr 8) and 0xff
                     val b = pixel and 0xff
                     val gray = (0.299 * r + 0.587 * g + 0.114 * b).toInt()
-                    val binary = if (gray < threshold) 0 else 255
+
+                    val binary = if (gray >= threshold) 255 else 0
+
                     val newPixel = (0xff shl 24) or (binary shl 16) or (binary shl 8) or binary
                     result[x, y] = newPixel
                 }
@@ -194,6 +201,7 @@ class DigitRecognitionPrep {
             } while (changed)
 
             val result = createBitmap(width, height)
+            Canvas(result).drawColor(android.graphics.Color.BLACK)
 
             for (y in 0 until height) {
                 for (x in 0 until width) {
@@ -226,6 +234,7 @@ class DigitRecognitionPrep {
             val width = src.width
             val height = src.height
             val result = createBitmap(width, height)
+            Canvas(result).drawColor(android.graphics.Color.BLACK)
             val kernelSize = 2 * radius + 1
             val kernel = FloatArray(kernelSize)
             val sigma2 = 2 * sigma * sigma
@@ -297,7 +306,8 @@ class DigitRecognitionPrep {
             val width = boundingRect.width().coerceAtMost(original.width - left)
             val height = boundingRect.height().coerceAtMost(original.height - top)
 
-            return Bitmap.createBitmap(original, left, top, width, height)
+            val res = Bitmap.createBitmap(original, left, top, width, height)
+            return res
         }
 
         private fun cropBoundingBox(bitmap: Bitmap): Bitmap {
@@ -350,42 +360,67 @@ class DigitRecognitionPrep {
             }
         }
 
-        private fun centerByMass(bitmap: Bitmap, padding: Int): Bitmap {
-            val dest = createBitmap(
-                bitmap.width + 2 * padding,
-                bitmap.height + 2 * padding,
-                Bitmap.Config.ARGB_8888
-            )
+        private fun resizeMaintainingAspectRatio(source: Bitmap, targetMaxDim: Float): Bitmap {
+            val w = source.width
+            val h = source.height
+            val maxDim = maxOf(w, h).toFloat()
 
-            val center = centerOfMass(bitmap)
+            val scale = targetMaxDim / maxDim
+            val nw = maxOf(1, (w * scale).toInt())
+            val nh = maxOf(1, (h * scale).toInt())
 
-            val dx = dest.width / 2f - center.x
-            val dy = dest.height / 2f - center.y
-
-            val matrix = Matrix().apply { postTranslate(dx, dy) }
-            val canvas = Canvas(dest)
-            canvas.drawBitmap(bitmap, matrix, null)
-
-            return dest
+            return source.scale(nw, nh)
         }
 
-        fun prepareBitmap(img: Bitmap, radius: Int, rotations: Array<Float>): MutableList<Bitmap> {
-            val scaled = img.scale(50, 50)
-            val images = mutableListOf<Bitmap>()
-
-            for (angle in rotations) {
-                var res = rotateBitmap(scaled, angle)
-                res = otsuBinarize(res)
-                res = skeletonize(res)
-                res = dilate(res, radius)
-                res = cropBoundingBox(res)
-                res = res.scale(50, 50)
-                res = centerByMass(res, 4)
-                res = gaussianBlur(res, 3, 0.5f)
-                images.add(res)
+        private fun scaleAndCenterTo28x28(cropped: Bitmap): Bitmap {
+            val w = cropped.width
+            val h = cropped.height
+            val maxDim = maxOf(w, h).toFloat()
+            val scale = 20f / maxDim
+            val nw = maxOf(1, (w * scale).toInt())
+            val nh = maxOf(1, (h * scale).toInt())
+            val resized = cropped.scale(nw, nh)
+            val center = centerOfMass(resized)
+            val shiftX = 14f - center.x
+            val shiftY = 14f - center.y
+            val canvasBitmap = createBitmap(28, 28)
+            Canvas(canvasBitmap).drawColor(android.graphics.Color.BLACK)
+            val canvas = Canvas(canvasBitmap)
+            val matrix = Matrix().apply {
+                postTranslate(shiftX, shiftY)
             }
+            val paint = Paint(Paint.FILTER_BITMAP_FLAG)
+            canvas.drawBitmap(resized, matrix, paint)
+            return canvasBitmap
+        }
 
-            return images
+        fun padBitmap(
+            source: Bitmap,
+            paddingLeft: Int,
+            paddingTop: Int,
+            paddingRight: Int,
+            paddingBottom: Int
+        ): Bitmap {
+            val newWidth = source.width + paddingLeft + paddingRight
+            val newHeight = source.height + paddingTop + paddingBottom
+            val paddedBitmap = createBitmap(newWidth, newHeight, source.config!!)
+            val canvas = Canvas(paddedBitmap)
+            canvas.drawColor(Color.BLACK)
+            canvas.drawBitmap(source, paddingLeft.toFloat(), paddingTop.toFloat(), null)
+            return paddedBitmap
+        }
+
+        fun prepareBitmap(img: Bitmap, radius: Int): Bitmap {
+            var res = cropBoundingBox(img)
+            res = resizeMaintainingAspectRatio(res, 50.0f)
+            res = otsuBinarize(res)
+            res = padBitmap(res, 1, 1, 1, 1)
+            res = skeletonize(res)
+            res = dilate(res, 3)
+            res = scaleAndCenterTo28x28(res)
+            res = gaussianBlur(res, 1, 0.5f)
+
+            return res
         }
     }
 }
