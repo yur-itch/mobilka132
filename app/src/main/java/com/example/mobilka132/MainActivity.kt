@@ -11,6 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -71,6 +72,9 @@ class MainActivity : ComponentActivity() {
                 BitmapFactory.decodeResource(context.resources, R.drawable.user_map_contrast, options)
             }
 
+            val bitmaps = arrayOf(maskBitmap, dummyBitmap)
+            var shownIndex by remember { mutableIntStateOf(0) }
+
             LaunchedEffect(maskBitmap) {
                 state.imageSize = Size(maskBitmap.width.toFloat(), maskBitmap.height.toFloat())
             }
@@ -95,7 +99,7 @@ class MainActivity : ComponentActivity() {
 
                 MapContainer(
                     state = state,
-                    bitmap = dummyBitmap,
+                    bitmap = bitmaps[shownIndex],
                     modifier = Modifier.weight(1f),
                     onPointSelected = { pressOffset ->
                         val contentPoint = state.screenToContent(pressOffset)
@@ -106,7 +110,7 @@ class MainActivity : ComponentActivity() {
                 )
 
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    modifier = Modifier.fillMaxWidth(),//.padding(8.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -114,6 +118,7 @@ class MainActivity : ComponentActivity() {
                         Button(
                             onClick = { state.isSelectionMode = !state.isSelectionMode },
                             enabled = !state.isProcessing,
+                            modifier = Modifier,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = if (state.isSelectionMode) Color.Red else Color.Blue
                             )
@@ -123,17 +128,27 @@ class MainActivity : ComponentActivity() {
 
                         Button(
                             onClick = { showPointsList = true },
-                            modifier = Modifier.padding(top = 4.dp),
+                            modifier = Modifier,
                             colors = ButtonDefaults.buttonColors(containerColor = Color.Gray)
                         ) {
                             Text("Список точек")
                         }
-                    }
 
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("Точек: ${state.selectedPoints.size}", fontWeight = FontWeight.Bold)
                         Button(onClick = { viewModel.clear() }) {
                             Text("Очистить")
+                        }
+                    }
+
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Button(
+                            onClick = { shownIndex = (shownIndex + 1) % bitmaps.size },
+                            modifier = Modifier,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.Blue
+                            )
+                        ) {
+                            Text("Сменить вид")
                         }
                     }
                 }
