@@ -143,7 +143,7 @@ class MainActivity : ComponentActivity() {
                 PointsListDialog(
                     points = state.selectedPoints,
                     onDismiss = { showPointsList = false },
-                    onDeletePoint = { index -> state.selectedPoints.removeAt(index) }
+                    onDeletePoint = { index -> viewModel.deletePoint(index) }
                 )
             }
         }
