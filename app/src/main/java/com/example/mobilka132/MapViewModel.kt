@@ -42,7 +42,7 @@ class MapViewModel : ViewModel() {
     }
 
     fun requestPathfinding(visualizeSteps : Boolean = false){
-        if (pathJob != null) return
+        pathJob?.cancel()
         val points = state.selectedPoints.toList()
         try {
             isPathProcessing = true;
