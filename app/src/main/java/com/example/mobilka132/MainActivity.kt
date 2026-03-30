@@ -1,10 +1,12 @@
 package com.example.mobilka132
 
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -41,19 +43,42 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.mobilka132.data.pathfinding.AStar
-import kotlinx.coroutines.launch
+import androidx.core.content.ContextCompat
+import com.google.android.gms.location.LocationServices
+import android.Manifest
+import android.location.Location
+import androidx.core.app.ActivityCompat
+import com.example.mobilka132.data.location.LocationManager
 
 class MainActivity : ComponentActivity() {
 
     lateinit var mapManager : MapManager
     val viewModel: MapViewModel = MapViewModel()
+    val location: LocationManager = LocationManager(this)
+
+    val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
+        if (isGranted) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+
+            }
+        }
+    }
+
+    private fun checkPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+
+        } else {
+            requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         mapManager = MapManager(this)
         mapManager.loadData()
         viewModel.init(mapManager.grid)
+        location.init()
+        checkPermission()
 
         setContent {
             val state = viewModel.state
@@ -101,7 +126,8 @@ class MainActivity : ComponentActivity() {
                         viewModel.onPointSelected(contentPoint, maskBitmap)
                     },
                     overlay = overlay,
-                    viewModel
+                    viewModel,
+                    location
                 )
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -152,7 +178,14 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-
+                    Button(
+                        onClick = { location.requestNewLocationData() },
+                        colors = ButtonDefaults.buttonColors(
+                            Color.Blue
+                        )
+                    ) {
+                        Text("локация")
+                    }
                 }
             }
         }
@@ -166,7 +199,8 @@ private fun MapContainer(
     modifier: Modifier = Modifier,
     onPointSelected: (Offset) -> Unit,
     overlay: MapOverlayRenderer,
-    viewModel : MapViewModel
+    viewModel: MapViewModel,
+    location: LocationManager
 ) {
     val cachedPath = remember(viewModel.lastPath) {
         overlay.generatePath(viewModel.lastPath)
@@ -216,6 +250,10 @@ private fun MapContainer(
         Canvas(modifier = Modifier.fillMaxSize()) {
             with(overlay) {
                 drawMarkersUnscaled(state.selectedPoints)
+                if (location.mapLocation != null)
+                {
+                    drawMarkerUnscaled(location.mapLocation!!)
+                }
                 if (viewModel.currentStep != null) {
                     drawPointUnscaled(Offset(viewModel.currentStep!!.current.first.toFloat(), viewModel.currentStep!!.current.second.toFloat()))
                     drawPointsUnscaled(viewModel.currentStep!!.openSet.map { p ->
