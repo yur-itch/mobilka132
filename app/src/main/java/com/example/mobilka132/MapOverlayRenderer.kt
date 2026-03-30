@@ -44,6 +44,16 @@ class MapOverlayRenderer(private val state: MapState) {
         drawCircle(color = Color.White, radius = 10f, center = screenPos)
     }
 
+    fun DrawScope.drawPointUnscaled(point: Offset, radius : Float = 5f, color : Color = Color.Yellow) {
+        val screenPos = state.contentToScreen(point)
+        drawCircle(color = color, radius = 2 * radius, center = screenPos)
+        drawCircle(color = Color.White, radius = radius, center = screenPos)
+    }
+
+    fun DrawScope.drawPointsUnscaled(points: List<Offset>, radius : Float = 5f, color : Color = Color.Yellow) {
+        points.forEach { drawPointUnscaled(it, radius, color) }
+    }
+
     fun DrawScope.drawMarkersUnscaled(points: List<Offset>) =
         points.forEach { drawMarkerUnscaled(it) }
 }
