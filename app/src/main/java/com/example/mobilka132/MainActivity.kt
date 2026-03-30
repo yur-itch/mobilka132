@@ -104,28 +104,55 @@ class MainActivity : ComponentActivity() {
                     viewModel
                 )
 
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    Button(
-                        onClick = { state.isSelectionMode = !state.isSelectionMode },
-                        enabled = !state.isProcessing,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (state.isSelectionMode) Color.Red else Color.Blue
-                        )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        Text(if (state.isSelectionMode) "Отмена" else "Выбрать точку")
-                    }
+                        Button(
+                            onClick = { state.isSelectionMode = !state.isSelectionMode },
+                            enabled = !state.isProcessing,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (state.isSelectionMode) Color.Red else Color.Blue
+                            )
+                        ) {
+                            Text(if (state.isSelectionMode) "Отмена" else "Выбрать точку")
+                        }
 
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Точек: ${state.selectedPoints.size}")
-                        Button(onClick = {
-                            viewModel.clear()
-                        }) {
-                            Text("Очистить")
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("Точек: ${state.selectedPoints.size}")
+                            Button(onClick = {
+                                viewModel.clear()
+                            }) {
+                                Text("Очистить")
+                            }
                         }
                     }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        Button(
+                            onClick = { if (viewModel.isPathProcessing) viewModel.cancelPathfinding() else viewModel.requestPathfinding(true) },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (viewModel.isPathProcessing) Color.Red else Color.Blue
+                            )
+                        ) {
+                            Text(if (viewModel.isPathProcessing) "Отмена" else "Найти путь")
+                        }
+
+                        Button(
+                            onClick = { if (viewModel.isPathProcessing) viewModel.cancelPathfinding() else viewModel.requestPathfinding(false) },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (viewModel.isPathProcessing) Color.Red else Color.Blue
+                            )
+                        ) {
+                            Text(if (viewModel.isPathProcessing) "Отмена" else "Найти путь быстро")
+                        }
+                    }
+
+
                 }
             }
         }
@@ -189,6 +216,15 @@ private fun MapContainer(
         Canvas(modifier = Modifier.fillMaxSize()) {
             with(overlay) {
                 drawMarkersUnscaled(state.selectedPoints)
+                if (viewModel.currentStep != null) {
+                    drawPointUnscaled(Offset(viewModel.currentStep!!.current.first.toFloat(), viewModel.currentStep!!.current.second.toFloat()))
+                    drawPointsUnscaled(viewModel.currentStep!!.openSet.map { p ->
+                        Offset(p.first.toFloat(), p.second.toFloat())
+                    }, 3f, Color.Green)
+//                    drawPointsUnscaled(viewModel.currentStep!!.closedSet.map { p ->
+//                        Offset(p.first.toFloat(), p.second.toFloat())
+//                    }, 1f, Color.Blue)
+                }
             }
         }
     }

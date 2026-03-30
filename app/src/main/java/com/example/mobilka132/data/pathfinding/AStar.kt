@@ -4,6 +4,11 @@ import android.graphics.Point
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import java.util.*
 import kotlin.collections.mutableMapOf
 import kotlin.math.abs
@@ -17,15 +22,15 @@ class AStar {
         this.map = map
     }
 
-    public fun findPath(x1 : Int, y1 : Int, x2 : Int, y2 : Int) : List<Pair<Int, Int>> {
-        if (x1 >= map.size || x2 >= map.size || y1 >= map.size || y2 >= map.size) {
-            println("Coordinate(s) out of array's bounds ($x1, $y1) ($x2, $y2)")
+    public fun findPath(s: Pair<Int, Int>, e: Pair<Int, Int>) : List<Pair<Int, Int>> {
+        if (s.first >= map.size || s.second >= map.size || e.first >= map.size || e.second >= map.size) {
+            println("Coordinate(s) out of array's bounds (${s.first}, ${s.second}) ($e.first, ${e.second})")
             return emptyList()
         }
 
         val allNodes = mutableMapOf<Pair<Int, Int>, Node>()
-        val startNode : Node = getOrCreateNode(Pair(x1, y1), map, allNodes)
-        val destinationNode : Node = getOrCreateNode(Pair(x2, y2), map, allNodes)
+        val startNode : Node = getOrCreateNode(s, map, allNodes)
+        val destinationNode : Node = getOrCreateNode(e, map, allNodes)
         val path : List<Node> = find(startNode, destinationNode, map, allNodes)
         val points: List<Pair<Int, Int>> = path.map { node ->
             Pair(node.x, node.y)
@@ -33,7 +38,7 @@ class AStar {
         return points
     }
 
-    public fun find(start : Node, destination : Node, map : Array<Array<Int>>, allNodes :  MutableMap<Pair<Int, Int>, Node>) : List<Node> {
+    fun find(start : Node, destination : Node, map : Array<Array<Int>>, allNodes :  MutableMap<Pair<Int, Int>, Node>) : List<Node> {
         var found = false
         val path : MutableList<Node> = mutableListOf()
 
@@ -70,7 +75,7 @@ class AStar {
                 if (newCost < neighbours[i].cost || !minHeap.contains(neighbours[i])) {
 
                     neighbours[i].cost = newCost
-                    neighbours[i].heuristicCost = getDistance(current, neighbours[i])
+                    neighbours[i].heuristicCost = getDistance(current, destination)
                     neighbours[i].parent = current
                     if (!minHeap.contains(neighbours[i])){
                         minHeap.add(neighbours[i])
@@ -103,12 +108,95 @@ class AStar {
     }
 
     private fun walkable(node : Node) : Boolean {
-        return node.weight < 100
+        return node.weight < 5
     }
 
     private fun getOrCreateNode(coords : Pair<Int, Int>, map : Array<Array<Int>>, allNodes :  MutableMap<Pair<Int, Int>, Node>) : Node {
         return allNodes.getOrPut(coords) {
-            Node(coords.first, coords.second, 100 - map[coords.first][coords.second] * 100)
+            Node(coords.first, coords.second, 5 - map[coords.first][coords.second] * 5)
+        }
+    }
+
+    fun findPathAsync(s: Pair<Int, Int>, e: Pair<Int, Int>, delayMs: Long = 16L): Flow<AStarStep> = flow {
+        val path : MutableList<Node> = mutableListOf()
+        val allNodes = mutableMapOf<Pair<Int, Int>, Node>()
+        val start : Node = getOrCreateNode(s, map, allNodes)
+        val destination : Node = getOrCreateNode(e, map, allNodes)
+        val closed : MutableSet<Node> = mutableSetOf()
+        val minHeap = PriorityQueue<Node>()
+        minHeap.add(start)
+
+        while (minHeap.isNotEmpty()) {
+
+            currentCoroutineContext().ensureActive()
+
+
+            val current = minHeap.poll()
+            closed.add(current!!)
+
+            emit(
+                AStarStep(
+                    Pair(current.x, current.y),
+                    minHeap.map { item -> Pair(item.x, item.y) },
+                    closed.map {
+                            item -> Pair(item.x, item.y)
+                    }.toList()
+                )
+            )
+
+            if (current == destination) {
+                var curr : Node = destination
+                while (curr != start) {
+                    path.add(curr)
+                    curr = curr.parent!!
+                }
+                path.add(curr)
+
+                emit(
+                    AStarStep(
+                        Pair(current.x, current.y),
+                        minHeap.map { item -> Pair(item.x, item.y) },
+                        closed.map {
+                                item -> Pair(item.x, item.y)
+                        }.toList(),
+                        path = path.map { item -> Pair(item.x, item.y) }
+                    )
+                )
+                return@flow
+            }
+            val neighbours = mutableListOf<Node>()
+            for (x in -1 until 2){
+                for(y in -1 until 2){
+                    val i : Int = x + current.x
+                    val j : Int = y + current.y
+                    if (i >= 0 && i < map.size && j >= 0 && j < map[current.x].size && !(x == 0 && y == 0)){
+                        neighbours.add(getOrCreateNode(Pair(x + current.x, y + current.y), map, allNodes))
+                    }
+                }
+            }
+            for (i in neighbours.indices){
+
+                if (closed.contains(neighbours[i]) || !walkable(neighbours[i])){
+                    continue
+                }
+                val newCost : Int = current.cost + getDistance(current, neighbours[i]) + neighbours[i].weight
+                if (newCost < neighbours[i].cost || !minHeap.contains(neighbours[i])) {
+                    println(getDistance(current, destination))
+                    neighbours[i].cost = newCost
+                    neighbours[i].heuristicCost = getDistance(current, destination)
+                    neighbours[i].parent = current
+                    if (!minHeap.contains(neighbours[i])){
+                        minHeap.add(neighbours[i])
+                    }
+                    else{
+                        minHeap.remove(neighbours[i])
+                        minHeap.add(neighbours[i])
+                    }
+                }
+            }
+
+            delay(delayMs)
         }
     }
 }
+
