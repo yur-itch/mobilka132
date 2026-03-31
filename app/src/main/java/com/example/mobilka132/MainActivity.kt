@@ -17,6 +17,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -39,7 +41,8 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import kotlinx.coroutines.launch
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.mobilka132.data.pathfinding.DecisionTreeManager
 
 class MainActivity : ComponentActivity() {
 
@@ -58,6 +61,9 @@ class MainActivity : ComponentActivity() {
             val overlay = viewModel.overlay
             val context = LocalContext.current
             val scope = rememberCoroutineScope()
+
+            val treeViewModel: DecisionTreeManager = viewModel()
+            var showDecisionDialog by remember { mutableStateOf(false) }
 
             var showPointsList by remember { mutableStateOf(false) }
 
@@ -110,7 +116,7 @@ class MainActivity : ComponentActivity() {
                 )
 
                 Row(
-                    modifier = Modifier.fillMaxWidth(),//.padding(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -142,6 +148,16 @@ class MainActivity : ComponentActivity() {
 
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Button(
+                            onClick = { 
+                                treeViewModel.reset()
+                                showDecisionDialog = true 
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+                        ) {
+                            Text("💡 Совет")
+                        }
+
+                        Button(
                             onClick = { shownIndex = (shownIndex + 1) % bitmaps.size },
                             modifier = Modifier,
                             colors = ButtonDefaults.buttonColors(
@@ -159,6 +175,13 @@ class MainActivity : ComponentActivity() {
                     points = state.selectedPoints,
                     onDismiss = { showPointsList = false },
                     onDeletePoint = { index -> viewModel.deletePoint(index) }
+                )
+            }
+
+            if (showDecisionDialog) {
+                DecisionDialog(
+                    viewModel = treeViewModel,
+                    onDismiss = { showDecisionDialog = false }
                 )
             }
         }
