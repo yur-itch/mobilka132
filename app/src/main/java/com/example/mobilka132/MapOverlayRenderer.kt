@@ -10,13 +10,13 @@ import androidx.compose.ui.graphics.drawscope.withTransform
 import com.example.mobilka132.data.pathfinding.Node
 
 class MapOverlayRenderer(private val state: MapState) {
-    fun generatePath(nodes: List<Node>): Path {
+    fun generatePath(nodes: List<Offset>): Path {
         val path = Path()
         if (nodes.isEmpty()) return path
 
-        path.moveTo(nodes[0].x.toFloat(), nodes[0].y.toFloat())
+        path.moveTo(nodes[0].x, nodes[0].y)
         for (i in 1 until nodes.size) {
-            path.lineTo(nodes[i].x.toFloat(), nodes[i].y.toFloat())
+            path.lineTo(nodes[i].x, nodes[i].y)
         }
         return path
     }

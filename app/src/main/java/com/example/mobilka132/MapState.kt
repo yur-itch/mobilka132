@@ -13,6 +13,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.min
 
+data class MapPoint(
+    val id: Int,
+    val position: Offset
+)
+
 class MapState {
     var offset by mutableStateOf(Offset.Zero)
     var scale by mutableFloatStateOf(1f)
@@ -20,15 +25,17 @@ class MapState {
     var imageSize by mutableStateOf(Size.Zero)
 
     val fitScale: Float
-        get() = if (containerSize == IntSize.Zero || imageSize == Size.Zero) 1f 
-                else min(containerSize.width.toFloat() / imageSize.width, containerSize.height.toFloat() / imageSize.height)
+        get() = if (containerSize == IntSize.Zero || imageSize == Size.Zero) 1f
+        else min(containerSize.width.toFloat() / imageSize.width, containerSize.height.toFloat() / imageSize.height)
 
-    public val extraSpaceX: Float
+    val extraSpaceX: Float
         get() = (containerSize.width - imageSize.width * fitScale) / 2f
-    public val extraSpaceY: Float
+    val extraSpaceY: Float
         get() = (containerSize.height - imageSize.height * fitScale) / 2f
 
-    val selectedPoints = mutableStateListOf<Offset>()
+    val selectedPoints = mutableStateListOf<MapPoint>()
+    private var nextPointId = 1
+
     var isSelectionMode by mutableStateOf(false)
     var isProcessing by mutableStateOf(false)
 
@@ -88,9 +95,9 @@ class MapState {
                 maskPixels = p
             }
 
-            val finalPoint = findNearestAvailablePoint(contentPoint)
+            val finalPosition = findNearestAvailablePoint(contentPoint)
             withContext(Dispatchers.Main) {
-                selectedPoints.add(finalPoint)
+                selectedPoints.add(MapPoint(id = nextPointId++, position = finalPosition))
                 isSelectionMode = false
             }
         } finally {
@@ -108,7 +115,7 @@ class MapState {
 
         if (isColorWhite(pixels[centerY * w + centerX])) return startPoint
 
-        val maxRadius = maxOf(w, h)
+        val maxRadius = 1500
         for (radius in 1..maxRadius) {
             for (i in -radius..radius) {
                 checkPixel(centerX + i, centerY - radius, w, h, pixels)?.let { return it }
@@ -116,7 +123,6 @@ class MapState {
                 checkPixel(centerX - radius, centerY + i, w, h, pixels)?.let { return it }
                 checkPixel(centerX + radius, centerY + i, w, h, pixels)?.let { return it }
             }
-            if (radius > 1500) break 
         }
         return startPoint
     }
@@ -124,10 +130,7 @@ class MapState {
     private fun checkPixel(x: Int, y: Int, w: Int, h: Int, pixels: IntArray): Offset? {
         if (x in 0 until w && y in 0 until h) {
             val color = pixels[y * w + x]
-            val r = (color shr 16) and 0xFF
-            val g = (color shr 8) and 0xFF
-            val b = color and 0xFF
-            if (r > 200 && g > 200 && b > 200) return Offset(x.toFloat(), y.toFloat())
+            if (isColorWhite(color)) return Offset(x.toFloat(), y.toFloat())
         }
         return null
     }
@@ -137,5 +140,10 @@ class MapState {
         val g = (color shr 8) and 0xFF
         val b = color and 0xFF
         return r > 200 && g > 200 && b > 200
+    }
+
+    fun clearPoints() {
+        selectedPoints.clear()
+        nextPointId = 1
     }
 }
