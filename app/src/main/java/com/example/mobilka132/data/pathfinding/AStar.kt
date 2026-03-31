@@ -11,14 +11,13 @@ import kotlin.math.abs
 
 class AStar {
 
-    val map : Array<Array<Int>>
-
+    private val map : Array<Array<Int>>
 
     constructor(map : Array<Array<Int>>) {
         this.map = map
     }
 
-    public fun findPath(s: Pair<Int, Int>, e: Pair<Int, Int>) : List<Pair<Int, Int>> {
+    suspend fun findPath(s: Pair<Int, Int>, e: Pair<Int, Int>) : List<Pair<Int, Int>> {
         if (s.first >= map.size || s.second >= map.size || e.first >= map.size || e.second >= map.size) {
             println("Coordinate(s) out of array's bounds (${s.first}, ${s.second}) ($e.first, ${e.second})")
             return emptyList()
@@ -34,17 +33,14 @@ class AStar {
         return points
     }
 
-    fun find(start : Node, destination : Node, map : Array<Array<Int>>, allNodes :  MutableMap<Pair<Int, Int>, Node>) : List<Node> {
+    private suspend fun find(start : Node, destination : Node, map : Array<Array<Int>>, allNodes :  MutableMap<Pair<Int, Int>, Node>) : List<Node> {
         var found = false
         val path : MutableList<Node> = mutableListOf()
-
         val closed : MutableSet<Node> = mutableSetOf()
         val minHeap = PriorityQueue<Node>()
         minHeap.add(start)
-        var c : Int = 0
         while (minHeap.isNotEmpty()) {
-            c += 1
-            if (c % 100000 == 0) println(c)
+            currentCoroutineContext().ensureActive()
             val current = minHeap.poll()
             closed.add(current!!)
             if (current == destination) {
@@ -91,9 +87,6 @@ class AStar {
             }
             path.add(current)
         }
-        println("Количество созданных Node: " + allNodes.size)
-        println("Количество итераций $c")
-        println("Длина найденного пути: " + path.size)
         return path.reversed()
     }
 
@@ -123,10 +116,7 @@ class AStar {
         minHeap.add(start)
 
         while (minHeap.isNotEmpty()) {
-
             currentCoroutineContext().ensureActive()
-
-
             val current = minHeap.poll()
             closed.add(current!!)
 

@@ -43,10 +43,10 @@ class MapViewModel : ViewModel() {
         pathJob?.cancel()
         val points = state.selectedPoints.toList()
         try {
-            isPathProcessing = true;
             if (points.size >= 2) {
                 val p1 = points[points.size - 2]
                 val p2 = points[points.size - 1]
+                isPathProcessing = true;
                 if (!visualizeSteps)
                 {
                     pathJob = viewModelScope.launch {
@@ -59,7 +59,6 @@ class MapViewModel : ViewModel() {
                 {
                     startPathfinding(p1.toPair(), p2.toPair())
                 }
-
                 pathJob?.invokeOnCompletion { cause ->
                     if (cause == null) {
 
