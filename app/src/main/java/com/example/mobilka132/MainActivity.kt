@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.LocationServices
 import android.Manifest
+import android.annotation.SuppressLint
 import android.location.Location
 import androidx.core.app.ActivityCompat
 import com.example.mobilka132.data.location.LocationManager
@@ -54,31 +55,13 @@ class MainActivity : ComponentActivity() {
 
     lateinit var mapManager : MapManager
     val viewModel: MapViewModel = MapViewModel()
-    val location: LocationManager = LocationManager(this)
-
-    val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
-        if (isGranted) {
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-
-            }
-        }
-    }
-
-    private fun checkPermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-
-        } else {
-            requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-        }
-    }
+    val location: LocationManager = LocationManager(this, activityResultRegistry)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         mapManager = MapManager(this)
         mapManager.loadData()
         viewModel.init(mapManager.grid)
-        location.init()
-        checkPermission()
 
         setContent {
             val state = viewModel.state
@@ -259,9 +242,6 @@ private fun MapContainer(
                     drawPointsUnscaled(viewModel.currentStep!!.openSet.map { p ->
                         Offset(p.first.toFloat(), p.second.toFloat())
                     }, 3f, Color.Green)
-//                    drawPointsUnscaled(viewModel.currentStep!!.closedSet.map { p ->
-//                        Offset(p.first.toFloat(), p.second.toFloat())
-//                    }, 1f, Color.Blue)
                 }
             }
         }
