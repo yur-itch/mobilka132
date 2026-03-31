@@ -1,12 +1,10 @@
 package com.example.mobilka132
 
-import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -43,12 +41,6 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
-import com.google.android.gms.location.LocationServices
-import android.Manifest
-import android.annotation.SuppressLint
-import android.location.Location
-import androidx.core.app.ActivityCompat
 import com.example.mobilka132.data.location.LocationManager
 
 class MainActivity : ComponentActivity() {
