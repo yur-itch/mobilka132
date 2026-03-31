@@ -12,6 +12,9 @@ import android.os.Looper
 import androidx.activity.result.ActivityResultRegistry
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresPermission
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.core.app.ActivityCompat
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest.Builder
@@ -21,8 +24,7 @@ import com.google.android.gms.location.Priority
 
 class LocationManager(private val activity: Context, private val registry: ActivityResultRegistry) {
 
-    val mapLocation : Offset?
-        get() = worldLocation?.let { l -> Offset(((l.longitude - 84.932881) * 122800).toFloat(), (-(l.latitude - 56.4758) * 222000).toFloat()) ?: null }
+    var mapLocation by mutableStateOf<Offset?>(null)
     var worldLocation : Location? = null
     private val fusedLocationClient by lazy {
         LocationServices.getFusedLocationProviderClient(activity)
@@ -46,10 +48,14 @@ class LocationManager(private val activity: Context, private val registry: Activ
         }
     }
 
+    private fun setMapLocation() {
+        mapLocation = worldLocation?.let { l -> Offset(((l.longitude - 84.932881) * 122800).toFloat(), (-(l.latitude - 56.4758) * 222000).toFloat()) ?: null }
+    }
+
     @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
     fun getLastLocation() {
         if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            fusedLocationClient?.lastLocation?.addOnSuccessListener { location ->
+            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
                 requestNewLocationData()
                 if (location != null) {
                     val lat = location.latitude
@@ -71,10 +77,11 @@ class LocationManager(private val activity: Context, private val registry: Activ
             .build()
 
         if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            fusedLocationClient!!.requestLocationUpdates(locationRequest, object : LocationCallback() {
+            fusedLocationClient.requestLocationUpdates(locationRequest, object : LocationCallback() {
                 override fun onLocationResult(locationResult: LocationResult) {
                     val location = locationResult.lastLocation
                     worldLocation = location
+                    setMapLocation()
                     if (location != null) {
                         Toast.makeText(activity, "Новая локация: ${location.latitude} ${location.longitude}", Toast.LENGTH_SHORT).show()
                     }

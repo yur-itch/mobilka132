@@ -53,6 +53,7 @@ class MainActivity : ComponentActivity() {
         mapManager = MapManager(this)
         mapManager.loadData()
         viewModel.init(mapManager.grid)
+        location.checkPermission()
 
         setContent {
             val state = viewModel.state
@@ -70,7 +71,11 @@ class MainActivity : ComponentActivity() {
 
             val dummyBitmap = remember {
                 val options = BitmapFactory.Options().apply { inScaled = false }
-                BitmapFactory.decodeResource(context.resources, R.drawable.user_map_contrast, options)
+                BitmapFactory.decodeResource(
+                    context.resources,
+                    R.drawable.user_map_contrast,
+                    options
+                )
             }
 
             val bitmaps = arrayOf(maskBitmap, dummyBitmap)
@@ -93,7 +98,9 @@ class MainActivity : ComponentActivity() {
                         fontWeight = FontWeight.Bold
                     )
                     if (state.isProcessing) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp).align(Alignment.CenterEnd))
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp).align(Alignment.CenterEnd)
+                        )
                     }
                 }
 
@@ -129,7 +136,10 @@ class MainActivity : ComponentActivity() {
                         }
 
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Точек: ${state.selectedPoints.size}", fontWeight = FontWeight.Bold)
+                            Text(
+                                "Точек: ${state.selectedPoints.size}",
+                                fontWeight = FontWeight.Bold
+                            )
 
                             Button(onClick = { viewModel.clear() }) {
                                 Text("Очистить")
@@ -207,18 +217,6 @@ class MainActivity : ComponentActivity() {
                         onDismiss = { showPointsList = false },
                         onDeletePoint = { index -> viewModel.deletePoint(index) }
                     )
-
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Button(
-                            onClick = { shownIndex = (shownIndex + 1) % bitmaps.size },
-                            modifier = Modifier,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.Blue
-                            )
-                        ) {
-                            Text("Сменить вид")
-                        }
-                    }
                 }
             }
 
@@ -227,6 +225,143 @@ class MainActivity : ComponentActivity() {
                     points = state.selectedPoints,
                     onDismiss = { showPointsList = false },
                     onDeletePoint = { index -> viewModel.deletePoint(index) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MapContainer(
+    state: MapState,
+    bitmap: Bitmap,
+    modifier: Modifier = Modifier,
+    onPointSelected: (Offset) -> Unit,
+    overlay: MapOverlayRenderer,
+    viewModel: MapViewModel,
+    location: LocationManager
+) {
+    val textMeasurer = rememberTextMeasurer()
+
+    val cachedPath = remember(viewModel.lastPath) {
+        overlay.generatePath(viewModel.lastPath)
+    }
+
+    Box(
+        modifier = modifier
+            .clipToBounds()
+            .fillMaxWidth()
+            .background(Color.DarkGray)
+            .onSizeChanged { state.containerSize = it }
+            .pointerInput(state.isSelectionMode, state.isProcessing) {
+                if (state.isSelectionMode && !state.isProcessing) {
+                    detectTapGestures { onPointSelected(it) }
+                } else {
+                    detectTransformGestures { centroid, pan, zoom, _ ->
+                        state.updateTransform(centroid, pan, zoom)
+                    }
+                }
+            }
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer(
+                    scaleX = state.scale,
+                    scaleY = state.scale,
+                    translationX = state.offset.x * state.scale,
+                    translationY = state.offset.y * state.scale,
+                    transformOrigin = TransformOrigin(0f, 0f)
+                )
+        ) {
+            Image(
+                bitmap = bitmap.asImageBitmap(),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize()
+            )
+
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                with(overlay) {
+                    drawPathScaled(cachedPath)
+
+                }
+            }
+        }
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            with(overlay) {
+                if (location.mapLocation != null)
+                {
+                    drawPointUnscaled(location.mapLocation!!, 7f, Color.Yellow)
+                }
+                if (viewModel.currentStep != null) {
+                    drawPointUnscaled(Offset(viewModel.currentStep!!.current.first.toFloat(), viewModel.currentStep!!.current.second.toFloat()))
+                    drawPointsUnscaled(viewModel.currentStep!!.openSet.map { p ->
+                        Offset(p.first.toFloat(), p.second.toFloat())
+                    }, 3f, Color.Green)
+//                    drawPointsUnscaled(viewModel.currentStep!!.closedSet.map { p ->
+//                        Offset(p.first.toFloat(), p.second.toFloat())
+//                    }, 1f, Color.Blue)
+                }
+            }
+        }
+        val textStyle = TextStyle(
+            color = Color.Black,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold
+        )
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            state.selectedPoints.forEach { point ->
+                val screenPos = state.contentToScreen(point.position)
+                val label = point.id.toString()
+
+                drawCircle(color = Color.Red, radius = 20f, center = screenPos)
+                drawCircle(color = Color.White, radius = 8f, center = screenPos)
+
+                val textLayoutResult = textMeasurer.measure(
+                    text = label,
+                    style = textStyle
+                )
+
+                val textWidth = textLayoutResult.size.width.toFloat()
+                val textHeight = textLayoutResult.size.height.toFloat()
+
+                val pinWidth = maxOf(50f, textWidth + 20f)
+                val pinHeight = 70f
+                val tailHeight = 25f
+                val pinBottomOffset = 25f
+
+                val path = Path().apply {
+                    moveTo(screenPos.x, screenPos.y - pinBottomOffset)
+                    lineTo(
+                        screenPos.x - pinWidth / 2,
+                        screenPos.y - pinBottomOffset - tailHeight
+                    )
+                    lineTo(
+                        screenPos.x - pinWidth / 2,
+                        screenPos.y - pinBottomOffset - pinHeight
+                    )
+                    lineTo(
+                        screenPos.x + pinWidth / 2,
+                        screenPos.y - pinBottomOffset - pinHeight
+                    )
+                    lineTo(
+                        screenPos.x + pinWidth / 2,
+                        screenPos.y - pinBottomOffset - tailHeight
+                    )
+                    close()
+                }
+
+                drawPath(path = path, color = Color.Yellow)
+                drawPath(path = path, color = Color.Black, style = Stroke(width = 2f))
+
+                drawText(
+                    textLayoutResult = textLayoutResult,
+                    topLeft = Offset(
+                        x = screenPos.x - textWidth / 2,
+                        y = screenPos.y - pinBottomOffset - pinHeight +
+                                (pinHeight - tailHeight) / 2 - textHeight / 2
+                    )
                 )
             }
         }
@@ -283,4 +418,3 @@ fun PointsListDialog(
         }
     }
 }
-

@@ -49,19 +49,19 @@ class MapViewModel : ViewModel() {
             if (points.size >= 2) {
                 val p1 = points[points.size - 2]
                 val p2 = points[points.size - 1]
-                isPathProcessing = true;
                 if (!visualizeSteps)
                 {
                     pathJob = viewModelScope.launch {
                         val path = withContext(Dispatchers.Default) {
-                            lastPath = algorithm.findPath(p1.toPair(),p2.toPair()).map { p -> p.toOffset() }
+                            lastPath = algorithm.findPath(p1.position.toPair(),p2.position.toPair()).map { p -> p.toOffset() }
                         }
                     }
                 }
                 else
                 {
-                    startPathfinding(p1.toPair(), p2.toPair())
+                    startPathfinding(p1.position.toPair(), p2.position.toPair())
                 }
+                isPathProcessing = true;
                 pathJob?.invokeOnCompletion { cause ->
                     if (cause == null) {
 
@@ -85,7 +85,7 @@ class MapViewModel : ViewModel() {
 
         pathJob = viewModelScope.launch {
             try {
-                algorithm.findPathAsync(start, end, delayMs = 13)
+                algorithm.findPathAsync(start, end, delayMs = 5)
                     .flowOn(Dispatchers.Default)
                     .collect { step ->
                         currentStep = step
