@@ -33,9 +33,12 @@ class MapViewModel : ViewModel() {
     }
 
     fun onPointSelected(point: Offset, maskBitmap: Bitmap) {
-
         viewModelScope.launch {
-            state.addPoint(point, maskBitmap)
+            try {
+                state.addPoint(point, maskBitmap)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
@@ -68,9 +71,7 @@ class MapViewModel : ViewModel() {
             }
         }
         finally {
-
         }
-
     }
 
     fun cancelPathfinding(){
@@ -96,15 +97,25 @@ class MapViewModel : ViewModel() {
                     }
 
             } catch (e: CancellationException) {
-
             } finally {
+            }
+        }
+    }
 
+    fun deletePoint(index: Int) {
+        if (index in state.selectedPoints.indices) {
+            state.selectedPoints.removeAt(index)
+
+            if (state.selectedPoints.size < 2) {
+                lastPath = emptyList()
+            } else {
+                lastPath = emptyList()
             }
         }
     }
 
     fun clear() {
-        state.selectedPoints.clear()
+        state.clearPoints()
         currentStep = null;
         lastPath = emptyList()
     }
