@@ -3,7 +3,6 @@ package com.example.mobilka132.data.location
 import android.content.pm.PackageManager
 import android.widget.Toast
 import androidx.compose.ui.geometry.Offset
-import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import android.Manifest
 import android.annotation.SuppressLint
@@ -14,7 +13,6 @@ import androidx.activity.result.ActivityResultRegistry
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresPermission
 import androidx.core.app.ActivityCompat
-import com.example.mobilka132.MainActivity
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest.Builder
 import com.google.android.gms.location.LocationResult
