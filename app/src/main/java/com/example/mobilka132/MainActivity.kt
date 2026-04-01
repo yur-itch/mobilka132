@@ -17,6 +17,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -39,6 +41,8 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.mobilka132.data.pathfinding.DecisionTreeManager
 import kotlinx.coroutines.launch
 import com.example.mobilka132.data.location.LocationManager
 
@@ -61,6 +65,9 @@ class MainActivity : ComponentActivity() {
 
             val context = LocalContext.current
             val scope = rememberCoroutineScope()
+
+            val treeViewModel: DecisionTreeManager = viewModel()
+            var showDecisionDialog by remember { mutableStateOf(false) }
 
             var showPointsList by remember { mutableStateOf(false) }
 
@@ -154,60 +161,80 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Button(
                             onClick = {
-                                if (viewModel.isPathProcessing)
-                                    viewModel.cancelPathfinding()
-                                else
-                                    viewModel.requestPathfinding(true)
+                                treeViewModel.reset()
+                                showDecisionDialog = true
                             },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (viewModel.isPathProcessing) Color.Red else Color.Blue
-                            )
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
                         ) {
-                            Text(if (viewModel.isPathProcessing) "Отмена" else "Найти путь")
+                            Text("💡 Совет")
                         }
 
-                        Button(
-                            onClick = {
-                                if (viewModel.isPathProcessing)
-                                    viewModel.cancelPathfinding()
-                                else
-                                    viewModel.requestPathfinding(false)
-                            },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (viewModel.isPathProcessing) Color.Red else Color.Blue
-                            )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
-                            Text(if (viewModel.isPathProcessing) "Отмена" else "Найти путь быстро")
+                            Button(
+                                onClick = {
+                                    if (viewModel.isPathProcessing)
+                                        viewModel.cancelPathfinding()
+                                    else
+                                        viewModel.requestPathfinding(true)
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (viewModel.isPathProcessing) Color.Red else Color.Blue
+                                )
+                            ) {
+                                Text(if (viewModel.isPathProcessing) "Отмена" else "Найти путь")
+                            }
+
+                            Button(
+                                onClick = {
+                                    if (viewModel.isPathProcessing)
+                                        viewModel.cancelPathfinding()
+                                    else
+                                        viewModel.requestPathfinding(false)
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (viewModel.isPathProcessing) Color.Red else Color.Blue
+                                )
+                            ) {
+                                Text(if (viewModel.isPathProcessing) "Отмена" else "Найти путь быстро")
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            Button(
+                                onClick = { location.requestNewLocationData() },
+                                colors = ButtonDefaults.buttonColors(Color.Blue)
+                            ) {
+                                Text("Локация")
+                            }
+
+                            Button(
+                                onClick = { shownIndex = (shownIndex + 1) % bitmaps.size },
+                                colors = ButtonDefaults.buttonColors(Color.Blue)
+                            ) {
+                                Text("Сменить вид")
+                            }
                         }
                     }
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        Button(
-                            onClick = { location.requestNewLocationData() },
-                            colors = ButtonDefaults.buttonColors(Color.Blue)
-                        ) {
-                            Text("Локация")
-                        }
-
-                        Button(
-                            onClick = { shownIndex = (shownIndex + 1) % bitmaps.size },
-                            colors = ButtonDefaults.buttonColors(Color.Blue)
-                        ) {
-                            Text("Сменить вид")
-                        }
+                    if (showPointsList) {
+                        PointsListDialog(
+                            points = state.selectedPoints,
+                            onDismiss = { showPointsList = false },
+                            onDeletePoint = { index -> viewModel.deletePoint(index) }
+                        )
                     }
                 }
 
@@ -218,201 +245,209 @@ class MainActivity : ComponentActivity() {
                         onDeletePoint = { index -> viewModel.deletePoint(index) }
                     )
                 }
-            }
 
-            if (showPointsList) {
-                PointsListDialog(
-                    points = state.selectedPoints,
-                    onDismiss = { showPointsList = false },
-                    onDeletePoint = { index -> viewModel.deletePoint(index) }
-                )
+                if (showDecisionDialog) {
+                    DecisionDialog(
+                        viewModel = treeViewModel,
+                        onDismiss = { showDecisionDialog = false }
+                    )
+                }
             }
         }
     }
-}
 
-@Composable
-private fun MapContainer(
-    state: MapState,
-    bitmap: Bitmap,
-    modifier: Modifier = Modifier,
-    onPointSelected: (Offset) -> Unit,
-    overlay: MapOverlayRenderer,
-    viewModel: MapViewModel,
-    location: LocationManager
-) {
-    val textMeasurer = rememberTextMeasurer()
-
-    val cachedPath = remember(viewModel.lastPath) {
-        overlay.generatePath(viewModel.lastPath)
-    }
-
-    Box(
-        modifier = modifier
-            .clipToBounds()
-            .fillMaxWidth()
-            .background(Color.DarkGray)
-            .onSizeChanged { state.containerSize = it }
-            .pointerInput(state.isSelectionMode, state.isProcessing) {
-                if (state.isSelectionMode && !state.isProcessing) {
-                    detectTapGestures { onPointSelected(it) }
-                } else {
-                    detectTransformGestures { centroid, pan, zoom, _ ->
-                        state.updateTransform(centroid, pan, zoom)
-                    }
-                }
-            }
+    @Composable
+    private fun MapContainer(
+        state: MapState,
+        bitmap: Bitmap,
+        modifier: Modifier = Modifier,
+        onPointSelected: (Offset) -> Unit,
+        overlay: MapOverlayRenderer,
+        viewModel: MapViewModel,
+        location: LocationManager
     ) {
+        val textMeasurer = rememberTextMeasurer()
+
+        val cachedPath = remember(viewModel.lastPath) {
+            overlay.generatePath(viewModel.lastPath)
+        }
+
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer(
-                    scaleX = state.scale,
-                    scaleY = state.scale,
-                    translationX = state.offset.x * state.scale,
-                    translationY = state.offset.y * state.scale,
-                    transformOrigin = TransformOrigin(0f, 0f)
-                )
-        ) {
-            Image(
-                bitmap = bitmap.asImageBitmap(),
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.fillMaxSize()
-            )
-
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                with(overlay) {
-                    drawPathScaled(cachedPath)
-
-                }
-            }
-        }
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            with(overlay) {
-                if (location.mapLocation != null)
-                {
-                    drawPointUnscaled(location.mapLocation!!, 7f, Color.Yellow)
-                }
-                if (viewModel.currentStep != null) {
-                    drawPointUnscaled(Offset(viewModel.currentStep!!.current.first.toFloat(), viewModel.currentStep!!.current.second.toFloat()))
-                    drawPointsUnscaled(viewModel.currentStep!!.openSet.map { p ->
-                        Offset(p.first.toFloat(), p.second.toFloat())
-                    }, 3f, Color.Green)
-//                    drawPointsUnscaled(viewModel.currentStep!!.closedSet.map { p ->
-//                        Offset(p.first.toFloat(), p.second.toFloat())
-//                    }, 1f, Color.Blue)
-                }
-            }
-        }
-        val textStyle = TextStyle(
-            color = Color.Black,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold
-        )
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            state.selectedPoints.forEach { point ->
-                val screenPos = state.contentToScreen(point.position)
-                val label = point.id.toString()
-
-                drawCircle(color = Color.Red, radius = 20f, center = screenPos)
-                drawCircle(color = Color.White, radius = 8f, center = screenPos)
-
-                val textLayoutResult = textMeasurer.measure(
-                    text = label,
-                    style = textStyle
-                )
-
-                val textWidth = textLayoutResult.size.width.toFloat()
-                val textHeight = textLayoutResult.size.height.toFloat()
-
-                val pinWidth = maxOf(50f, textWidth + 20f)
-                val pinHeight = 70f
-                val tailHeight = 25f
-                val pinBottomOffset = 25f
-
-                val path = Path().apply {
-                    moveTo(screenPos.x, screenPos.y - pinBottomOffset)
-                    lineTo(
-                        screenPos.x - pinWidth / 2,
-                        screenPos.y - pinBottomOffset - tailHeight
-                    )
-                    lineTo(
-                        screenPos.x - pinWidth / 2,
-                        screenPos.y - pinBottomOffset - pinHeight
-                    )
-                    lineTo(
-                        screenPos.x + pinWidth / 2,
-                        screenPos.y - pinBottomOffset - pinHeight
-                    )
-                    lineTo(
-                        screenPos.x + pinWidth / 2,
-                        screenPos.y - pinBottomOffset - tailHeight
-                    )
-                    close()
-                }
-
-                drawPath(path = path, color = Color.Yellow)
-                drawPath(path = path, color = Color.Black, style = Stroke(width = 2f))
-
-                drawText(
-                    textLayoutResult = textLayoutResult,
-                    topLeft = Offset(
-                        x = screenPos.x - textWidth / 2,
-                        y = screenPos.y - pinBottomOffset - pinHeight +
-                                (pinHeight - tailHeight) / 2 - textHeight / 2
-                    )
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun PointsListDialog(
-    points: List<MapPoint>,
-    onDismiss: () -> Unit,
-    onDeletePoint: (Int) -> Unit
-) {
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = Color.White,
-            modifier = Modifier.fillMaxWidth().padding(16.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "Выбранные локации",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-
-                if (points.isEmpty()) {
-                    Text("Список пуст", modifier = Modifier.padding(vertical = 16.dp))
-                } else {
-                    LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
-                        itemsIndexed(points) { index, point ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(text = "Точка №${point.id}", fontSize = 18.sp)
-                                IconButton(onClick = { onDeletePoint(index) }) {
-                                    Text("✕", color = Color.Red, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
-                                }
-                            }
-                            HorizontalDivider(color = Color.LightGray)
+            modifier = modifier
+                .clipToBounds()
+                .fillMaxWidth()
+                .background(Color.DarkGray)
+                .onSizeChanged { state.containerSize = it }
+                .pointerInput(state.isSelectionMode, state.isProcessing) {
+                    if (state.isSelectionMode && !state.isProcessing) {
+                        detectTapGestures { onPointSelected(it) }
+                    } else {
+                        detectTransformGestures { centroid, pan, zoom, _ ->
+                            state.updateTransform(centroid, pan, zoom)
                         }
                     }
                 }
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer(
+                        scaleX = state.scale,
+                        scaleY = state.scale,
+                        translationX = state.offset.x * state.scale,
+                        translationY = state.offset.y * state.scale,
+                        transformOrigin = TransformOrigin(0f, 0f)
+                    )
+            ) {
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize()
+                )
 
-                Button(
-                    onClick = onDismiss,
-                    modifier = Modifier.align(Alignment.End).padding(top = 16.dp)
-                ) {
-                    Text("Закрыть")
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    with(overlay) {
+                        drawPathScaled(cachedPath)
+
+                    }
+                }
+            }
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                with(overlay) {
+                    if (location.mapLocation != null) {
+                        drawPointUnscaled(location.mapLocation!!, 7f, Color.Yellow)
+                    }
+                    if (viewModel.currentStep != null) {
+                        drawPointUnscaled(
+                            Offset(
+                                viewModel.currentStep!!.current.first.toFloat(),
+                                viewModel.currentStep!!.current.second.toFloat()
+                            )
+                        )
+                        drawPointsUnscaled(viewModel.currentStep!!.openSet.map { p ->
+                            Offset(p.first.toFloat(), p.second.toFloat())
+                        }, 3f, Color.Green)
+//                    drawPointsUnscaled(viewModel.currentStep!!.closedSet.map { p ->
+//                        Offset(p.first.toFloat(), p.second.toFloat())
+//                    }, 1f, Color.Blue)
+                    }
+                }
+            }
+            val textStyle = TextStyle(
+                color = Color.Black,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                state.selectedPoints.forEach { point ->
+                    val screenPos = state.contentToScreen(point.position)
+                    val label = point.id.toString()
+
+                    drawCircle(color = Color.Red, radius = 20f, center = screenPos)
+                    drawCircle(color = Color.White, radius = 8f, center = screenPos)
+
+                    val textLayoutResult = textMeasurer.measure(
+                        text = label,
+                        style = textStyle
+                    )
+
+                    val textWidth = textLayoutResult.size.width.toFloat()
+                    val textHeight = textLayoutResult.size.height.toFloat()
+
+                    val pinWidth = maxOf(50f, textWidth + 20f)
+                    val pinHeight = 70f
+                    val tailHeight = 25f
+                    val pinBottomOffset = 25f
+
+                    val path = Path().apply {
+                        moveTo(screenPos.x, screenPos.y - pinBottomOffset)
+                        lineTo(
+                            screenPos.x - pinWidth / 2,
+                            screenPos.y - pinBottomOffset - tailHeight
+                        )
+                        lineTo(
+                            screenPos.x - pinWidth / 2,
+                            screenPos.y - pinBottomOffset - pinHeight
+                        )
+                        lineTo(
+                            screenPos.x + pinWidth / 2,
+                            screenPos.y - pinBottomOffset - pinHeight
+                        )
+                        lineTo(
+                            screenPos.x + pinWidth / 2,
+                            screenPos.y - pinBottomOffset - tailHeight
+                        )
+                        close()
+                    }
+
+                    drawPath(path = path, color = Color.Yellow)
+                    drawPath(path = path, color = Color.Black, style = Stroke(width = 2f))
+
+                    drawText(
+                        textLayoutResult = textLayoutResult,
+                        topLeft = Offset(
+                            x = screenPos.x - textWidth / 2,
+                            y = screenPos.y - pinBottomOffset - pinHeight +
+                                    (pinHeight - tailHeight) / 2 - textHeight / 2
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    @Composable
+    fun PointsListDialog(
+        points: List<MapPoint>,
+        onDismiss: () -> Unit,
+        onDeletePoint: (Int) -> Unit
+    ) {
+        Dialog(onDismissRequest = onDismiss) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = Color.White,
+                modifier = Modifier.fillMaxWidth().padding(16.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Выбранные локации",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
+                    if (points.isEmpty()) {
+                        Text("Список пуст", modifier = Modifier.padding(vertical = 16.dp))
+                    } else {
+                        LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
+                            itemsIndexed(points) { index, point ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(text = "Точка №${point.id}", fontSize = 18.sp)
+                                    IconButton(onClick = { onDeletePoint(index) }) {
+                                        Text(
+                                            "✕",
+                                            color = Color.Red,
+                                            fontSize = 22.sp,
+                                            fontWeight = FontWeight.ExtraBold
+                                        )
+                                    }
+                                }
+                                HorizontalDivider(color = Color.LightGray)
+                            }
+                        }
+                    }
+
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier.align(Alignment.End).padding(top = 16.dp)
+                    ) {
+                        Text("Закрыть")
+                    }
                 }
             }
         }
