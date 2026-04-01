@@ -32,3 +32,6 @@ google-services.json
 
 # Android Profiling
 *.hprof
+
+# Project specific
+digit_recognition_python/mnist_train.csv
