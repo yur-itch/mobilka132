@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mobilka132.data.pathfinding.AStar
 import com.example.mobilka132.data.pathfinding.AStarStep
+import com.example.mobilka132.model.MapPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.flowOn
@@ -42,32 +43,36 @@ class MapViewModel : ViewModel() {
         }
     }
 
-    fun requestPathfinding(visualizeSteps : Boolean = false){
-        pathJob?.cancel()
+    fun requestPathfinding(visualizeSteps : Boolean = false) {
         val points = state.selectedPoints.toList()
+        if (points.size >= 2) {
+            val p1 = points[points.size - 2]
+            val p2 = points[points.size - 1]
+            requestPathfinding(p1, p2, visualizeSteps)
+        }
+    }
+    fun requestPathfinding(p1 : MapPoint, p2 : MapPoint, visualizeSteps : Boolean = false) =
+        requestPathfinding(p1.position, p2.position, visualizeSteps)
+    fun requestPathfinding(p1 : Offset, p2 : Offset, visualizeSteps : Boolean = false){
+        pathJob?.cancel()
         try {
-            if (points.size >= 2) {
-                val p1 = points[points.size - 2]
-                val p2 = points[points.size - 1]
-                if (!visualizeSteps)
-                {
-                    pathJob = viewModelScope.launch {
-                        val path = withContext(Dispatchers.Default) {
-                            lastPath = algorithm.findPath(p1.position.toPair(),p2.position.toPair()).map { p -> p.toOffset() }
-                        }
+            if (!visualizeSteps)
+            {
+                pathJob = viewModelScope.launch {
+                    val path = withContext(Dispatchers.Default) {
+                        lastPath = algorithm.findPath(p1.toPair(),p2.toPair()).map { p -> p.toOffset() }
                     }
                 }
-                else
-                {
-                    startPathfinding(p1.position.toPair(), p2.position.toPair())
+            }
+            else
+            {
+                startPathfinding(p1.toPair(), p2.toPair())
+            }
+            isPathProcessing = true;
+            pathJob?.invokeOnCompletion { cause ->
+                if (cause == null) {
                 }
-                isPathProcessing = true;
-                pathJob?.invokeOnCompletion { cause ->
-                    if (cause == null) {
-
-                    }
-                    isPathProcessing = false;
-                }
+                isPathProcessing = false;
             }
         }
         finally {
@@ -95,7 +100,6 @@ class MapViewModel : ViewModel() {
                             }
                         }
                     }
-
             } catch (e: CancellationException) {
             } finally {
             }

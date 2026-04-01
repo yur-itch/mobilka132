@@ -9,14 +9,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.unit.IntSize
+import com.example.mobilka132.model.MapPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.min
-
-data class MapPoint(
-    val id: Int,
-    val position: Offset
-)
 
 class MapState {
     var offset by mutableStateOf(Offset.Zero)
@@ -105,7 +101,7 @@ class MapState {
         }
     }
 
-    private fun findNearestAvailablePoint(startPoint: Offset): Offset {
+    fun findNearestAvailablePoint(startPoint: Offset): Offset {
         val pixels = maskPixels ?: return startPoint
         val w = maskWidth
         val h = maskHeight
