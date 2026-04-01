@@ -18,7 +18,6 @@ class MapManager(val context: Context) {
         println(cont);
 
         val bitmap = BitmapFactory.decodeStream(cont);
-        println("Ширина: ${bitmap.width}, Высота: ${bitmap.height}")
         cont.close();
 
         for(x in 0 until min(bitmap.width, grid.size)){
