@@ -1,6 +1,7 @@
-package com.example.mobilka132
+package com.example.mobilka132.pickBestRestaurant
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -12,8 +13,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.example.mobilka132.data.pathfinding.DecisionTree
-import com.example.mobilka132.data.pathfinding.DecisionTreeManager
 
 @Composable
 fun DecisionDialog(
@@ -22,7 +21,7 @@ fun DecisionDialog(
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+            shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 8.dp,
             modifier = Modifier.fillMaxWidth().padding(16.dp)

@@ -42,7 +42,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.mobilka132.data.pathfinding.DecisionTreeManager
+import com.example.mobilka132.pickBestRestaurant.DecisionDialog
+import com.example.mobilka132.pickBestRestaurant.DecisionTreeManager
 
 class MainActivity : ComponentActivity() {
 

@@ -1,4 +1,4 @@
-package com.example.mobilka132.data.pathfinding
+package com.example.mobilka132.pickBestRestaurant
 
 import kotlin.collections.get
 import kotlin.math.log2
@@ -102,6 +102,7 @@ class DecisionTree {
             Row(mapOf("location" to "second_building", "budget" to "low", "time_available" to "very_short", "food_type" to "snack", "queue_tolerance" to "low", "weather" to "good"), "Vending_Machine"),
             Row(mapOf("location" to "second_building", "budget" to "medium", "time_available" to "short", "food_type" to "coffee", "queue_tolerance" to "medium", "weather" to "good"), "Second_Building_Cafe"),
             Row(mapOf("location" to "second_building", "budget" to "medium", "time_available" to "medium", "food_type" to "full_meal", "queue_tolerance" to "medium", "weather" to "good"), "Main_Cafeteria"),
+            Row(mapOf("location" to "second_building", "budget" to "low", "time_available" to "medium", "food_type" to "full_meal", "queue_tolerance" to "medium", "weather" to "good"), "Canteen_2"),
             Row(mapOf("location" to "second_building", "budget" to "low", "time_available" to "short", "food_type" to "snack", "queue_tolerance" to "low", "weather" to "bad"), "Vending_Machine"),
             Row(mapOf("location" to "second_building", "budget" to "high", "time_available" to "medium", "food_type" to "full_meal", "queue_tolerance" to "high", "weather" to "good"), "Nearby_Restaurant"),
 
