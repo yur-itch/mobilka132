@@ -90,26 +90,4 @@ class DecisionTree {
 
         return baseEntropy - subsetEntropy
     }
-
-    fun Data(): List<Row> {
-        return listOf(
-            Row(mapOf("location" to "main_building", "budget" to "low", "time_available" to "medium", "food_type" to "full_meal", "queue_tolerance" to "medium", "weather" to "good"), "Main_Cafeteria"),
-            Row(mapOf("location" to "main_building", "budget" to "low", "time_available" to "short", "food_type" to "snack", "queue_tolerance" to "low", "weather" to "good"), "Yarche"),
-            Row(mapOf("location" to "main_building", "budget" to "medium", "time_available" to "short", "food_type" to "coffee", "queue_tolerance" to "low", "weather" to "good"), "Bus_Stop_Coffee"),
-            Row(mapOf("location" to "main_building", "budget" to "high", "time_available" to "medium", "food_type" to "coffee", "queue_tolerance" to "medium", "weather" to "good"), "Starbooks"),
-            Row(mapOf("location" to "main_building", "budget" to "low", "time_available" to "short", "food_type" to "snack", "queue_tolerance" to "high", "weather" to "bad"), "Yarche"),
-
-            Row(mapOf("location" to "second_building", "budget" to "low", "time_available" to "very_short", "food_type" to "snack", "queue_tolerance" to "low", "weather" to "good"), "Vending_Machine"),
-            Row(mapOf("location" to "second_building", "budget" to "medium", "time_available" to "short", "food_type" to "coffee", "queue_tolerance" to "medium", "weather" to "good"), "Second_Building_Cafe"),
-            Row(mapOf("location" to "second_building", "budget" to "medium", "time_available" to "medium", "food_type" to "full_meal", "queue_tolerance" to "medium", "weather" to "good"), "Main_Cafeteria"),
-            Row(mapOf("location" to "second_building", "budget" to "low", "time_available" to "medium", "food_type" to "full_meal", "queue_tolerance" to "medium", "weather" to "good"), "Canteen_2"),
-            Row(mapOf("location" to "second_building", "budget" to "low", "time_available" to "short", "food_type" to "snack", "queue_tolerance" to "low", "weather" to "bad"), "Vending_Machine"),
-            Row(mapOf("location" to "second_building", "budget" to "high", "time_available" to "medium", "food_type" to "full_meal", "queue_tolerance" to "high", "weather" to "good"), "Nearby_Restaurant"),
-
-            Row(mapOf("location" to "campus_center", "budget" to "medium", "time_available" to "short", "food_type" to "pancakes", "queue_tolerance" to "medium", "weather" to "good"), "Siberian_Pancakes"),
-            Row(mapOf("location" to "campus_center", "budget" to "low", "time_available" to "short", "food_type" to "snack", "queue_tolerance" to "low", "weather" to "good"), "Campus_Kiosk"),
-            Row(mapOf("location" to "campus_center", "budget" to "high", "time_available" to "long", "food_type" to "full_meal", "queue_tolerance" to "high", "weather" to "bad"), "Information_Center_Cafe"),
-            Row(mapOf("location" to "campus_center", "budget" to "medium", "time_available" to "medium", "food_type" to "coffee", "queue_tolerance" to "low", "weather" to "good"), "Pancake_House_Coffee")
-        )
-    }
 }
