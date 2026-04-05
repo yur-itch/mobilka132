@@ -14,7 +14,7 @@ class MapManager(val context: Context)  {
         Array(3000) { j -> 0 }
     }
 
-    suspend fun loadData() = withContext(Dispatchers.Default) {
+    fun loadData() {
         val cont = context.assets.open("test.png");
 
         println(cont);
