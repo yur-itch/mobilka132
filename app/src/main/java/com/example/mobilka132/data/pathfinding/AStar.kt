@@ -1,5 +1,6 @@
 package com.example.mobilka132.data.pathfinding
 
+import com.example.mobilka132.model.AStarStep
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
@@ -17,26 +18,20 @@ class AStar {
         this.map = map
     }
 
-    suspend fun findPath(s: Pair<Int, Int>, e: Pair<Int, Int>) : List<Pair<Int, Int>> {
+    private suspend fun findPath(s: Pair<Int, Int>, e: Pair<Int, Int>) : List<Pair<Int, Int>> {
         if (s.first >= map.size || s.second >= map.size || e.first >= map.size || e.second >= map.size) {
             println("Coordinate(s) out of array's bounds (${s.first}, ${s.second}) ($e.first, ${e.second})")
-            return emptyList()
         }
-
-        val allNodes = mutableMapOf<Pair<Int, Int>, Node>()
-        val startNode : Node = getOrCreateNode(s, map, allNodes)
-        val destinationNode : Node = getOrCreateNode(e, map, allNodes)
-        val path : List<Node> = find(startNode, destinationNode, map, allNodes)
-        val points: List<Pair<Int, Int>> = path.map { node ->
-            Pair(node.x, node.y)
-        }
-        return points
+        return emptyList()
     }
 
-    private suspend fun find(start : Node, destination : Node, map : Array<Array<Int>>, allNodes :  MutableMap<Pair<Int, Int>, Node>) : List<Node> {
+    suspend fun find(s: Pair<Int, Int>, e: Pair<Int, Int>) : PathData {
         var found = false
-        val path : MutableList<Node> = mutableListOf()
+        val allNodes = mutableMapOf<Pair<Int, Int>, Node>()
+        val start : Node = getOrCreateNode(s, map, allNodes)
+        val destination : Node = getOrCreateNode(e, map, allNodes)
         val closed : MutableSet<Node> = mutableSetOf()
+        var path = PathData(emptyList(), 0f)
         val minHeap = PriorityQueue<Node>()
         minHeap.add(start)
         while (minHeap.isNotEmpty()) {
@@ -80,14 +75,9 @@ class AStar {
             }
         }
         if (found) {
-            var current : Node = destination
-            while (current != start) {
-                path.add(current)
-                current = current.parent!!
-            }
-            path.add(current)
+            path = retrace(start, destination)
         }
-        return path.reversed()
+        return path
     }
 
     private fun getDistance(start : Node, destination : Node) : Int {
@@ -106,7 +96,20 @@ class AStar {
         }
     }
 
-    fun findPathAsync(s: Pair<Int, Int>, e: Pair<Int, Int>, delayMs: Long = 16L): Flow<AStarStep> = flow {
+    private fun retrace(start : Node, destination : Node) : PathData {
+        val path = mutableListOf<Node>()
+        var distance = 0f
+        var current : Node = destination
+        while (current != start) {
+            path.add(current)
+            distance += getDistance(current, current.parent!!)
+            current = current.parent!!
+        }
+        path.add(current)
+        return PathData(path.reversed(), distance / 10)
+    }
+
+    fun findPathAsync(s: Pair<Int, Int>, e: Pair<Int, Int>, delayMs: Long = 16L): Flow<AStarStepData> = flow {
         val path : MutableList<Node> = mutableListOf()
         val allNodes = mutableMapOf<Pair<Int, Int>, Node>()
         val start : Node = getOrCreateNode(s, map, allNodes)
@@ -121,12 +124,10 @@ class AStar {
             closed.add(current!!)
 
             emit(
-                AStarStep(
-                    Pair(current.x, current.y),
-                    minHeap.map { item -> Pair(item.x, item.y) },
-                    closed.map {
-                            item -> Pair(item.x, item.y)
-                    }.toList()
+                AStarStepData(
+                    current,
+                    minHeap.toList(),
+                    closed.toList()
                 )
             )
 
@@ -139,13 +140,11 @@ class AStar {
                 path.add(curr)
 
                 emit(
-                    AStarStep(
-                        Pair(current.x, current.y),
-                        minHeap.map { item -> Pair(item.x, item.y) },
-                        closed.map {
-                                item -> Pair(item.x, item.y)
-                        }.toList(),
-                        path = path.map { item -> Pair(item.x, item.y) }
+                    AStarStepData(
+                        current,
+                        minHeap.toList(),
+                        closed.toList(),
+                        path = retrace(start, destination)
                     )
                 )
                 return@flow

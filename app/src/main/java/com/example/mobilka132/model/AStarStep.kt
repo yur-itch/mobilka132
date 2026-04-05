@@ -1,8 +1,8 @@
-package com.example.mobilka132.data.pathfinding
+package com.example.mobilka132.model
 
 data class AStarStep(
     val current: Pair<Int, Int>,
     val openSet: List<Pair<Int, Int>>,
     val closedSet: List<Pair<Int, Int>>,
-    val path: List<Pair<Int, Int>>? = null
+    val path: Path? = null
 )
