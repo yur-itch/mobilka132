@@ -39,9 +39,13 @@
     import androidx.compose.ui.unit.dp
     import androidx.compose.ui.unit.sp
     import androidx.compose.ui.window.Dialog
-    import kotlinx.coroutines.launch
+    import androidx.lifecycle.lifecycleScope
     import com.example.mobilka132.data.location.LocationManager
     import com.example.mobilka132.model.MapPoint
+    import kotlinx.coroutines.Dispatchers
+    import kotlinx.coroutines.coroutineScope
+    import kotlinx.coroutines.launch
+    import kotlinx.coroutines.withContext
 
     class MainActivity : ComponentActivity() {
 
@@ -52,8 +56,11 @@
         override fun onCreate(savedInstanceState: Bundle?) {
             super.onCreate(savedInstanceState)
             mapManager = MapManager(this)
-            mapManager.loadData()
-            viewModel.init(mapManager.grid)
+
+            lifecycleScope.launch {
+                mapManager.loadData()
+                viewModel.init(mapManager.grid)
+            }
             location.checkPermission()
 
             setContent {
@@ -272,8 +279,8 @@
     ) {
         val textMeasurer = rememberTextMeasurer()
 
-        val cachedPath = remember(viewModel.lastPath) {
-            overlay.generatePath(viewModel.lastPath)
+        val cachedPath = remember(viewModel.lastPath?.steps) {
+            overlay.generatePath(viewModel.lastPath?.steps)
         }
 
         val stepOffset = remember(viewModel.currentStep) {
