@@ -49,13 +49,12 @@ import com.example.mobilka132.model.MapPoint
 
 class MainActivity : ComponentActivity() {
 
-    lateinit var mapManager: MapManager
+    val mapManager: MapManager = MapManager(this)
     val viewModel: MapViewModel = MapViewModel()
     val location: LocationManager = LocationManager(this, activityResultRegistry)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        mapManager = MapManager(this)
         mapManager.loadData()
         viewModel.init(mapManager.grid)
         location.checkPermission()
