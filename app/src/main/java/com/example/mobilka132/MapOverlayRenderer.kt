@@ -1,23 +1,20 @@
 package com.example.mobilka132
 
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 
 class MapOverlayRenderer(private val state: MapState) {
 
-    fun generatePath(nodes: List<Offset>): Path {
+    fun generatePath(points: List<Offset>?): Path {
         val path = Path()
-        if (nodes.isEmpty()) return path
-
-        path.moveTo(nodes[0].x, nodes[0].y)
-        for (i in 1 until nodes.size) {
-            path.lineTo(nodes[i].x, nodes[i].y)
+        if (points.isNullOrEmpty()) return path
+        path.moveTo(points[0].x, points[0].y)
+        for (i in 1 until points.size) {
+            path.lineTo(points[i].x, points[i].y)
         }
         return path
     }
