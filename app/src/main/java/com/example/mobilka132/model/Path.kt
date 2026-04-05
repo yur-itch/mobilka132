@@ -1,6 +1,9 @@
 package com.example.mobilka132.model
 
+import androidx.compose.ui.geometry.Offset
+
 data class Path (
-    val id: Int,
-    val steps : List<Pair<Int, Int>>
+    val steps : List<Offset>,
+    val distance : Float,
+
 )
