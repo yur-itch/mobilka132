@@ -1,10 +1,8 @@
 package com.example.mobilka132
 
-import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.content.Context
-import com.example.mobilka132.data.pathfinding.Node
 import androidx.core.graphics.get
 import kotlin.math.min
 
