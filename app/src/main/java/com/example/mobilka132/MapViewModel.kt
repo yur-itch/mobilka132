@@ -146,7 +146,7 @@ class MapViewModel : ViewModel() {
             }
 
             try {
-                repeat(30) {
+                repeat(10) {
                     val randomPoint = Offset(
                         Random.nextInt(0, width).toFloat(),
                         Random.nextInt(0, height).toFloat()
@@ -164,7 +164,7 @@ class MapViewModel : ViewModel() {
                 val numItems = 10
 
                 val gaPoints = mapPoints.map { com.example.mobilka132.data.genetic.Point(it.position.x.toInt(), it.position.y.toInt()) }
-                val distancer = Distancer(gaPoints)
+                val distancer = WalkableDistance(gaPoints, algorithm)
 
                 val allItems = (0 until numItems).toMutableList()
                 val items = MutableList(numPoints) { mutableListOf<Int>() }
@@ -187,10 +187,14 @@ class MapViewModel : ViewModel() {
 
                         val best = population.maxByOrNull { fitness(it, ctx) }
                         if (best != null) {
-                            val bestPath = best.map { idx -> mapPoints[idx].position }
+                            val actualPath = mutableListOf<Offset>()
+                            for (i in 0 until best.size - 1) {
+                                val segment = distancer.path(best[i], best[i+1])
+                                actualPath.addAll(segment.map { Offset(it.x.toFloat(), it.y.toFloat()) })
+                            }
                             // Update UI on main thread
                             withContext(Dispatchers.Main) {
-                                lastPath = bestPath
+                                lastPath = actualPath
                                 currentGeneration = gen
                             }
                         }

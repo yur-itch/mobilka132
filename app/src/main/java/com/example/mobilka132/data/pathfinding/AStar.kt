@@ -184,5 +184,16 @@ class AStar {
             delay(delayMs)
         }
     }
+
+    fun pathLength(path: List<Pair<Int, Int>>): Double {
+        return (1 until path.size).sumOf { x ->
+            val start = path[x - 1]
+            val destination = path[x]
+            val dX = abs(start.first - destination.first)
+            val dY = abs(start.second - destination.second)
+            (if (dX >= dY) 14 * dY + 10 * (dX - dY)
+            else 14 * dX + 10 * (dY - dX)).toDouble()
+        }
+    }
 }
 
