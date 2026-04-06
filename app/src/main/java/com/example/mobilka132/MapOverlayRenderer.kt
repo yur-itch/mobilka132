@@ -1,13 +1,11 @@
 package com.example.mobilka132
 
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
-import com.example.mobilka132.data.pathfinding.Node
 
 class MapOverlayRenderer(private val state: MapState) {
     fun generatePath(nodes: List<Offset>): Path {
@@ -42,6 +40,16 @@ class MapOverlayRenderer(private val state: MapState) {
         val screenPos = state.contentToScreen(point)
         drawCircle(color = Color.Blue, radius = 20f, center = screenPos)
         drawCircle(color = Color.White, radius = 10f, center = screenPos)
+    }
+
+    fun DrawScope.drawPointUnscaled(point: Offset, radius : Float = 5f, color : Color = Color.Yellow) {
+        val screenPos = state.contentToScreen(point)
+        drawCircle(color = color, radius = 2 * radius, center = screenPos)
+        drawCircle(color = Color.White, radius = radius, center = screenPos)
+    }
+
+    fun DrawScope.drawPointsUnscaled(points: List<Offset>, radius : Float = 5f, color : Color = Color.Yellow) {
+        points.forEach { drawPointUnscaled(it, radius, color) }
     }
 
     fun DrawScope.drawMarkersUnscaled(points: List<Offset>) =
