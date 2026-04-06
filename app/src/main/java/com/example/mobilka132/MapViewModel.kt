@@ -1,6 +1,8 @@
 package com.example.mobilka132
 
+import android.content.Context
 import android.graphics.Bitmap
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -23,6 +25,7 @@ import kotlin.random.Random
 class MapViewModel : ViewModel() {
 
     lateinit var algorithm: AStar
+    private lateinit var distancer: WalkableDistance
     val state = MapState()
     val overlay = MapOverlayRenderer(state)
     var lastPath by mutableStateOf<List<Offset>>(emptyList())
@@ -36,8 +39,35 @@ class MapViewModel : ViewModel() {
     var currentGeneration by mutableStateOf(0)
     var totalGenerations by mutableStateOf(0)
 
+    private var loadedPoints: List<Offset> = emptyList()
+
     fun init(grid: Array<Array<Int>>) {
         algorithm = AStar(grid)
+        distancer = WalkableDistance(algorithm)
+    }
+
+    fun loadPointsFromAssets(context: Context) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val points = mutableListOf<Offset>()
+                context.assets.open("ga_points.csv").bufferedReader().useLines { lines ->
+                    lines.forEach { line ->
+                        val parts = line.split(",")
+                        if (parts.size == 2) {
+                            val x = parts[0].trim().toFloatOrNull()
+                            val y = parts[1].trim().toFloatOrNull()
+                            if (x != null && y != null) {
+                                points.add(Offset(x, y))
+                            }
+                        }
+                    }
+                }
+                loadedPoints = points
+                Log.d("GA_POINTS", "Successfully loaded ${points.size} points from assets")
+            } catch (e: Exception) {
+                Log.e("GA_POINTS", "Error loading points from assets", e)
+            }
+        }
     }
 
     fun onPointSelected(point: Offset, maskBitmap: Bitmap) {
@@ -146,12 +176,17 @@ class MapViewModel : ViewModel() {
             }
 
             try {
-                repeat(10) {
-                    val randomPoint = Offset(
-                        Random.nextInt(0, width).toFloat(),
-                        Random.nextInt(0, height).toFloat()
-                    )
-                    state.addPoint(randomPoint, maskBitmap)
+                if (loadedPoints.isNotEmpty()) {
+                    // Part 2: Added directly without snapping
+                    state.addPointsDirectly(loadedPoints)
+                } else {
+                    repeat(10) {
+                        val randomPoint = Offset(
+                            Random.nextInt(0, width).toFloat(),
+                            Random.nextInt(0, height).toFloat()
+                        )
+                        state.addPoint(randomPoint, maskBitmap)
+                    }
                 }
 
                 val mapPoints = state.selectedPoints.toList()
@@ -164,7 +199,7 @@ class MapViewModel : ViewModel() {
                 val numItems = 10
 
                 val gaPoints = mapPoints.map { com.example.mobilka132.data.genetic.Point(it.position.x.toInt(), it.position.y.toInt()) }
-                val distancer = WalkableDistance(gaPoints, algorithm)
+                distancer.setPoints(gaPoints)
 
                 val allItems = (0 until numItems).toMutableList()
                 val items = MutableList(numPoints) { mutableListOf<Int>() }

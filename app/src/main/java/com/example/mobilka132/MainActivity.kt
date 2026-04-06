@@ -55,6 +55,8 @@ class MainActivity : ComponentActivity() {
         viewModel.init(mapManager.grid)
         location.checkPermission()
 
+        viewModel.loadPointsFromAssets(this)
+
         setContent {
             val state = viewModel.state
             val overlay = viewModel.overlay
