@@ -34,7 +34,7 @@ class TestActivity : ComponentActivity() {
                 val points = List(numPoints) { Point(Random.nextInt(0, 1000), Random.nextInt(0, 1000)) }
                 pointsList = points
 
-                val distancer = Distancer(points)
+                val distancer = EucledianDistance(points)
                 val allItems = (0 until numItems).toMutableList()
                 val items = MutableList(numPoints) { mutableListOf<Int>() }
 

@@ -1,5 +1,7 @@
 package com.example.mobilka132.data.genetic
 
+import com.example.mobilka132.data.pathfinding.AStar
+import kotlinx.coroutines.runBlocking
 import kotlin.math.exp
 import kotlin.math.log2
 import kotlin.math.pow
@@ -47,7 +49,7 @@ class Mutator(private val path: MutableList<Int>, private val ctx: MutationConte
         return this
     }
 
-    fun do2opt(): Mutator {
+    suspend fun do2opt(): Mutator {
         while (true) {
             val pair = this.path.findFirst2opt(ctx) ?: break
             this.path.invertRange(pair.first + 1, pair.second)
@@ -61,8 +63,8 @@ class Mutator(private val path: MutableList<Int>, private val ctx: MutationConte
         return decay
     }
 
-    fun mutate(
-        func: Mutator.() -> Mutator,
+    suspend fun mutate(
+        func: suspend Mutator.() -> Mutator,
         strength: Double = 1.0,
         decay: Mutator.(Int) -> Double = { expLogDecay(it) },
     ): Mutator {
@@ -90,7 +92,7 @@ fun <E> MutableList<E>.invertRange(from: Int, to: Int) {
     }
 }
 
-fun MutableList<Int>.improvesWith2opt(i: Int, j: Int, ctx: MutationContext): Boolean {
+suspend fun MutableList<Int>.improvesWith2opt(i: Int, j: Int, ctx: MutationContext): Boolean {
     if (j - i < 2) return false
     if (j >= this.size - 1) return false
 
@@ -106,11 +108,11 @@ fun MutableList<Int>.improvesWith2opt(i: Int, j: Int, ctx: MutationContext): Boo
 }
 
 interface Distance {
-    operator fun get(i: Int, j: Int): Double
+    suspend operator fun get(i: Int, j: Int): Double
     val size: Int
 }
 
-fun MutableList<Int>.findFirst2opt(ctx: MutationContext): Pair<Int, Int>? {
+suspend fun MutableList<Int>.findFirst2opt(ctx: MutationContext): Pair<Int, Int>? {
     val n = this.size
     for (i in 0 until n - 3) {
         for (j in i + 2 until n - 1) {
@@ -139,7 +141,7 @@ fun crossover(a1: MutableList<Int>, a2: MutableList<Int>) {
 }
 */
 
-fun nearestNeighborAll(ctx: MutationContext): MutableList<Int> {
+suspend fun nearestNeighborAll(ctx: MutationContext): MutableList<Int> {
     val res = MutableList(1) { ctx.initial }
     val used = MutableList(ctx.dist.size) { false }
     used[ctx.initial] = true
@@ -160,7 +162,7 @@ fun nearestNeighborAll(ctx: MutationContext): MutableList<Int> {
     return res
 }
 
-fun fitness(arr: MutableList<Int>, ctx: MutationContext): Double {
+suspend fun fitness(arr: MutableList<Int>, ctx: MutationContext): Double {
     val collected = BooleanArray(ctx.allItems.size) { false }
     for (i in 0 until arr.size) {
         val pointIndex = arr[i]
@@ -168,9 +170,13 @@ fun fitness(arr: MutableList<Int>, ctx: MutationContext): Double {
             collected[item] = true
         }
     }
-    val dist = (1 until arr.size).sumOf { idx -> ctx.dist[arr[idx - 1], arr[idx]] }
+    
+    var dist = 0.0
+    for (idx in 1 until arr.size) {
+        dist += ctx.dist[arr[idx - 1], arr[idx]]
+    }
+    
     val uncollected = ctx.allItems.size - collected.count { it }
-    val factor = uncollected + 1
     return 1 / (dist + 1) - uncollected
 }
 
@@ -178,21 +184,70 @@ class Point(val x: Int, val y: Int) {
     fun distanceTo(other: Point): Double {
         return ((x - other.x).toDouble().pow(2) + (y - other.y).toDouble().pow(2)).pow(0.5)
     }
+
+    fun toPair(): Pair<Int, Int> {
+        return Pair(this.x, this.y)
+    }
 }
 
-class Distancer(private val points: List<Point>) : Distance {
+class EucledianDistance(private val points: List<Point>) : Distance {
     override val size: Int = points.size
 
-    operator override fun get(i: Int, j: Int): Double {
+    override suspend operator fun get(i: Int, j: Int): Double {
         return points[i].distanceTo(points[j])
     }
 }
 
-fun performGeneration(pop: Population, index: Int, total: Int, ctx: MutationContext): MutableList<MutableList<Int>> {
-    val sorted = pop.map { it to fitness(it, ctx) }
+data class CachedPath(
+    val path: List<Point>,
+    val length: Double
+)
+
+class WalkableDistance(
+    private val points: List<Point>,
+    private val algo: AStar
+) : Distance {
+
+    override val size: Int = points.size
+
+    private val cache = mutableMapOf<Pair<Int, Int>, CachedPath>()
+
+    private fun key(i: Int, j: Int): Pair<Int, Int> =
+        if (i <= j) i to j else j to i
+
+    private suspend fun getCached(i: Int, j: Int): CachedPath {
+        val k = key(i, j)
+        cache[k]?.let { return it }
+
+        val (start, end) = if (i <= j) i to j else j to i
+        val path = algo.findPath(points[start].toPair(), points[end].toPair())
+        val length = algo.pathLength(path)
+        val cached = CachedPath(path = path.map { Point(it.first, it.second) }, length = length)
+
+        cache[k] = cached
+        return cached
+    }
+
+    override suspend operator fun get(i: Int, j: Int): Double =
+        getCached(i, j).length
+
+    suspend fun path(i: Int, j: Int): List<Point> {
+        val p = getCached(i, j).path
+        return if (i <= j) p else p.reversed()
+    }
+}
+
+suspend fun performGeneration(pop: Population, index: Int, total: Int, ctx: MutationContext): MutableList<MutableList<Int>> {
+    val fitnessPairs = mutableListOf<Pair<MutableList<Int>, Double>>()
+    for (p in pop) {
+        fitnessPairs.add(p to fitness(p, ctx))
+    }
+    
+    val sorted = fitnessPairs
         .sortedByDescending { it.second }
         .map { it.first }
         .toMutableList()
+        
     pop.clear()
     pop.addAll(sorted)
     val newPop = MutableList(pop.size / 20) { pop[it].toMutableList() }
@@ -206,9 +261,9 @@ fun performGeneration(pop: Population, index: Int, total: Int, ctx: MutationCont
         val bestIndex = if (fitnessOne > fitnessTwo) one else two
         newPop.add(Mutator(pop[bestIndex], ctx)
             .copy()
-            .mutate(Mutator::invert, mutationRate)
-            .mutate(Mutator::remove, mutationRate)
-            .mutate(Mutator::add, mutationRate)
+            .mutate({ invert() }, mutationRate)
+            .mutate({ remove() }, mutationRate)
+            .mutate({ add() }, mutationRate)
             .do2opt()
             .get()
         )
@@ -218,15 +273,15 @@ fun performGeneration(pop: Population, index: Int, total: Int, ctx: MutationCont
     return newPop
 }
 
-fun newPopulation(size: Int, ctx: MutationContext): Population {
+suspend fun newPopulation(size: Int, ctx: MutationContext): Population {
     val nn = Mutator(nearestNeighborAll(ctx), ctx).do2opt().get()
     val res: Population = mutableListOf(nn)
     for (i in 1 until size) {
         res.add(Mutator(res[0], ctx)
             .copy()
-            .mutate(Mutator::invert, 1.0)
-            .mutate(Mutator::remove, 1.0)
-            .mutate(Mutator::add, 1.0)
+            .mutate({ invert() }, 1.0)
+            .mutate({ remove() }, 1.0)
+            .mutate({ add() }, 1.0)
             .do2opt()
             .get()
         )
@@ -235,8 +290,12 @@ fun newPopulation(size: Int, ctx: MutationContext): Population {
 }
 
 
-fun printPopulationStatistics(population: Population, ctx: MutationContext, label: String) {
-    val fitnesses = population.map { fitness(it, ctx) }
+suspend fun printPopulationStatistics(population: Population, ctx: MutationContext, label: String) {
+    val fitnesses = mutableListOf<Double>()
+    for (p in population) {
+        fitnesses.add(fitness(p, ctx))
+    }
+    
     val best = fitnesses.maxOrNull() ?: 0.0
     val worst = fitnesses.minOrNull() ?: 0.0
     val avg = fitnesses.average()
@@ -245,7 +304,16 @@ fun printPopulationStatistics(population: Population, ctx: MutationContext, labe
         else it[it.size / 2]
     }
 
-    val bestRoute = population.maxByOrNull { fitness(it, ctx) }
+    var bestRoute: MutableList<Int>? = null
+    var maxFit = Double.NEGATIVE_INFINITY
+    for (p in population) {
+        val f = fitness(p, ctx)
+        if (f > maxFit) {
+            maxFit = f
+            bestRoute = p
+        }
+    }
+    
     val bestRouteLength = bestRoute?.size ?: 0
 
     val collectedItems = if (bestRoute != null) {
@@ -267,9 +335,12 @@ fun printPopulationStatistics(population: Population, ctx: MutationContext, labe
     println()
 }
 
-fun printDetailedRoute(route: MutableList<Int>, ctx: MutationContext, label: String) {
+suspend fun printDetailedRoute(route: MutableList<Int>, ctx: MutationContext, label: String) {
     val fit = fitness(route, ctx)
-    val distance = (1 until route.size).sumOf { ctx.dist[route[it - 1], route[it]] }
+    var distance = 0.0
+    for (idx in 1 until route.size) {
+        distance += ctx.dist[route[idx - 1], route[idx]]
+    }
     val collected = mutableSetOf<Int>()
     for (i in route) {
         collected.addAll(ctx.items[i])
@@ -280,12 +351,11 @@ fun printDetailedRoute(route: MutableList<Int>, ctx: MutationContext, label: Str
     println("  Distance: $distance")
     println("  Length: ${route.size}")
     println("  Items collected: ${collected.size}/${ctx.allItems.size}")
-    println("  Items collected: ${collected.size}/${ctx.allItems.size}")
     println("  First 10 points: ${route.take(10)}")
     println()
 }
 
-fun main() {
+fun main() = runBlocking {
     println("=== Genetic Algorithm for TSP with Collection Problem ===\n")
 
     val numPoints = 50
@@ -302,7 +372,7 @@ fun main() {
         )
     }
 
-    val distancer = Distancer(points)
+    val distancer = EucledianDistance(points)
 
     println("Generating $numItems items distributed across points...")
     val allItems = (0 until numItems).toMutableList()
@@ -347,30 +417,25 @@ fun main() {
     println("\nRunning $generations generations...\n")
 
     for (gen in 1..generations) {
-        population = performGeneration(population, gen - 1, generations,ctx)
+        population = performGeneration(population, gen - 1, generations, ctx)
         if (gen % 10 == 0) {
             printPopulationStatistics(population, ctx, "Generation $gen")
         }
     }
 
     println("\n=== Final Results ===")
-    val bestRoute = population.maxByOrNull { fitness(it, ctx) }
+    
+    var bestRoute: MutableList<Int>? = null
+    var maxFitnessValue = Double.NEGATIVE_INFINITY
+    for (p in population) {
+        val f = fitness(p, ctx)
+        if (f > maxFitnessValue) {
+            maxFitnessValue = f
+            bestRoute = p
+        }
+    }
+    
     if (bestRoute != null) {
-        val bestFitness = fitness(bestRoute, ctx)
-        println("Best fitness: $bestFitness")
-        println("\nBest route length: ${bestRoute.size} points")
-        println("First 10 points of best route: ${bestRoute.take(10)}")
-        val collectedItems = mutableSetOf<Int>()
-        for (i in bestRoute) {
-            collectedItems.addAll(items[i])
-        }
-        println("Items collected: ${collectedItems.size} / $numItems")
-        println("Collection rate: ${(collectedItems.size.toDouble() / numItems * 100).toInt()}%")
-        val totalDistance = (1 until bestRoute.size).sumOf {
-            distancer[bestRoute[it - 1], bestRoute[it]]
-        }
-        println("Total travel distance: ${totalDistance.toInt()}")
-        println("Starts at initial point: ${bestRoute[0] == initialPoint}")
-        println("No duplicate points: ${bestRoute.distinct().size == bestRoute.size}")
+        printDetailedRoute(bestRoute, ctx, "Final Best Route")
     }
 }
