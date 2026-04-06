@@ -16,6 +16,7 @@ class DecisionTreeManager(application: Application) : AndroidViewModel(applicati
     var currentNode by mutableStateOf<DecisionTree.Node?>(null)
     var recommendation by mutableStateOf("")
     var budgetInput by mutableStateOf("")
+    var decisionPath by mutableStateOf<List<Pair<String, String>>>(emptyList())
 
     init {
         reset()
@@ -28,6 +29,7 @@ class DecisionTreeManager(application: Application) : AndroidViewModel(applicati
         currentNode = rootNode
         recommendation = ""
         budgetInput = ""
+        decisionPath = emptyList()
     }
 
     private fun loadDataFromCsv(): List<DecisionTree.Row> {
@@ -59,7 +61,10 @@ class DecisionTreeManager(application: Application) : AndroidViewModel(applicati
 
     fun onAnswerSelected(answer: String) {
         val node = currentNode as? DecisionTree.InternalNode ?: return
-        val nextNode = node.branches[answer]
+
+        val nextNode = node.branches[answer] ?: node.branches.values.firstOrNull()
+
+        decisionPath = decisionPath + (node.problemName to answer)
 
         if (nextNode != null) {
             if (nextNode is DecisionTree.Leaf) {

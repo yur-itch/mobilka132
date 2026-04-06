@@ -4,7 +4,6 @@ import kotlin.collections.get
 import kotlin.math.log2
 
 class DecisionTree {
-
     data class Row(
         val problems: Map<String, String>,
         val target: String

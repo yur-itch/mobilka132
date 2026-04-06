@@ -38,7 +38,11 @@ fun DecisionDialog(
                 )
 
                 if (viewModel.recommendation.isNotEmpty()) {
-                    ResultView(viewModel.recommendation, onRestart = { viewModel.reset() })
+                    ResultView(
+                        result = viewModel.recommendation,
+                        path = viewModel.decisionPath,
+                        onRestart = { viewModel.reset() }
+                    )
                 } else {
                     when (val node = viewModel.currentNode) {
                         is DecisionTree.InternalNode -> {
@@ -52,7 +56,11 @@ fun DecisionDialog(
                             )
                         }
                         is DecisionTree.Leaf -> {
-                            ResultView(node.result, onRestart = { viewModel.reset() })
+                            ResultView(
+                                result = node.result,
+                                path = viewModel.decisionPath,
+                                onRestart = { viewModel.reset() }
+                            )
                         }
                         else -> {
                             Text("Загрузка дерева...")
@@ -114,24 +122,7 @@ fun QuestionView(
             modifier = Modifier.fillMaxWidth()
         ) {
             node.branches.keys.forEach { answer ->
-                val displayAnswer = when(answer) {
-                    "main_building" -> "Главный корпус"
-                    "second_building" -> "Второй корпус"
-                    "campus_center" -> "Центр кампуса"
-                    "short" -> "Мало (15-20 мин)"
-                    "medium" -> "Средне (30-40 мин)"
-                    "very_short" -> "Очень мало (5 мин)"
-                    "long" -> "Много времени"
-                    "full_meal" -> "Полноценный обед"
-                    "snack" -> "Перекус"
-                    "coffee" -> "Просто кофе"
-                    "pancakes" -> "Блинчики"
-                    "low" -> "Не хочу ждать (очереди)"
-                    "high" -> "Готов подождать"
-                    "good" -> "Хорошая (солнце)"
-                    "bad" -> "Плохая (дождь/снег)"
-                    else -> answer
-                }
+                val displayAnswer = translateValue(node.problemName, answer)
                 
                 OutlinedButton(
                     onClick = { onAnswerSelect(answer) },
@@ -151,26 +142,111 @@ fun QuestionView(
 }
 
 @Composable
-fun ResultView(result: String, onRestart: () -> Unit) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
-        modifier = Modifier.fillMaxWidth()
+fun ResultView(result: String, path: List<Pair<String, String>>, onRestart: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Text("РЕКОМЕНДАЦИЯ:", fontSize = 12.sp, fontWeight = FontWeight.Light)
+            Column(
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("РЕКОМЕНДАЦИЯ:", fontSize = 12.sp, fontWeight = FontWeight.Light)
+                Text(
+                    text = result,
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = Color(0xFF2E7D32),
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        if (path.isNotEmpty()) {
             Text(
-                text = result,
-                style = MaterialTheme.typography.headlineMedium,
-                color = Color(0xFF2E7D32),
-                fontWeight = FontWeight.Bold
+                text = "Ваш путь принятия решения:",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.Start)
             )
+            
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                path.forEachIndexed { index, pair ->
+                    val question = translateKey(pair.first)
+                    val answer = translateValue(pair.first, pair.second)
+                    Text(
+                        text = "${index + 1}. $question -> $answer",
+                        fontSize = 13.sp,
+                        color = Color.Gray
+                    )
+                }
+            }
+        }
+        
+        Button(onClick = onRestart, modifier = Modifier.fillMaxWidth()) {
+            Text("Попробовать снова")
         }
     }
-    
-    Button(onClick = onRestart, modifier = Modifier.fillMaxWidth()) {
-        Text("Попробовать снова")
+}
+
+private fun translateKey(key: String): String {
+    return when(key) {
+        "budget" -> "Бюджет"
+        "location" -> "Локация"
+        "time_available" -> "Время"
+        "food_type" -> "Тип еды"
+        "queue_tolerance" -> "Очереди"
+        "weather" -> "Погода"
+        else -> key
+    }
+}
+
+private fun translateValue(key: String, value: String): String {
+    return when(key) {
+        "budget" -> when(value) {
+            "low" -> "Низкий"
+            "medium" -> "Средний"
+            "high" -> "Высокий"
+            else -> value
+        }
+        "time_available" -> when(value) {
+            "very_short" -> "Очень мало (5 мин)"
+            "short" -> "Мало (15-20 мин)"
+            "medium" -> "Средне (30-40 мин)"
+            "long" -> "Много времени"
+            else -> value
+        }
+        "location" -> when(value) {
+            "main_building" -> "Главный корпус"
+            "second_building" -> "Второй корпус"
+            "campus_center" -> "Центр кампуса"
+            "bus_stop" -> "Остановка"
+            else -> value
+        }
+        "food_type" -> when(value) {
+            "coffee" -> "Просто кофе"
+            "pancakes" -> "Блинчики"
+            "full_meal" -> "Полноценный обед"
+            "snack" -> "Перекус"
+            else -> value
+        }
+        "queue_tolerance" -> when(value) {
+            "low" -> "Не хочу ждать"
+            "medium" -> "Средне"
+            "high" -> "Готов ждать"
+            else -> value
+        }
+        "weather" -> when(value) {
+            "good" -> "Хорошая"
+            "bad" -> "Плохая"
+            else -> value
+        }
+        else -> value
     }
 }
