@@ -130,8 +130,17 @@ class MapViewModel : ViewModel() {
                         .flowOn(pathfinderDispatcher)
                         .collect { step ->
                             currentStep = step
-                            step.path?.let { pathPairs ->
-                                foundPath = PathData(pathPairs.map { com.example.mobilka132.data.pathfinding.Node(it.first, it.second, 0) }, 0f)
+                            step.path?.let { pathObject ->
+                                foundPath = PathData(
+                                    pathObject.steps.map { offset ->
+                                        com.example.mobilka132.data.pathfinding.Node(
+                                            offset.x.toInt(),
+                                            offset.y.toInt(),
+                                            0
+                                        )
+                                    },
+                                    pathObject.distance
+                                )
                             }
                         }
                 }

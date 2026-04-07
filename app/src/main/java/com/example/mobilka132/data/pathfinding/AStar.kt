@@ -1,7 +1,6 @@
 package com.example.mobilka132.data.pathfinding
 
 import com.example.mobilka132.model.AStarStep
-import com.example.mobilka132.model.PathData
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
@@ -29,7 +28,7 @@ class AStar {
         val destinationNode: Node = getOrCreateNode(e.first, e.second, map, allNodes)
 
         val pathData = find(startNode, destinationNode, allNodes)
-        return pathData.steps.map { node -> Pair(node.x, node.y) }
+        return pathData.path.map { node -> Pair(node.x, node.y) }
     }
 
     suspend fun find(s: Pair<Int, Int>, e: Pair<Int, Int>): PathData {
@@ -167,10 +166,16 @@ class AStar {
                 val pathData = retrace(start, destination)
                 emit(
                     AStarStep(
-                        Pair(current.x, current.y),
-                        minHeap.map { Pair(it.x, it.y) },
-                        closedSet.map { Pair(it.x, it.y) },
-                        path = pathData.steps.map { Pair(it.x, it.y) }
+                        current = Pair(current.x, current.y),
+                        openSet = minHeap.map { Pair(it.x, it.y) },
+                        closedSet = closedSet.map { Pair(it.x, it.y) },
+                        // Обертываем в класс Path, переводя Int в Float для Offset
+                        path = com.example.mobilka132.model.Path(
+                            steps = pathData.path.map { node ->
+                                androidx.compose.ui.geometry.Offset(node.x.toFloat(), node.y.toFloat())
+                            },
+                            distance = pathData.distance
+                        )
                     )
                 )
                 return@flow
