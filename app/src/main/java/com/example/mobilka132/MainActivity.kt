@@ -5,6 +5,7 @@ import android.graphics.BitmapFactory
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -47,7 +48,8 @@ import com.example.mobilka132.model.MapPoint
 class MainActivity : ComponentActivity() {
 
     private lateinit var mapManager: MapManager
-    private val viewModel: MapViewModel = MapViewModel()
+//    private val viewModel: MapViewModel = MapViewModel()
+    private val viewModel: MapViewModel by viewModels<MapViewModel>()
     private val location: LocationManager by lazy { LocationManager(this, activityResultRegistry) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -89,65 +91,84 @@ class MainActivity : ComponentActivity() {
                 state.imageSize = Size(maskBitmap.width.toFloat(), maskBitmap.height.toFloat())
             }
 
-            Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
-                HeaderSection(state, viewModel)
+            Scaffold(
+                modifier = Modifier
+                    .fillMaxSize(),
+//                contentWindowInsets = WindowInsets(),
+            ) { padding ->
+                Column(
+                    modifier = Modifier
+                        .padding(padding)
+                        .fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    HeaderSection(state, viewModel)
 
-                if (showRouteMenu) {
-                    RouteMenu(
-                        points = state.selectedPoints,
-                        myLocation = location.mapLocation,
-                        startLabel = startLabel,
-                        endLabel = endLabel,
-                        isVisualized = visualizeRoute,
-                        onVisualizationToggle = { visualizeRoute = it },
-                        onStartSelected = { offset, label -> startPoint = offset; startLabel = label },
-                        onEndSelected = { offset, label -> endPoint = offset; endLabel = label },
-                        onClose = { showRouteMenu = false },
-                        onBuildRoute = {
-                            if (startPoint != null && endPoint != null) {
-                                viewModel.requestPathfinding(state.findNearestAvailablePoint(startPoint!!), endPoint!!, visualizeRoute)
-                                showRouteMenu = false
+                    if (showRouteMenu) {
+                        RouteMenu(
+                            points = state.selectedPoints,
+                            myLocation = location.mapLocation,
+                            startLabel = startLabel,
+                            endLabel = endLabel,
+                            isVisualized = visualizeRoute,
+                            onVisualizationToggle = { visualizeRoute = it },
+                            onStartSelected = { offset, label ->
+                                startPoint = offset; startLabel = label
+                            },
+                            onEndSelected = { offset, label ->
+                                endPoint = offset; endLabel = label
+                            },
+                            onClose = { showRouteMenu = false },
+                            onBuildRoute = {
+                                if (startPoint != null && endPoint != null) {
+                                    viewModel.requestPathfinding(
+                                        state.findNearestAvailablePoint(
+                                            startPoint!!
+                                        ), endPoint!!, visualizeRoute
+                                    )
+                                    showRouteMenu = false
+                                }
                             }
-                        }
+                        )
+                    }
+
+                    MapContainer(
+                        state = state,
+                        bitmap = bitmaps[shownIndex],
+                        modifier = Modifier.weight(1f),
+                        onPointSelected = { pressOffset ->
+                            val contentPoint = state.screenToContent(pressOffset)
+                            viewModel.onPointSelected(contentPoint, maskBitmap)
+                        },
+                        overlay = overlay,
+                        viewModel = viewModel,
+                        location = location
                     )
-                }
 
-                MapContainer(
-                    state = state,
-                    bitmap = bitmaps[shownIndex],
-                    modifier = Modifier.weight(1f),
-                    onPointSelected = { pressOffset ->
-                        val contentPoint = state.screenToContent(pressOffset)
-                        viewModel.onPointSelected(contentPoint, maskBitmap)
-                    },
-                    overlay = overlay,
-                    viewModel = viewModel,
-                    location = location
-                )
-
-                ControlPanel(
-                    state = state,
-                    viewModel = viewModel,
-                    onShowPointsList = { showPointsList = true },
-                    onShowDecisionDialog = { showDecisionDialog = true },
-                    onToggleView = { shownIndex = (shownIndex + 1) % bitmaps.size },
-                    onToggleRouteMenu = { showRouteMenu = !showRouteMenu },
-                    maskBitmap = maskBitmap
-                )
-
-                if (showPointsList) {
-                    PointsListDialog(
-                        points = state.selectedPoints,
-                        onDismiss = { showPointsList = false },
-                        onDeletePoint = { index -> viewModel.deletePoint(index) }
+                    ControlPanel(
+                        state = state,
+                        viewModel = viewModel,
+                        onShowPointsList = { showPointsList = true },
+                        onShowDecisionDialog = { showDecisionDialog = true },
+                        onToggleView = { shownIndex = (shownIndex + 1) % bitmaps.size },
+                        onToggleRouteMenu = { showRouteMenu = !showRouteMenu },
+                        maskBitmap = maskBitmap
                     )
-                }
 
-                if (showDecisionDialog) {
-                    DecisionDialog(
-                        viewModel = treeViewModel,
-                        onDismiss = { showDecisionDialog = false }
-                    )
+                    if (showPointsList) {
+                        PointsListDialog(
+                            points = state.selectedPoints,
+                            onDismiss = { showPointsList = false },
+                            onDeletePoint = { index -> viewModel.deletePoint(index) }
+                        )
+                    }
+
+                    if (showDecisionDialog) {
+                        DecisionDialog(
+                            viewModel = treeViewModel,
+                            onDismiss = { showDecisionDialog = false }
+                        )
+                    }
                 }
             }
         }
