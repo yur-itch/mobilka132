@@ -156,8 +156,7 @@ class MapViewModel : ViewModel() {
 
     fun startFoodShoppingGA(maskBitmap: Bitmap) {
         if (isAnyAlgoRunning) return
-        pathJob?.cancel()
-        pathJob = viewModelScope.launch {
+        viewModelScope.launch {
             isGARunning = true
             currentGeneration = 0
             totalGenerations = 200
