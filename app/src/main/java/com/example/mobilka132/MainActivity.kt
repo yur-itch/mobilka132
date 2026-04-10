@@ -3,6 +3,7 @@ package com.example.mobilka132
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
+import android.widget.Button
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -44,6 +45,7 @@ import com.example.mobilka132.pickBestRestaurant.DecisionTreeManager
 import com.example.mobilka132.pickBestRestaurant.DecisionDialog
 import com.example.mobilka132.data.location.LocationManager
 import com.example.mobilka132.model.MapPoint
+import kotlinx.coroutines.CoroutineScope
 
 class MainActivity : ComponentActivity() {
 
@@ -56,9 +58,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         mapManager = MapManager(this)
         mapManager.loadData()
-        viewModel.init(mapManager.grid)
+        mapManager.loadPointsFromAssets()
+        viewModel.init(mapManager)
         location.checkPermission()
-        viewModel.loadPointsFromAssets(this)
 
         setContent {
             val state = viewModel.state
@@ -75,6 +77,7 @@ class MainActivity : ComponentActivity() {
             var startLabel by remember { mutableStateOf("Выберите начало") }
             var endLabel by remember { mutableStateOf("Выберите конец") }
             var visualizeRoute by remember { mutableStateOf(false) }
+            var stepDelay by remember {mutableStateOf(5L)}
 
             val maskBitmap = remember {
                 val options = BitmapFactory.Options().apply { inScaled = false }
@@ -85,7 +88,7 @@ class MainActivity : ComponentActivity() {
                 BitmapFactory.decodeResource(context.resources, R.drawable.user_map_contrast, options)
             }
             val bitmaps = arrayOf(maskBitmap, dummyBitmap)
-            var shownIndex by remember { mutableIntStateOf(0) }
+            var shownIndex by remember { mutableIntStateOf(1) }
 
             LaunchedEffect(maskBitmap) {
                 state.imageSize = Size(maskBitmap.width.toFloat(), maskBitmap.height.toFloat())
@@ -111,6 +114,8 @@ class MainActivity : ComponentActivity() {
                             startLabel = startLabel,
                             endLabel = endLabel,
                             isVisualized = visualizeRoute,
+                            stepDelay = stepDelay,
+                            onStepDelayChange = {stepDelay = it},
                             onVisualizationToggle = { visualizeRoute = it },
                             onStartSelected = { offset, label ->
                                 startPoint = offset; startLabel = label
@@ -124,7 +129,8 @@ class MainActivity : ComponentActivity() {
                                     viewModel.requestPathfinding(
                                         state.findNearestAvailablePoint(
                                             startPoint!!
-                                        ), endPoint!!, visualizeRoute
+                                        ), endPoint!!, visualizeRoute,
+                                        stepDelay
                                     )
                                     showRouteMenu = false
                                 }
@@ -188,7 +194,7 @@ class MainActivity : ComponentActivity() {
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
             )
-            if (state.isProcessing || viewModel.isAnyAlgoRunning) {
+            if (state.isProcessing || viewModel.activeJobs.isNotEmpty()) {
                 CircularProgressIndicator(modifier = Modifier.size(20.dp).align(Alignment.CenterEnd).padding(end = 16.dp))
             }
         }
@@ -204,13 +210,14 @@ class MainActivity : ComponentActivity() {
         onToggleRouteMenu: () -> Unit,
         maskBitmap: Bitmap
     ) {
-        val isBusy = viewModel.isAnyAlgoRunning || state.isProcessing
-
+        val isBusy = viewModel.activeJobs.isNotEmpty() || state.isProcessing
+        println(isBusy)
         Column(modifier = Modifier.padding(8.dp).background(Color(0xFFF5F5F5), RoundedCornerShape(16.dp)).padding(8.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 Button(onClick = onToggleRouteMenu, enabled = !isBusy) { Text("Маршрут") }
                 Button(onClick = onToggleView) { Text("Вид") }
-                Button(onClick = { viewModel.startFoodShoppingGA(maskBitmap) }, enabled = !isBusy, colors = ButtonDefaults.buttonColors(Color(0xFFFF9800))) {
+                Button(onClick = { viewModel.startFoodShoppingGA(maskBitmap) }, enabled = !isBusy,
+                    colors = ButtonDefaults.buttonColors(Color(0xFFFF9800))) {
                     Text("GA")
                 }
             }
@@ -223,15 +230,19 @@ class MainActivity : ComponentActivity() {
                     enabled = !isBusy,
                     colors = ButtonDefaults.buttonColors(containerColor = if (state.isSelectionMode) Color.Red else Color(0xFF2196F3))
                 ) {
-                    Text(if (state.isSelectionMode) "Отмена" else "Точка +")
+                    Text(if (state.isSelectionMode) "Отмена" else "Точка")
                 }
 
                 Button(onClick = onShowPointsList, colors = ButtonDefaults.buttonColors(Color.Gray)) {
                     Text("Список (${state.selectedPoints.size})")
                 }
 
-                IconButton(onClick = { viewModel.clear() }, enabled = !isBusy) {
-                    Text("🗑️", fontSize = 20.sp)
+                Button(
+                    onClick = { viewModel.clear() },
+                    enabled = !isBusy,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Blue)
+                ) {
+                    Text("Оч.", fontSize = 20.sp)
                 }
             }
 
@@ -239,7 +250,7 @@ class MainActivity : ComponentActivity() {
                 Button(onClick = onShowDecisionDialog, colors = ButtonDefaults.buttonColors(Color(0xFF4CAF50))) {
                     Text("💡 Совет")
                 }
-                if (viewModel.isAnyAlgoRunning) {
+                if (viewModel.activeJobs.isNotEmpty()) {
                     Button(onClick = { viewModel.cancelAll() }, colors = ButtonDefaults.buttonColors(Color.Red)) {
                         Text("Остановить")
                     }
@@ -259,12 +270,14 @@ class MainActivity : ComponentActivity() {
         location: LocationManager
     ) {
         val textMeasurer = rememberTextMeasurer()
-        val cachedPath = remember(viewModel.lastPath?.steps) { overlay.generatePath(viewModel.lastPath?.steps) }
+        val cachedPath = remember(viewModel.lastPath?.steps) {
+            overlay.generatePath(viewModel.lastPath?.steps)
+        }
         val stepOffset = remember(viewModel.currentStep) {
-            viewModel.currentStep?.current?.let { (x, y) -> Offset(x.toFloat(), y.toFloat()) }
+            viewModel.currentStep?.current
         }
         val nodeOffsets = remember(viewModel.currentStep) {
-            viewModel.currentStep?.openSet?.map { (x, y) -> Offset(x.toFloat(), y.toFloat()) } ?: emptyList()
+            viewModel.currentStep?.openSet ?: emptyList()
         }
 
         Box(
@@ -301,7 +314,7 @@ class MainActivity : ComponentActivity() {
                 with(overlay) {
                     location.mapLocation?.let { drawPointUnscaled(it, 7f, Color.Yellow) }
                     if (viewModel.currentStep != null) {
-                        if (nodeOffsets.isNotEmpty()) drawPointsUnscaled(nodeOffsets, 3f, Color.Green)
+                        drawPointsUnscaled(nodeOffsets, 3f, Color.Green)
                         stepOffset?.let { drawPointUnscaled(it, 5f, Color.Yellow) }
                     }
                 }
@@ -310,7 +323,7 @@ class MainActivity : ComponentActivity() {
             FilledIconButton(
                 onClick = { location.requestNewLocationData() },
                 modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp).size(56.dp),
-                colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.Blue)
+                colors = IconButtonDefaults.filledIconButtonColors(if (location.mapLocation == null) Color.Blue else Color.Gray)
             ) {
                 Text("GPS", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
@@ -388,6 +401,8 @@ fun RouteMenu(
     startLabel: String,
     endLabel: String,
     isVisualized: Boolean,
+    stepDelay: Long,
+    onStepDelayChange: (Long) -> Unit,
     onVisualizationToggle: (Boolean) -> Unit,
     onStartSelected: (Offset, String) -> Unit,
     onEndSelected: (Offset, String) -> Unit,
@@ -405,10 +420,29 @@ fun RouteMenu(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Checkbox(checked = isVisualized, onCheckedChange = onVisualizationToggle)
-                Text("Визуализировать шаги (A*)", fontSize = 14.sp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+            ) {
+                Checkbox(
+                    checked = isVisualized,
+                    onCheckedChange = onVisualizationToggle
+                )
+                Text("A*", fontSize = 14.sp)
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Задержка: ${stepDelay.toInt()} мс", fontSize = 12.sp, color = Color.Gray)
+                    Slider(
+                        value = stepDelay.toFloat(),
+                        onValueChange = { onStepDelayChange(it.toLong()) },
+                        valueRange = 0f..50f,
+                        colors = SliderDefaults.colors(thumbColor = Color(0xFF4CAF50), activeTrackColor = Color(0xFF4CAF50))
+                    )
+                }
             }
+
 
             Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                 TextButton(onClick = onClose) { Text("Закрыть", color = Color.Gray) }
