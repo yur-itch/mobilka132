@@ -8,21 +8,21 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 
 class MapOverlayRenderer(private val state: MapState) {
-    fun generatePath(nodes: List<Offset>): Path {
-        val path = Path()
-        if (nodes.isEmpty()) return path
 
-        path.moveTo(nodes[0].x, nodes[0].y)
-        for (i in 1 until nodes.size) {
-            path.lineTo(nodes[i].x, nodes[i].y)
+    fun generatePath(points: List<Offset>?): Path {
+        val path = Path()
+        if (points.isNullOrEmpty()) return path
+        path.moveTo(points[0].x, points[0].y)
+        for (i in 1 until points.size) {
+            path.lineTo(points[i].x, points[i].y)
         }
         return path
     }
 
     fun DrawScope.drawPathScaled(
         path: Path,
-        color: Color = Color.Red,
-        thickness: Float = 3f
+        thickness: Float = 3f,
+        color: Color = Color.Red
     ) {
         withTransform({
             translate(state.extraSpaceX, state.extraSpaceY)
@@ -42,6 +42,9 @@ class MapOverlayRenderer(private val state: MapState) {
         drawCircle(color = Color.White, radius = 10f, center = screenPos)
     }
 
+    fun DrawScope.drawMarkersUnscaled(points: List<Offset>) =
+        points.forEach { drawMarkerUnscaled(it) }
+
     fun DrawScope.drawPointUnscaled(point: Offset, radius : Float = 5f, color : Color = Color.Yellow) {
         val screenPos = state.contentToScreen(point)
         drawCircle(color = color, radius = 2 * radius, center = screenPos)
@@ -51,7 +54,4 @@ class MapOverlayRenderer(private val state: MapState) {
     fun DrawScope.drawPointsUnscaled(points: List<Offset>, radius : Float = 5f, color : Color = Color.Yellow) {
         points.forEach { drawPointUnscaled(it, radius, color) }
     }
-
-    fun DrawScope.drawMarkersUnscaled(points: List<Offset>) =
-        points.forEach { drawMarkerUnscaled(it) }
 }

@@ -4,21 +4,22 @@ import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.content.Context
 import androidx.core.graphics.get
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlin.math.min
 
-class MapManager(val context: Context) {
+class MapManager(val context: Context)  {
     // 1 - white, 0 - black
     var grid = Array(3000) { i ->
-        Array(3000) { j -> 0 }
+        Array(3000) { j -> 1 }
     }
 
-    fun loadData(){
+    fun loadData() {
         val cont = context.assets.open("test.png");
 
         println(cont);
 
         val bitmap = BitmapFactory.decodeStream(cont);
-        println("Ширина: ${bitmap.width}, Высота: ${bitmap.height}")
         cont.close();
 
         for(x in 0 until min(bitmap.width, grid.size)){
