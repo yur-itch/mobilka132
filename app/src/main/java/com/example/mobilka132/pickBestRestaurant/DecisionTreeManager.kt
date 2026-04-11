@@ -25,7 +25,7 @@ class DecisionTreeManager(application: Application) : AndroidViewModel(applicati
     fun reset() {
         val data = loadDataFromCsv()
         val attributes = listOf("location", "budget", "time_available", "food_type", "queue_tolerance", "weather")
-        rootNode = treeManager.buildTree(data, attributes)
+        rootNode = treeManager.buildTree(data, attributes, optimize = true)
         currentNode = rootNode
         recommendation = ""
         budgetInput = ""
