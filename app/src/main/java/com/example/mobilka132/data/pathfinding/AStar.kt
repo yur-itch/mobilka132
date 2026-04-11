@@ -169,7 +169,6 @@ class AStar {
                         current = Pair(current.x, current.y),
                         openSet = minHeap.map { Pair(it.x, it.y) },
                         closedSet = closedSet.map { Pair(it.x, it.y) },
-                        // Обертываем в класс Path, переводя Int в Float для Offset
                         path = com.example.mobilka132.model.Path(
                             steps = pathData.path.map { node ->
                                 androidx.compose.ui.geometry.Offset(node.x.toFloat(), node.y.toFloat())

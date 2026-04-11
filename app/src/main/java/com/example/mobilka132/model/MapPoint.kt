@@ -3,5 +3,7 @@ import androidx.compose.ui.geometry.Offset
 
 data class MapPoint(
     val id: Int,
-    val position: Offset
+    val position: Offset,
+    val workingStart: Int = 0,
+    val workingEnd: Int = 1440
 )
