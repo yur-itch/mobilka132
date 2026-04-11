@@ -1,8 +1,12 @@
 package com.example.mobilka132.pickBestRestaurant
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,20 +28,43 @@ fun DecisionDialog(
             shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 8.dp,
-            modifier = Modifier.fillMaxWidth().padding(16.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 16.dp)
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
+                modifier = Modifier
+                    .padding(24.dp)
+                    .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text(
-                    text = "Подбор заведения",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (viewModel.isSettingsMode) "Настройка данных" else "Подбор заведения",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    IconButton(onClick = { viewModel.isSettingsMode = !viewModel.isSettingsMode }) {
+                        Icon(
+                            Icons.Default.Settings, 
+                            contentDescription = "Settings", 
+                            tint = if (viewModel.isSettingsMode) MaterialTheme.colorScheme.primary else Color.Gray
+                        )
+                    }
+                }
 
-                if (viewModel.recommendation.isNotEmpty()) {
+                if (viewModel.isSettingsMode) {
+                    SettingsView(
+                        csvText = viewModel.userCsvText,
+                        onCsvChange = { viewModel.userCsvText = it },
+                        onApply = { viewModel.reset() }
+                    )
+                } else if (viewModel.recommendation.isNotEmpty()) {
                     ResultView(
                         result = viewModel.recommendation,
                         path = viewModel.decisionPath,
@@ -56,14 +83,10 @@ fun DecisionDialog(
                             )
                         }
                         is DecisionTree.Leaf -> {
-                            ResultView(
-                                result = node.result,
-                                path = viewModel.decisionPath,
-                                onRestart = { viewModel.reset() }
-                            )
+                            ResultView(node.result, viewModel.decisionPath, onRestart = { viewModel.reset() })
                         }
                         else -> {
-                            Text("Загрузка дерева...")
+                            Text("Дерево пусто. Проверьте CSV в настройках.")
                         }
                     }
                 }
@@ -76,6 +99,37 @@ fun DecisionDialog(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun SettingsView(
+    csvText: String,
+    onCsvChange: (String) -> Unit,
+    onApply: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Вставьте обучающую выборку (CSV):", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        OutlinedTextField(
+            value = csvText,
+            onValueChange = onCsvChange,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 150.dp, max = 300.dp),
+            placeholder = { Text("location,budget,time,food,queue,weather,target...") },
+            textStyle = MaterialTheme.typography.bodySmall
+        )
+        Button(
+            onClick = onApply,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Обновить дерево и начать")
+        }
+        Text(
+            "Формат: первая строка - заголовок. Далее - данные через запятую.",
+            fontSize = 11.sp,
+            color = Color.Gray
+        )
     }
 }
 
@@ -123,7 +177,6 @@ fun QuestionView(
         ) {
             node.branches.keys.forEach { answer ->
                 val displayAnswer = translateValue(node.problemName, answer)
-                
                 OutlinedButton(
                     onClick = { onAnswerSelect(answer) },
                     modifier = Modifier.fillMaxWidth()
@@ -172,19 +225,11 @@ fun ResultView(result: String, path: List<Pair<String, String>>, onRestart: () -
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.align(Alignment.Start)
             )
-            
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
                 path.forEachIndexed { index, pair ->
                     val question = translateKey(pair.first)
                     val answer = translateValue(pair.first, pair.second)
-                    Text(
-                        text = "${index + 1}. $question -> $answer",
-                        fontSize = 13.sp,
-                        color = Color.Gray
-                    )
+                    Text("${index + 1}. $question -> $answer", fontSize = 13.sp, color = Color.Gray)
                 }
             }
         }
