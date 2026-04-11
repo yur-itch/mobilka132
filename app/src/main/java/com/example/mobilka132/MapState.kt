@@ -9,14 +9,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.unit.IntSize
+import com.example.mobilka132.model.MapPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.min
-
-data class MapPoint(
-    val id: Int,
-    val position: Offset
-)
 
 class MapState {
     var offset by mutableStateOf(Offset.Zero)
@@ -84,15 +80,27 @@ class MapState {
         return (inFittedSpace + offset) * scale
     }
 
+    fun prepareMask(mask: Bitmap) {
+        if (maskPixels == null) {
+            maskWidth = mask.width
+            maskHeight = mask.height
+            val p = IntArray(maskWidth * maskHeight)
+            mask.getPixels(p, 0, maskWidth, 0, 0, maskWidth, maskHeight)
+            maskPixels = p
+        }
+    }
+
+    fun addPointsDirectly(points: List<Offset>) {
+        points.forEach { pt ->
+            selectedPoints.add(MapPoint(id = nextPointId++, position = pt))
+        }
+    }
+
     suspend fun addPoint(contentPoint: Offset, mask: Bitmap?) = withContext(Dispatchers.Default) {
         isProcessing = true
         try {
-            if (mask != null && maskPixels == null) {
-                maskWidth = mask.width
-                maskHeight = mask.height
-                val p = IntArray(maskWidth * maskHeight)
-                mask.getPixels(p, 0, maskWidth, 0, 0, maskWidth, maskHeight)
-                maskPixels = p
+            if (mask != null) {
+                prepareMask(mask)
             }
 
             val finalPosition = findNearestAvailablePoint(contentPoint)
@@ -105,7 +113,7 @@ class MapState {
         }
     }
 
-    private fun findNearestAvailablePoint(startPoint: Offset): Offset {
+    fun findNearestAvailablePoint(startPoint: Offset): Offset {
         val pixels = maskPixels ?: return startPoint
         val w = maskWidth
         val h = maskHeight
