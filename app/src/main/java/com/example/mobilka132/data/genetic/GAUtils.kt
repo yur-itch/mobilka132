@@ -24,21 +24,49 @@ suspend fun nearestNeighborAll(ctx: MutationContext): MutableList<Int> {
 }
 
 suspend fun fitness(arr: MutableList<Int>, ctx: MutationContext): Double {
+    if (arr.isEmpty()) return -ctx.allItems.size.toDouble()
+
     val collected = BooleanArray(ctx.allItems.size) { false }
-    for (i in 0 until arr.size) {
-        val pointIndex = arr[i]
-        for (item in ctx.items[pointIndex]) {
-            collected[item] = true
+    var currentTime = ctx.startTime.toDouble()
+    
+    // First point
+    val firstPointIdx = arr[0]
+    val firstPoint = ctx.dist.getPoint(firstPointIdx)
+    val firstTimeOfDay = currentTime % 1440
+    if (firstTimeOfDay >= firstPoint.workingStart && firstTimeOfDay <= firstPoint.workingEnd) {
+        for (item in ctx.items[firstPointIdx]) {
+            if (item in 0 until ctx.allItems.size) {
+                collected[item] = true
+            }
         }
     }
 
-    var dist = 0.0
+    var totalDist = 0.0
     for (idx in 1 until arr.size) {
-        dist += ctx.dist[arr[idx - 1], arr[idx]]
+        val prevIdx = arr[idx - 1]
+        val currIdx = arr[idx]
+        val d = ctx.dist[prevIdx, currIdx]
+        totalDist += d
+        
+        // travel time = (pixels * metersPerPixel / 1000) / speedKmh * 60 min
+        val travelTimeMinutes = (d * ctx.metersPerPixel * 60.0) / (ctx.speedKmh * 1000.0)
+        currentTime += travelTimeMinutes
+        
+        val currPoint = ctx.dist.getPoint(currIdx)
+        val timeOfDay = currentTime % 1440
+        if (timeOfDay >= currPoint.workingStart && timeOfDay <= currPoint.workingEnd) {
+            for (item in ctx.items[currIdx]) {
+                if (item in 0 until ctx.allItems.size) {
+                    collected[item] = true
+                }
+            }
+        }
     }
 
-    val uncollected = ctx.allItems.size - collected.count { it }
-    return 1 / (dist + 1) - uncollected
+    val collectedCount = collected.count { it }
+    val uncollected = ctx.allItems.size - collectedCount
+    
+    return 1.0 / (totalDist + 1.0) - uncollected
 }
 
 suspend fun performGeneration(pop: Population, index: Int, total: Int, ctx: MutationContext): MutableList<MutableList<Int>> {
@@ -71,7 +99,6 @@ suspend fun performGeneration(pop: Population, index: Int, total: Int, ctx: Muta
             .do2opt()
             .get()
         )
-        // TODO: add crossover
     }
 
     return newPop
@@ -100,61 +127,109 @@ suspend fun printPopulationStatistics(population: Population, ctx: MutationConte
         fitnesses.add(fitness(p, ctx))
     }
 
-    val best = fitnesses.maxOrNull() ?: 0.0
-    val worst = fitnesses.minOrNull() ?: 0.0
-    val avg = fitnesses.average()
-    val median = fitnesses.sorted().let {
+    val bestValue = fitnesses.maxOrNull() ?: 0.0
+    val worstValue = fitnesses.minOrNull() ?: 0.0
+    val avgValue = fitnesses.average()
+    val medianValue = fitnesses.sorted().let {
         if (it.isEmpty()) 0.0
         else it[it.size / 2]
     }
 
     var bestRoute: MutableList<Int>? = null
     var maxFit = Double.NEGATIVE_INFINITY
-    for (p in population) {
-        val f = fitness(p, ctx)
-        if (f > maxFit) {
-            maxFit = f
-            bestRoute = p
+    for (i in population.indices) {
+        if (fitnesses[i] > maxFit) {
+            maxFit = fitnesses[i]
+            bestRoute = population[i]
         }
     }
 
     val bestRouteLength = bestRoute?.size ?: 0
-
-    val collectedItems = if (bestRoute != null) {
-        val collected = mutableSetOf<Int>()
-        for (i in bestRoute) {
-            collected.addAll(ctx.items[i])
-        }
-        collected.size
+    val collectedItemsCount = if (bestRoute != null) {
+        getCollectedItemsCount(bestRoute, ctx)
     } else 0
 
     println("$label:")
-    println("  Best fitness: %.10f".format(best))
-    println("  Worst fitness: %.10f".format(worst))
-    println("  Avg fitness: %.10f".format(avg))
-    println("  Median fitness: %.10f".format(median))
+    println("  Best fitness: %.10f".format(bestValue))
+    println("  Worst fitness: %.10f".format(worstValue))
+    println("  Avg fitness: %.10f".format(avgValue))
+    println("  Median fitness: %.10f".format(medianValue))
     println("  Best route length: $bestRouteLength points")
-    println("  Items collected by best route: $collectedItems / ${ctx.allItems.size}")
+    println("  Items collected by best route: $collectedItemsCount / ${ctx.allItems.size}")
     println("  Population diversity: ${population.distinctBy { it.joinToString() }.size} unique routes")
     println()
 }
 
-suspend fun printDetailedRoute(route: MutableList<Int>, ctx: MutationContext, label: String) {
-    val fit = fitness(route, ctx)
-    var distance = 0.0
-    for (idx in 1 until route.size) {
-        distance += ctx.dist[route[idx - 1], route[idx]]
-    }
+suspend fun getCollectedItemsCount(route: MutableList<Int>, ctx: MutationContext): Int {
+    if (route.isEmpty()) return 0
     val collected = mutableSetOf<Int>()
-    for (i in route) {
-        collected.addAll(ctx.items[i])
+    var currentTime = ctx.startTime.toDouble()
+    
+    val firstPointIdx = route[0]
+    val firstPoint = ctx.dist.getPoint(firstPointIdx)
+    val firstTimeOfDay = currentTime % 1440
+    if (firstTimeOfDay >= firstPoint.workingStart && firstTimeOfDay <= firstPoint.workingEnd) {
+        collected.addAll(ctx.items[firstPointIdx])
+    }
+
+    for (idx in 1 until route.size) {
+        val d = ctx.dist[route[idx - 1], route[idx]]
+        val travelTimeMinutes = (d * ctx.metersPerPixel * 60.0) / (ctx.speedKmh * 1000.0)
+        currentTime += travelTimeMinutes
+        
+        val currIdx = route[idx]
+        val currPoint = ctx.dist.getPoint(currIdx)
+        val timeOfDay = currentTime % 1440
+        if (timeOfDay >= currPoint.workingStart && timeOfDay <= currPoint.workingEnd) {
+            collected.addAll(ctx.items[currIdx])
+        }
+    }
+    return collected.size
+}
+
+suspend fun printDetailedRoute(route: MutableList<Int>, ctx: MutationContext, label: String) {
+    val fitValue = fitness(route, ctx)
+    var distance = 0.0
+    var currentTime = ctx.startTime.toDouble()
+    val collected = mutableSetOf<Int>()
+
+    if (route.isNotEmpty()) {
+        val firstPointIdx = route[0]
+        val firstPoint = ctx.dist.getPoint(firstPointIdx)
+        val firstTimeOfDay = currentTime % 1440
+        if (firstTimeOfDay >= firstPoint.workingStart && firstTimeOfDay <= firstPoint.workingEnd) {
+            collected.addAll(ctx.items[firstPointIdx])
+        }
+
+        for (idx in 1 until route.size) {
+            val d = ctx.dist[route[idx - 1], route[idx]]
+            distance += d
+            val travelTimeMinutes = (d * ctx.metersPerPixel * 60.0) / (ctx.speedKmh * 1000.0)
+            currentTime += travelTimeMinutes
+            
+            val currIdx = route[idx]
+            val currPoint = ctx.dist.getPoint(currIdx)
+            val timeOfDay = currentTime % 1440
+            if (timeOfDay >= currPoint.workingStart && timeOfDay <= currPoint.workingEnd) {
+                collected.addAll(ctx.items[currIdx])
+            }
+        }
     }
 
     println("$label:")
-    println("  Fitness: $fit")
+    println("  Fitness: $fitValue")
     println("  Distance: $distance")
     println("  Length: ${route.size}")
     println("  Items collected: ${collected.size}/${ctx.allItems.size}")
+    val totalHours = currentTime.toInt() / 60
+    val hours = totalHours % 24
+    val minutes = currentTime.toInt() % 60
+    val days = totalHours / 24
+    if (days > 0) {
+        println("  End Time: ${"%02d:%02d".format(hours, minutes)} (+ $days days)")
+    } else {
+        println("  End Time: ${"%02d:%02d".format(hours, minutes)}")
+    }
     println("  First 10 points: ${route.take(10)}")
     println()
 }

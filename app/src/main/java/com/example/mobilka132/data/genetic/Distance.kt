@@ -6,9 +6,15 @@ import kotlin.math.pow
 interface Distance {
     suspend operator fun get(i: Int, j: Int): Double
     val size: Int
+    fun getPoint(i: Int): Point
 }
 
-data class Point(val x: Int, val y: Int) {
+data class Point(
+    val x: Int,
+    val y: Int,
+    val workingStart: Int = 0,
+    val workingEnd: Int = 1440
+) {
     fun distanceTo(other: Point): Double {
         return ((x - other.x).toDouble().pow(2) + (y - other.y).toDouble().pow(2)).pow(0.5)
     }
@@ -24,6 +30,8 @@ class EucledianDistance(private val points: List<Point>) : Distance {
     override suspend operator fun get(i: Int, j: Int): Double {
         return points[i].distanceTo(points[j])
     }
+
+    override fun getPoint(i: Int): Point = points[i]
 }
 
 data class CachedPath(
@@ -44,6 +52,8 @@ class WalkableDistance(
         this.points = newPoints
     }
 
+    override fun getPoint(i: Int): Point = points[i]
+
     private fun key(p1: Point, p2: Point): Pair<Point, Point> {
         return if (p1.x < p2.x || (p1.x == p2.x && p1.y < p2.y)) p1 to p2 else p2 to p1
     }
@@ -54,7 +64,10 @@ class WalkableDistance(
 
         val path = algo.findPath(k.first.toPair(), k.second.toPair())
         val length = algo.pathLength(path)
-        val cached = CachedPath(path = path.map { Point(it.first, it.second) }, length = length)
+        val cached = CachedPath(
+            path = path.map { Point(it.first, it.second) }, 
+            length = length
+        )
 
         coordinateCache[k] = cached
         return cached

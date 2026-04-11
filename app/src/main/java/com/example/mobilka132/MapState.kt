@@ -96,6 +96,12 @@ class MapState {
         }
     }
 
+    fun addPointsWithTiming(points: List<Triple<Offset, Int, Int>>) {
+        points.forEach { (pt, start, end) ->
+            selectedPoints.add(MapPoint(id = nextPointId++, position = pt, workingStart = start, workingEnd = end))
+        }
+    }
+
     suspend fun addPoint(contentPoint: Offset, mask: Bitmap?) = withContext(Dispatchers.Default) {
         isProcessing = true
         try {

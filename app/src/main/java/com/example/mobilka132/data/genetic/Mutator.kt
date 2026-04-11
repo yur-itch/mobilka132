@@ -9,7 +9,10 @@ data class MutationContext(
     val dist: Distance,
     val items: MutableList<MutableList<Int>>,
     val allItems: MutableList<Int>,
-    val initial: Int
+    val initial: Int,
+    val startTime: Int = 480, // Default to 8:00 AM
+    val speedKmh: Double = 5.0,
+    val metersPerPixel: Double = 0.5
 )
 
 typealias Population = MutableList<MutableList<Int>>

@@ -12,11 +12,15 @@ fun main() = runBlocking {
     val populationSize = 200
     val generations = 100
 
-    println("Generating $numPoints random points...")
+    println("Generating $numPoints random points with random working times...")
     val points = List(numPoints) { _ ->
+        val start = Random.nextInt(480, 720) // Between 8:00 and 12:00
+        val end = Random.nextInt(960, 1380)  // Between 16:00 and 23:00
         Point(
             x = Random.nextInt(0, 1000),
-            y = Random.nextInt(0, 1000)
+            y = Random.nextInt(0, 1000),
+            workingStart = start,
+            workingEnd = end
         )
     }
 

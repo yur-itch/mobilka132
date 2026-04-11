@@ -46,7 +46,7 @@ class MapViewModel : ViewModel() {
 
     val pathfinderDispatcher = Executors.newFixedThreadPool(3).asCoroutineDispatcher()
 
-    private var loadedPoints: List<Offset> = emptyList()
+    private var loadedPointsWithTiming: List<Triple<Offset, Int, Int>> = emptyList()
 
     fun init(grid: Array<Array<Int>>) {
         algorithm = AStar(grid)
@@ -56,20 +56,23 @@ class MapViewModel : ViewModel() {
     fun loadPointsFromAssets(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val points = mutableListOf<Offset>()
+                val points = mutableListOf<Triple<Offset, Int, Int>>()
                 context.assets.open("ga_points.csv").bufferedReader().useLines { lines ->
                     lines.forEach { line ->
                         val parts = line.split(",")
-                        if (parts.size == 2) {
+                        if (parts.size >= 2) {
                             val x = parts[0].trim().toFloatOrNull()
                             val y = parts[1].trim().toFloatOrNull()
+                            val start = if (parts.size >= 4) parts[2].trim().toIntOrNull() ?: 0 else 0
+                            val end = if (parts.size >= 4) parts[3].trim().toIntOrNull() ?: 1440 else 1440
+                            
                             if (x != null && y != null) {
-                                points.add(Offset(x, y))
+                                points.add(Triple(Offset(x, y), start, end))
                             }
                         }
                     }
                 }
-                loadedPoints = points
+                loadedPointsWithTiming = points
                 Log.d("GA_POINTS", "Successfully loaded ${points.size} points from assets")
             } catch (e: Exception) {
                 Log.e("GA_POINTS", "Error loading points from assets", e)
@@ -174,8 +177,8 @@ class MapViewModel : ViewModel() {
             }
 
             try {
-                if (loadedPoints.isNotEmpty()) {
-                    state.addPointsDirectly(loadedPoints)
+                if (loadedPointsWithTiming.isNotEmpty()) {
+                    state.addPointsWithTiming(loadedPointsWithTiming)
                 } else {
                     repeat(10) {
                         val randomPoint = Offset(
@@ -195,7 +198,14 @@ class MapViewModel : ViewModel() {
                 val numPoints = mapPoints.size
                 val numItems = 10
 
-                val gaPoints = mapPoints.map { com.example.mobilka132.data.genetic.Point(it.position.x.toInt(), it.position.y.toInt()) }
+                val gaPoints = mapPoints.map { 
+                    com.example.mobilka132.data.genetic.Point(
+                        x = it.position.x.toInt(), 
+                        y = it.position.y.toInt(),
+                        workingStart = it.workingStart,
+                        workingEnd = it.workingEnd
+                    ) 
+                }
                 distancer.setPoints(gaPoints)
 
                 val allItems = (0 until numItems).toMutableList()
@@ -207,7 +217,10 @@ class MapViewModel : ViewModel() {
                     dist = distancer,
                     items = items,
                     allItems = allItems,
-                    initial = Random.nextInt(0, numPoints)
+                    initial = Random.nextInt(0, numPoints),
+                    startTime = 480, // 8:00 AM
+                    speedKmh = 5.0,
+                    metersPerPixel = 0.5
                 )
 
                 withContext(Dispatchers.Default) {
