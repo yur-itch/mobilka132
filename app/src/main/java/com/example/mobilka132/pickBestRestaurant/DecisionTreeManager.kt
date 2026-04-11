@@ -5,12 +5,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
-import java.io.BufferedReader
-import java.io.InputStreamReader
-
 
 class DecisionTreeManager(application: Application) : AndroidViewModel(application) {
-    private val treeManager = DecisionTree()
+    private val treeTool = DecisionTree()
     private var rootNode: DecisionTree.Node? = null
 
     var currentNode by mutableStateOf<DecisionTree.Node?>(null)
@@ -18,50 +15,59 @@ class DecisionTreeManager(application: Application) : AndroidViewModel(applicati
     var budgetInput by mutableStateOf("")
     var decisionPath by mutableStateOf<List<Pair<String, String>>>(emptyList())
 
+    var userCsvText by mutableStateOf("")
+    var isSettingsMode by mutableStateOf(false)
+
     init {
+        userCsvText = loadCsvFromAssets()
         reset()
     }
 
     fun reset() {
-        val data = loadDataFromCsv()
+        val data = parseCsvFromText(userCsvText)
         val attributes = listOf("location", "budget", "time_available", "food_type", "queue_tolerance", "weather")
-        rootNode = treeManager.buildTree(data, attributes, optimize = true)
+        rootNode = treeTool.buildTree(data, attributes, optimize = true)
         currentNode = rootNode
         recommendation = ""
         budgetInput = ""
         decisionPath = emptyList()
+        isSettingsMode = false
     }
 
-    private fun loadDataFromCsv(): List<DecisionTree.Row> {
-        val rows = mutableListOf<DecisionTree.Row>()
-        try {
-            val inputStream = getApplication<Application>().assets.open("restaurants.csv")
-            val reader = BufferedReader(InputStreamReader(inputStream))
-            val header = reader.readLine()
-            
-            reader.forEachLine { line ->
-                val tokens = line.split(",")
-                if (tokens.size == 7) {
-                    val problems = mapOf(
-                        "location" to tokens[0],
-                        "budget" to tokens[1],
-                        "time_available" to tokens[2],
-                        "food_type" to tokens[3],
-                        "queue_tolerance" to tokens[4],
-                        "weather" to tokens[5]
-                    )
-                    rows.add(DecisionTree.Row(problems, tokens[6]))
-                }
-            }
+    private fun loadCsvFromAssets(): String {
+        return try {
+            getApplication<Application>().assets.open("restaurants.csv")
+                .bufferedReader()
+                .use { it.readText() }
         } catch (e: Exception) {
-            e.printStackTrace()
+            ""
+        }
+    }
+
+    private fun parseCsvFromText(csvText: String): List<DecisionTree.Row> {
+        val rows = mutableListOf<DecisionTree.Row>()
+        val lines = csvText.lineSequence().filter { it.isNotBlank() }.toList()
+        if (lines.isEmpty()) return rows
+
+        lines.drop(1).forEach { line ->
+            val tokens = line.split(",")
+            if (tokens.size >= 7) {
+                val problems = mapOf(
+                    "location" to tokens[0].trim(),
+                    "budget" to tokens[1].trim(),
+                    "time_available" to tokens[2].trim(),
+                    "food_type" to tokens[3].trim(),
+                    "queue_tolerance" to tokens[4].trim(),
+                    "weather" to tokens[5].trim()
+                )
+                rows.add(DecisionTree.Row(problems, tokens[6].trim()))
+            }
         }
         return rows
     }
 
     fun onAnswerSelected(answer: String) {
         val node = currentNode as? DecisionTree.InternalNode ?: return
-
         val nextNode = node.branches[answer] ?: node.branches.values.firstOrNull()
 
         decisionPath = decisionPath + (node.problemName to answer)
@@ -76,13 +82,13 @@ class DecisionTreeManager(application: Application) : AndroidViewModel(applicati
 
     fun onBudgetSubmitted() {
         val price = budgetInput.toDoubleOrNull() ?: 0.0
-        val category = treeManager.categorizeBudget(price)
+        val category = treeTool.categorizeBudget(price)
         onAnswerSelected(category)
     }
 
     fun stopAndGetCurrentPrediction() {
         val node = currentNode ?: return
-        recommendation = treeManager.predict(node, emptyMap())
+        recommendation = treeTool.predict(node, emptyMap())
         currentNode = null
     }
 }
