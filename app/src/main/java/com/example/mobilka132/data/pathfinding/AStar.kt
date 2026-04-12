@@ -8,13 +8,18 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import java.util.*
 import kotlin.math.abs
+import kotlin.time.Duration.Companion.seconds
 
 class AStar {
 
-    private val map: Array<Array<Int>>
+    private var width : Int
+    private var height : Int
+    private var map: IntArray
     private val maxNodeWeight = 5;
 
-    constructor(map: Array<Array<Int>>) {
+    constructor(width : Int, height : Int, map: IntArray) {
+        this.width = width
+        this.height = height
         this.map = map
     }
 
@@ -24,7 +29,7 @@ class AStar {
             return emptyList()
         }
 
-        val allNodes = arrayOfNulls<Node>(map.size * map[0].size)
+        val allNodes = arrayOfNulls<Node>(width * height)
         val startNode: Node = getOrCreateNode(s.first, s.second, map, allNodes)
         val destinationNode: Node = getOrCreateNode(e.first, e.second, map, allNodes)
 
@@ -33,7 +38,7 @@ class AStar {
     }
 
     suspend fun find(s: Pair<Int, Int>, e: Pair<Int, Int>): PathData {
-        val allNodes = arrayOfNulls<Node>(map.size * map[0].size)
+        val allNodes = arrayOfNulls<Node>(width * height)
         val startNode = getOrCreateNode(s.first, s.second, map, allNodes)
         val destinationNode = getOrCreateNode(e.first, e.second, map, allNodes)
         return find(startNode, destinationNode, allNodes)
@@ -41,8 +46,6 @@ class AStar {
 
     private suspend fun find(start: Node, destination: Node, allNodes: Array<Node?>): PathData {
         var found = false
-        val width = map.size
-        val height = map[0].size
         val closed = BooleanArray(width * height)
         val minHeap = PriorityQueue<Node>()
 
@@ -104,11 +107,11 @@ class AStar {
         return node.weight < maxNodeWeight
     }
 
-    private fun getOrCreateNode(x: Int, y: Int, map: Array<Array<Int>>, allNodes: Array<Node?>): Node {
-        val index = (x * map[0].size) + y
+    private fun getOrCreateNode(x: Int, y: Int, map: IntArray, allNodes: Array<Node?>): Node {
+        val index = y * width + x
         val existing = allNodes[index]
         if (existing != null) return existing
-        val newNode = Node(x, y, maxNodeWeight * (1 - map[x][y]))
+        val newNode = Node(x, y, maxNodeWeight * (1 - map[index]))
         allNodes[index] = newNode
         return newNode
     }
@@ -126,12 +129,10 @@ class AStar {
             current = parent
         }
         if (current != null) path.add(current)
-        return PathData(path.reversed(), distance / 10f)
+        return PathData(path.reversed(), distance / 20f)
     }
 
     fun findPathAsync(s: Pair<Int, Int>, e: Pair<Int, Int>, delayMs: Long = 16L): Flow<AStarStepData> = flow {
-        val width = map.size
-        val height = map[0].size
         val allNodes = arrayOfNulls<Node>(width * height)
 
         val start: Node = getOrCreateNode(s.first, s.second, map, allNodes)
@@ -145,7 +146,6 @@ class AStar {
         while (minHeap.isNotEmpty()) {
             currentCoroutineContext().ensureActive()
             val current = minHeap.poll()!!
-            println(current.heuristicCost)
 
             if (closedSet.contains(current)) continue
             closedSet.add(current)

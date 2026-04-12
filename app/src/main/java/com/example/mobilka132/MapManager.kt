@@ -6,7 +6,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
 import androidx.compose.ui.geometry.Offset
-import androidx.core.graphics.get
 import kotlinx.coroutines.*
 import kotlin.math.min
 
@@ -16,32 +15,34 @@ class MapManager(val context: Context)  {
     lateinit var bitmap : Bitmap
     var loadedPoints: List<Offset> = emptyList()
 
-    var activeJobs: MutableList<Job> = mutableListOf()
+    var width: Int = 3000
+    var height: Int = 3000
+    var grid = IntArray(0)
 
-    var grid = Array(3000) { i ->
-        Array(3000) { j -> 1 }
-    }
-
-    fun loadData() {
-//        val job = scope.launch(Dispatchers.IO) {
-        try {
-            val cont = context.assets.open("test.png")
-            bitmap = BitmapFactory.decodeStream(cont)
-            cont.close()
-
-            for(x in 0 until min(bitmap.width, grid.size)){
-                for(y in 0 until min(bitmap.height, grid[0].size)){
-                    val pixel = bitmap[x, y]
-                    val blue = Color.blue(pixel)
-                    grid[x][y] = if(blue > 127) 1 else 0
+    fun loadData() : Deferred<Int> {
+        val deferred = scope.async(Dispatchers.IO)
+        {
+            try {
+                val cont = context.assets.open("test.png")
+                bitmap = BitmapFactory.decodeStream(cont)
+                cont.close()
+                width = bitmap.width
+                height = bitmap.height
+                grid = IntArray(width * height)
+                bitmap.getPixels(grid, 0, width, 0, 0, width, height)
+                for (i in 0 until width * height) {
+                    if (Color.blue(grid[i]) > 127) {
+                        grid[i] = 1
+                    } else {
+                        grid[i] = 0
+                    }
                 }
+                Log.d("MAP_MANAGER", "Grid loaded")
+            } catch (e: Exception) {
+                Log.e("MAP_MANAGER", "Error loading bitmap", e)
             }
-            Log.d("MAP_MANAGER", "Grid loaded")
-        } catch (e: Exception) {
-            Log.e("MAP_MANAGER", "Error loading bitmap", e)
         }
-//        }
-//        activeJobs.add(job)
+        return deferred
     }
 
     fun loadPointsFromAssets() {
@@ -66,7 +67,6 @@ class MapManager(val context: Context)  {
                 Log.e("GA_POINTS", "Error loading points", e)
             }
         }
-        activeJobs.add(job)
     }
 
     fun cancelAll() {
