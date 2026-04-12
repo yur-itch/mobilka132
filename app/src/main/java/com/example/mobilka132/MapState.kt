@@ -38,10 +38,12 @@ class MapState {
 
     var isSelectionMode by mutableStateOf(false)
     var isProcessing by mutableStateOf(false)
+    var selectedBuildingInfo by mutableStateOf<BuildingInfo?>(null)
 
     private var maskPixels: IntArray? = null
     private var maskWidth: Int = 0
     private var maskHeight: Int = 0
+    private var buildingsMaskPixels: IntArray? = null
 
     fun updateTransform(centroid: Offset, pan: Offset, zoom: Float) {
         if (imageSize == Size.Zero) return
@@ -84,14 +86,37 @@ class MapState {
         return (inFittedSpace + offset) * scale
     }
 
-    suspend fun addPoint(contentPoint: Offset, mask: Bitmap?) = withContext(Dispatchers.Default) {
+    suspend fun handleMapClick(contentPoint: Offset, roadMask: Bitmap?, buildingsMask: Bitmap?) = withContext(Dispatchers.Default) {
         isProcessing = true
         try {
-            if (mask != null && maskPixels == null) {
-                maskWidth = mask.width
-                maskHeight = mask.height
+            if (buildingsMask != null) {
+                if (buildingsMaskPixels == null) {
+                    val p = IntArray(buildingsMask.width * buildingsMask.height)
+                    buildingsMask.getPixels(p, 0, buildingsMask.width, 0, 0, buildingsMask.width, buildingsMask.height)
+                    buildingsMaskPixels = p
+                }
+                
+                val bx = contentPoint.x.toInt().coerceIn(0, buildingsMask.width - 1)
+                val by = contentPoint.y.toInt().coerceIn(0, buildingsMask.height - 1)
+                val pixelColor = buildingsMaskPixels!![by * buildingsMask.width + bx]
+
+                if ((pixelColor and 0xFFFFFF) != 0xFFFFFF) {
+                    val info = CampusDatabase.getBuildingByColor(pixelColor)
+                    withContext(Dispatchers.Main) {
+                        selectedBuildingInfo = info
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        selectedBuildingInfo = null
+                    }
+                }
+            }
+
+            if (roadMask != null && maskPixels == null) {
+                maskWidth = roadMask.width
+                maskHeight = roadMask.height
                 val p = IntArray(maskWidth * maskHeight)
-                mask.getPixels(p, 0, maskWidth, 0, 0, maskWidth, maskHeight)
+                roadMask.getPixels(p, 0, maskWidth, 0, 0, maskWidth, maskHeight)
                 maskPixels = p
             }
 
@@ -145,5 +170,6 @@ class MapState {
     fun clearPoints() {
         selectedPoints.clear()
         nextPointId = 1
+        selectedBuildingInfo = null
     }
 }
