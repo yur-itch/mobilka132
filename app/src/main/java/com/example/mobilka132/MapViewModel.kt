@@ -80,11 +80,7 @@ class MapViewModel : ViewModel() {
         }
     }
 
-    /**
-     * UPDATED SIGNATURE (incoming)
-     * Now supports buildings mask detection.
-     */
-    fun onPointSelected(screenOffset: Offset, roadMask: Bitmap, buildingsMask: Bitmap) {
+    fun onPointSelected(screenOffset: Offset, roadMask: Bitmap?, buildingsMask: Bitmap) {
         if (isAnyAlgoRunning) return
 
         viewModelScope.launch {

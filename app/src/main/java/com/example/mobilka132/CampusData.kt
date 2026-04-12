@@ -1,4 +1,5 @@
 package com.example.mobilka132
+
 data class BuildingInfo(
     val name: String,
     val address: String,
@@ -6,7 +7,7 @@ data class BuildingInfo(
 )
 
 object CampusDatabase {
-    val buildingRegistry = mutableMapOf<Int, BuildingInfo>()
+    private val buildingRegistry = mutableMapOf<Int, BuildingInfo>()
 
     init {
         addBuilding(0xFF2BD936.toInt(), BuildingInfo("Студенческий жилой комплекс «Маяк»", "улица Аркадия Иванова, 22, 24"))
@@ -91,11 +92,10 @@ object CampusDatabase {
     }
 
     fun getBuildingByColor(color: Int): BuildingInfo? {
-        val rgbOnly = color and 0x00FFFFFF
-        return buildingRegistry.entries.find { (it.key and 0x00FFFFFF) == rgbOnly }?.value
+        return buildingRegistry[color and 0x00FFFFFF]
     }
     
-    fun addBuilding(color: Int, info: BuildingInfo) {
-        buildingRegistry[color] = info
+    private fun addBuilding(color: Int, info: BuildingInfo) {
+        buildingRegistry[color and 0x00FFFFFF] = info
     }
 }

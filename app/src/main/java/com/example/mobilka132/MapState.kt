@@ -39,14 +39,12 @@ class MapState {
     var isSelectionMode by mutableStateOf(false)
     var isProcessing by mutableStateOf(false)
 
-    // incoming feature
     var selectedBuildingInfo by mutableStateOf<BuildingInfo?>(null)
 
     private var maskPixels: IntArray? = null
     private var maskWidth: Int = 0
     private var maskHeight: Int = 0
 
-    // incoming feature
     private var buildingsMaskPixels: IntArray? = null
     private var buildingsMaskWidth: Int = 0
     private var buildingsMaskHeight: Int = 0
@@ -172,12 +170,11 @@ class MapState {
 
             if (roadMask != null) {
                 prepareMask(roadMask)
-            }
-
-            val finalPosition = findNearestAvailablePoint(contentPoint)
-            withContext(Dispatchers.Main) {
-                selectedPoints.add(MapPoint(id = nextPointId++, position = finalPosition))
-                isSelectionMode = false
+                val finalPosition = findNearestAvailablePoint(contentPoint)
+                withContext(Dispatchers.Main) {
+                    selectedPoints.add(MapPoint(id = nextPointId++, position = finalPosition))
+                    isSelectionMode = false
+                }
             }
         } finally {
             isProcessing = false
