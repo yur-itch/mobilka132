@@ -96,9 +96,15 @@ class MapState {
         }
     }
 
-    fun addPointsWithTiming(points: List<Triple<Offset, Int, Int>>) {
-        points.forEach { (pt, start, end) ->
-            selectedPoints.add(MapPoint(id = nextPointId++, position = pt, workingStart = start, workingEnd = end))
+    fun addPointsWithTiming(points: List<MapPointData>) {
+        points.forEach { p ->
+            selectedPoints.add(MapPoint(
+                id = nextPointId++, 
+                position = p.position, 
+                workingStart = p.start, 
+                workingEnd = p.end,
+                delay = p.delay
+            ))
         }
     }
 
@@ -161,3 +167,10 @@ class MapState {
         nextPointId = 1
     }
 }
+
+data class MapPointData(
+    val position: Offset,
+    val start: Int,
+    val end: Int,
+    val delay: Int
+)

@@ -13,7 +13,8 @@ data class Point(
     val x: Int,
     val y: Int,
     val workingStart: Int = 0,
-    val workingEnd: Int = 1440
+    val workingEnd: Int = 1440,
+    val delay: Int = 0
 ) {
     fun distanceTo(other: Point): Double {
         return ((x - other.x).toDouble().pow(2) + (y - other.y).toDouble().pow(2)).pow(0.5)
