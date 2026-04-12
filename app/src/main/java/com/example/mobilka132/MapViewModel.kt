@@ -22,6 +22,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Calendar
 import java.util.Collections.emptyList
 import java.util.concurrent.Executors
 import kotlin.coroutines.cancellation.CancellationException
@@ -46,7 +47,7 @@ class MapViewModel : ViewModel() {
 
     val pathfinderDispatcher = Executors.newFixedThreadPool(3).asCoroutineDispatcher()
 
-    private var loadedPointsWithTiming: List<Triple<Offset, Int, Int>> = emptyList()
+    private var loadedPointsWithTiming: List<MapPointData> = emptyList()
 
     fun init(grid: Array<Array<Int>>) {
         algorithm = AStar(grid)
@@ -56,7 +57,7 @@ class MapViewModel : ViewModel() {
     fun loadPointsFromAssets(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val points = mutableListOf<Triple<Offset, Int, Int>>()
+                val points = mutableListOf<MapPointData>()
                 context.assets.open("ga_points.csv").bufferedReader().useLines { lines ->
                     lines.forEach { line ->
                         val parts = line.split(",")
@@ -65,9 +66,10 @@ class MapViewModel : ViewModel() {
                             val y = parts[1].trim().toFloatOrNull()
                             val start = if (parts.size >= 4) parts[2].trim().toIntOrNull() ?: 0 else 0
                             val end = if (parts.size >= 4) parts[3].trim().toIntOrNull() ?: 1440 else 1440
+                            val d = if (parts.size >= 5) parts[4].trim().toIntOrNull() ?: 0 else 0
                             
                             if (x != null && y != null) {
-                                points.add(Triple(Offset(x, y), start, end))
+                                points.add(MapPointData(Offset(x, y), start, end, d))
                             }
                         }
                     }
@@ -203,7 +205,8 @@ class MapViewModel : ViewModel() {
                         x = it.position.x.toInt(), 
                         y = it.position.y.toInt(),
                         workingStart = it.workingStart,
-                        workingEnd = it.workingEnd
+                        workingEnd = it.workingEnd,
+                        delay = it.delay
                     ) 
                 }
                 distancer.setPoints(gaPoints)
@@ -212,13 +215,17 @@ class MapViewModel : ViewModel() {
                 val items = MutableList(numPoints) { mutableListOf<Int>() }
                 allItems.forEach { item -> items[Random.nextInt(0, numPoints)].add(item) }
 
+                // Get current system time in minutes
+                val calendar = Calendar.getInstance()
+                val currentMinutes = calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE)
+
                 val ctx = MutationContext(
                     allPoints = (0 until numPoints).toMutableList(),
                     dist = distancer,
                     items = items,
                     allItems = allItems,
                     initial = Random.nextInt(0, numPoints),
-                    startTime = 480, // 8:00 AM
+                    startTime = currentMinutes,
                     speedKmh = 5.0,
                     metersPerPixel = 0.5
                 )
