@@ -18,20 +18,19 @@ class MapViewModel : ViewModel() {
     val state = MapState()
     val overlay = MapOverlayRenderer(state)
 
-
     var lastPath by mutableStateOf<List<Offset>>(emptyList())
 
     fun init(grid: Array<Array<Int>>) {
         algorithm = AStar(grid)
     }
 
-    fun onPointSelected(point: Offset, maskBitmap: Bitmap) {
+    fun onPointSelected(screenOffset: Offset, roadMask: Bitmap, buildingsMask: Bitmap) {
         viewModelScope.launch {
             try {
-                state.addPoint(point, maskBitmap)
+                val contentPoint = state.screenToContent(screenOffset)
+                state.handleMapClick(contentPoint, roadMask, buildingsMask)
 
                 val points = state.selectedPoints
-
                 if (points.size >= 2) {
                     val p1 = points[points.size - 2]
                     val p2 = points[points.size - 1]
@@ -56,12 +55,7 @@ class MapViewModel : ViewModel() {
     fun deletePoint(index: Int) {
         if (index in state.selectedPoints.indices) {
             state.selectedPoints.removeAt(index)
-
-            if (state.selectedPoints.size < 2) {
-                lastPath = emptyList()
-            } else {
-                lastPath = emptyList()
-            }
+            lastPath = emptyList()
         }
     }
 
