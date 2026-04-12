@@ -224,9 +224,8 @@ class WalkableDistance(
         val k = key(p1, p2)
         coordinateCache[k]?.let { return it }
 
-        val path = algo.findPath(k.first.toPair(), k.second.toPair())
-        val length = algo.pathLength(path)
-        val cached = CachedPath(path = path.map { Point(it.first, it.second) }, length = length)
+        val path = algo.find(k.first.toPair(), k.second.toPair())
+        val cached = CachedPath(path = path.path.map { Point(it.x, it.y) }, length = path.distance.toDouble())
 
         coordinateCache[k] = cached
         return cached
