@@ -6,6 +6,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -92,7 +93,7 @@ class MainActivity : ComponentActivity() {
                 BitmapFactory.decodeResource(context.resources, R.drawable.user_map_contrast, options)
             }
 
-            val bitmaps = arrayOf(roadMask, dummyBitmap)
+            val bitmaps = arrayOf(dummyBitmap, roadMask, buildingsMask)
             var shownIndex by remember { mutableIntStateOf(0) }
 
             LaunchedEffect(roadMask) {
@@ -145,68 +146,32 @@ class MainActivity : ComponentActivity() {
                         bitmap = bitmaps[shownIndex],
                         modifier = Modifier.weight(1f),
                         onPointSelected = { pressOffset ->
-                            viewModel.onPointSelected(pressOffset, roadMask, buildingsMask)
+                            val currentRoadMask = if (state.isSelectionMode) roadMask else null
+                            viewModel.onPointSelected(pressOffset, currentRoadMask, buildingsMask)
                         },
                         overlay = overlay,
                         viewModel = viewModel,
                         location = location
                     )
 
-                    if (state.selectedBuildingInfo != null) {
-                        val info = state.selectedBuildingInfo!!
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Row(verticalAlignment = Alignment.Top) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        if (info.name.isNotEmpty()) {
-                                            Text(info.name, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                        }
-                                        Text(info.address, fontSize = 14.sp, color = Color.Gray)
-                                    }
-                                    IconButton(
-                                        onClick = { state.selectedBuildingInfo = null },
-                                        modifier = Modifier.size(24.dp)
-                                    ) {
-                                        Text("✕", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                    }
-                                }
-
-                                if (info.venues.isNotEmpty()) {
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text("Заведения:", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                    LazyColumn(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .heightIn(max = 180.dp)
-                                    ) {
-                                        items(info.venues) { venue ->
-                                            Text(
-                                                text = "• $venue",
-                                                fontSize = 13.sp,
-                                                modifier = Modifier.padding(vertical = 2.dp)
-                                            )
-                                        }
-                                    }
-                                }
+                    // Bottom Section with fixed height to prevent map jumping
+                    Box(modifier = Modifier.height(200.dp).fillMaxWidth()) {
+                        Crossfade(targetState = state.selectedBuildingInfo, label = "BottomPanel") { buildingInfo ->
+                            if (buildingInfo != null) {
+                                BuildingInfoCard(info = buildingInfo, onDismiss = { state.selectedBuildingInfo = null })
+                            } else {
+                                ControlPanel(
+                                    state = state,
+                                    viewModel = viewModel,
+                                    onShowPointsList = { showPointsList = true },
+                                    onShowDecisionDialog = { showDecisionDialog = true },
+                                    onToggleView = { shownIndex = (shownIndex + 1) % bitmaps.size },
+                                    onToggleRouteMenu = { showRouteMenu = !showRouteMenu },
+                                    roadMask = roadMask
+                                )
                             }
                         }
                     }
-
-                    ControlPanel(
-                        state = state,
-                        viewModel = viewModel,
-                        onShowPointsList = { showPointsList = true },
-                        onShowDecisionDialog = { showDecisionDialog = true },
-                        onToggleView = { shownIndex = (shownIndex + 1) % bitmaps.size },
-                        onToggleRouteMenu = { showRouteMenu = !showRouteMenu },
-                        roadMask = roadMask
-                    )
 
                     if (showPointsList) {
                         PointsListDialog(
@@ -220,6 +185,54 @@ class MainActivity : ComponentActivity() {
                         DecisionDialog(
                             viewModel = treeViewModel,
                             onDismiss = { showDecisionDialog = false }
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun BuildingInfoCard(info: BuildingInfo, onDismiss: () -> Unit) {
+        Card(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(8.dp),
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+            ) {
+                item {
+                    Row(verticalAlignment = Alignment.Top) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            if (info.name.isNotEmpty()) {
+                                Text(info.name, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Text(info.address, fontSize = 14.sp, color = Color.Gray)
+                        }
+                        IconButton(
+                            onClick = onDismiss,
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Text("✕", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                if (info.venues.isNotEmpty()) {
+                    item {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Заведения:", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    }
+                    items(info.venues) { venue ->
+                        Text(
+                            text = "• $venue",
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(vertical = 2.dp)
                         )
                     }
                 }
@@ -271,9 +284,11 @@ class MainActivity : ComponentActivity() {
 
         Column(
             modifier = Modifier
+                .fillMaxSize()
                 .padding(8.dp)
                 .background(Color(0xFFF5F5F5), RoundedCornerShape(16.dp))
-                .padding(8.dp)
+                .padding(8.dp),
+            verticalArrangement = Arrangement.Center
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -365,13 +380,14 @@ class MainActivity : ComponentActivity() {
                 .fillMaxWidth()
                 .background(Color.DarkGray)
                 .onSizeChanged { state.containerSize = it }
-                .pointerInput(state.isSelectionMode, state.isProcessing) {
-                    if (state.isSelectionMode && !state.isProcessing) {
-                        detectTapGestures { onPointSelected(it) }
-                    } else {
-                        detectTransformGestures { centroid, pan, zoom, _ ->
-                            state.updateTransform(centroid, pan, zoom)
-                        }
+                .pointerInput(state.isProcessing) {
+                    detectTapGestures(
+                        onTap = { if (!state.isProcessing) onPointSelected(it) }
+                    )
+                }
+                .pointerInput(Unit) {
+                    detectTransformGestures { centroid, pan, zoom, _ ->
+                        state.updateTransform(centroid, pan, zoom)
                     }
                 }
         ) {

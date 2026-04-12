@@ -52,7 +52,6 @@ class TestActivity : ComponentActivity() {
 
                 val totalGens = 200
                 for (gen in 1..totalGens) {
-                    // Run logic on background thread
                     val nextPop = withContext(Dispatchers.Default) {
                         performGeneration(population, gen - 1, totalGens, ctx)
                     }
