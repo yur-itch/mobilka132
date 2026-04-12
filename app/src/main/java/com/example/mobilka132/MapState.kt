@@ -22,10 +22,14 @@ class MapState {
 
     val fitScale: Float
         get() = if (containerSize == IntSize.Zero || imageSize == Size.Zero) 1f
-        else min(containerSize.width.toFloat() / imageSize.width, containerSize.height.toFloat() / imageSize.height)
+        else min(
+            containerSize.width.toFloat() / imageSize.width,
+            containerSize.height.toFloat() / imageSize.height
+        )
 
     val extraSpaceX: Float
         get() = (containerSize.width - imageSize.width * fitScale) / 2f
+
     val extraSpaceY: Float
         get() = (containerSize.height - imageSize.height * fitScale) / 2f
 
@@ -35,12 +39,21 @@ class MapState {
     var isSelectionMode by mutableStateOf(false)
     var isProcessing by mutableStateOf(false)
 
+    // incoming feature
+    var selectedBuildingInfo by mutableStateOf<BuildingInfo?>(null)
+
     private var maskPixels: IntArray? = null
     private var maskWidth: Int = 0
     private var maskHeight: Int = 0
 
+    // incoming feature
+    private var buildingsMaskPixels: IntArray? = null
+    private var buildingsMaskWidth: Int = 0
+    private var buildingsMaskHeight: Int = 0
+
     fun updateTransform(centroid: Offset, pan: Offset, zoom: Float) {
         if (imageSize == Size.Zero) return
+
         val oldScale = scale
         scale = (scale * zoom).coerceIn(1f, 50.0f)
 
@@ -72,6 +85,7 @@ class MapState {
             y = (inFittedSpace.y - extraSpaceY) / fitScale
         )
     }
+
     fun contentToScreen(contentOffset: Offset): Offset {
         val inFittedSpace = Offset(
             x = contentOffset.x * fitScale + extraSpaceX,
@@ -90,17 +104,74 @@ class MapState {
         }
     }
 
+    private fun prepareBuildingsMask(mask: Bitmap) {
+        if (buildingsMaskPixels == null) {
+            buildingsMaskWidth = mask.width
+            buildingsMaskHeight = mask.height
+            val p = IntArray(buildingsMaskWidth * buildingsMaskHeight)
+            mask.getPixels(p, 0, buildingsMaskWidth, 0, 0, buildingsMaskWidth, buildingsMaskHeight)
+            buildingsMaskPixels = p
+        }
+    }
+
     fun addPointsDirectly(points: List<Offset>) {
         points.forEach { pt ->
             selectedPoints.add(MapPoint(id = nextPointId++, position = pt))
         }
     }
 
+    /**
+     * develop function (used in existing logic)
+     */
     suspend fun addPoint(contentPoint: Offset, mask: Bitmap?) = withContext(Dispatchers.Default) {
         isProcessing = true
         try {
             if (mask != null) {
                 prepareMask(mask)
+            }
+
+            val finalPosition = findNearestAvailablePoint(contentPoint)
+            withContext(Dispatchers.Main) {
+                selectedPoints.add(MapPoint(id = nextPointId++, position = finalPosition))
+                isSelectionMode = false
+            }
+        } finally {
+            isProcessing = false
+        }
+    }
+
+    /**
+     * incoming function (needed for buildingsMask feature)
+     */
+    suspend fun handleMapClick(
+        contentPoint: Offset,
+        roadMask: Bitmap?,
+        buildingsMask: Bitmap?
+    ) = withContext(Dispatchers.Default) {
+        isProcessing = true
+        try {
+            if (buildingsMask != null) {
+                prepareBuildingsMask(buildingsMask)
+
+                val bx = contentPoint.x.toInt().coerceIn(0, buildingsMaskWidth - 1)
+                val by = contentPoint.y.toInt().coerceIn(0, buildingsMaskHeight - 1)
+
+                val pixelColor = buildingsMaskPixels!![by * buildingsMaskWidth + bx]
+
+                val buildingInfo =
+                    if ((pixelColor and 0xFFFFFF) != 0xFFFFFF) {
+                        CampusDatabase.getBuildingByColor(pixelColor)
+                    } else {
+                        null
+                    }
+
+                withContext(Dispatchers.Main) {
+                    selectedBuildingInfo = buildingInfo
+                }
+            }
+
+            if (roadMask != null) {
+                prepareMask(roadMask)
             }
 
             val finalPosition = findNearestAvailablePoint(contentPoint)
@@ -153,5 +224,6 @@ class MapState {
     fun clearPoints() {
         selectedPoints.clear()
         nextPointId = 1
+        selectedBuildingInfo = null
     }
 }
