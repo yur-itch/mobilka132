@@ -40,13 +40,12 @@ suspend fun fitness(arr: MutableList<Int>, ctx: MutationContext): Double {
             }
         }
     }
+    currentTime += firstPoint.delay
 
-    var totalDist = 0.0
     for (idx in 1 until arr.size) {
         val prevIdx = arr[idx - 1]
         val currIdx = arr[idx]
         val d = ctx.dist[prevIdx, currIdx]
-        totalDist += d
         
         // travel time = (pixels * metersPerPixel / 1000) / speedKmh * 60 min
         val travelTimeMinutes = (d * ctx.metersPerPixel * 60.0) / (ctx.speedKmh * 1000.0)
@@ -61,12 +60,14 @@ suspend fun fitness(arr: MutableList<Int>, ctx: MutationContext): Double {
                 }
             }
         }
+        currentTime += currPoint.delay
     }
 
+    val totalTimeSpent = currentTime - ctx.startTime
     val collectedCount = collected.count { it }
     val uncollected = ctx.allItems.size - collectedCount
-    
-    return 1.0 / (totalDist + 1.0) - uncollected
+
+    return 1.0 / (totalTimeSpent + 1.0) - uncollected
 }
 
 suspend fun performGeneration(pop: Population, index: Int, total: Int, ctx: MutationContext): MutableList<MutableList<Int>> {
@@ -171,6 +172,7 @@ suspend fun getCollectedItemsCount(route: MutableList<Int>, ctx: MutationContext
     if (firstTimeOfDay >= firstPoint.workingStart && firstTimeOfDay <= firstPoint.workingEnd) {
         collected.addAll(ctx.items[firstPointIdx])
     }
+    currentTime += firstPoint.delay
 
     for (idx in 1 until route.size) {
         val d = ctx.dist[route[idx - 1], route[idx]]
@@ -183,6 +185,7 @@ suspend fun getCollectedItemsCount(route: MutableList<Int>, ctx: MutationContext
         if (timeOfDay >= currPoint.workingStart && timeOfDay <= currPoint.workingEnd) {
             collected.addAll(ctx.items[currIdx])
         }
+        currentTime += currPoint.delay
     }
     return collected.size
 }
@@ -200,6 +203,7 @@ suspend fun printDetailedRoute(route: MutableList<Int>, ctx: MutationContext, la
         if (firstTimeOfDay >= firstPoint.workingStart && firstTimeOfDay <= firstPoint.workingEnd) {
             collected.addAll(ctx.items[firstPointIdx])
         }
+        currentTime += firstPoint.delay
 
         for (idx in 1 until route.size) {
             val d = ctx.dist[route[idx - 1], route[idx]]
@@ -213,6 +217,7 @@ suspend fun printDetailedRoute(route: MutableList<Int>, ctx: MutationContext, la
             if (timeOfDay >= currPoint.workingStart && timeOfDay <= currPoint.workingEnd) {
                 collected.addAll(ctx.items[currIdx])
             }
+            currentTime += currPoint.delay
         }
     }
 
