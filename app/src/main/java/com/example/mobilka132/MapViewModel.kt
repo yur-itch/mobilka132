@@ -31,10 +31,13 @@ class MapViewModel : ViewModel() {
 
     lateinit var algorithm: AStar
     private lateinit var distancer: WalkableDistance
+
     val state = MapState()
     val overlay = MapOverlayRenderer(state)
+
     var lastPath by mutableStateOf<Path?>(null)
     var currentStep by mutableStateOf<AStarStep?>(null)
+
     private var pathJob: Job? = null
 
     var isPathProcessing by mutableStateOf(false)
@@ -77,11 +80,17 @@ class MapViewModel : ViewModel() {
         }
     }
 
-    fun onPointSelected(point: Offset, maskBitmap: Bitmap) {
+    /**
+     * UPDATED SIGNATURE (incoming)
+     * Now supports buildings mask detection.
+     */
+    fun onPointSelected(screenOffset: Offset, roadMask: Bitmap, buildingsMask: Bitmap) {
         if (isAnyAlgoRunning) return
+
         viewModelScope.launch {
             try {
-                state.addPoint(point, maskBitmap)
+                val contentPoint = state.screenToContent(screenOffset)
+                state.handleMapClick(contentPoint, roadMask, buildingsMask)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -104,14 +113,28 @@ class MapViewModel : ViewModel() {
         }
     }
 
-    fun requestPathfinding(p1: MapPoint, p2: MapPoint, visualizeSteps: Boolean = false, onPathFound: ((Boolean, Path) -> Unit)? = null) =
-        requestPathfinding(p1.position, p2.position, visualizeSteps, onPathFound)
+    fun requestPathfinding(
+        p1: MapPoint,
+        p2: MapPoint,
+        visualizeSteps: Boolean = false,
+        onPathFound: ((Boolean, Path) -> Unit)? = null
+    ) = requestPathfinding(p1.position, p2.position, visualizeSteps, onPathFound)
 
-    fun requestPathfinding(p1: Offset, p2: Offset, visualizeSteps: Boolean = false, onPathFound: ((Boolean, Path) -> Unit)? = null) =
-        requestPathfinding(p1.toPair(), p2.toPair(), visualizeSteps, onPathFound ?: ::onPathFoundCallback)
+    fun requestPathfinding(
+        p1: Offset,
+        p2: Offset,
+        visualizeSteps: Boolean = false,
+        onPathFound: ((Boolean, Path) -> Unit)? = null
+    ) = requestPathfinding(p1.toPair(), p2.toPair(), visualizeSteps, onPathFound ?: ::onPathFoundCallback)
 
-    private fun requestPathfinding(start: Pair<Int, Int>, dest: Pair<Int, Int>, visualizeSteps: Boolean = false, onPathFound: ((Boolean, Path) -> Unit)? = null) {
+    private fun requestPathfinding(
+        start: Pair<Int, Int>,
+        dest: Pair<Int, Int>,
+        visualizeSteps: Boolean = false,
+        onPathFound: ((Boolean, Path) -> Unit)? = null
+    ) {
         if (isAnyAlgoRunning) return
+
         pathJob?.cancel()
         lastPath = null
         currentStep = null
@@ -156,6 +179,7 @@ class MapViewModel : ViewModel() {
 
     fun startFoodShoppingGA(maskBitmap: Bitmap) {
         if (isAnyAlgoRunning) return
+
         viewModelScope.launch {
             isGARunning = true
             currentGeneration = 0
@@ -195,7 +219,12 @@ class MapViewModel : ViewModel() {
                 val numPoints = mapPoints.size
                 val numItems = 10
 
-                val gaPoints = mapPoints.map { com.example.mobilka132.data.genetic.Point(it.position.x.toInt(), it.position.y.toInt()) }
+                val gaPoints = mapPoints.map {
+                    com.example.mobilka132.data.genetic.Point(
+                        it.position.x.toInt(),
+                        it.position.y.toInt()
+                    )
+                }
                 distancer.setPoints(gaPoints)
 
                 val allItems = (0 until numItems).toMutableList()
@@ -221,7 +250,7 @@ class MapViewModel : ViewModel() {
                         if (best != null) {
                             val actualPath = mutableListOf<Offset>()
                             for (i in 0 until best.size - 1) {
-                                val segment = distancer.path(best[i], best[i+1])
+                                val segment = distancer.path(best[i], best[i + 1])
                                 actualPath.addAll(segment.map { Offset(it.x.toFloat(), it.y.toFloat()) })
                             }
 
@@ -253,6 +282,7 @@ class MapViewModel : ViewModel() {
 
     fun deletePoint(index: Int) {
         if (isAnyAlgoRunning) return
+
         if (index in state.selectedPoints.indices) {
             state.selectedPoints.removeAt(index)
             if (state.selectedPoints.size < 2) {
@@ -263,6 +293,7 @@ class MapViewModel : ViewModel() {
 
     fun clear() {
         if (isAnyAlgoRunning) return
+
         state.clearPoints()
         currentStep = null
         lastPath = null
@@ -277,6 +308,6 @@ class MapViewModel : ViewModel() {
     }
 
     fun Pair<Int, Int>.toOffset() = Offset(first.toFloat(), second.toFloat())
-    fun Offset.toPair() = Pair<Int, Int>(x.toInt(), y.toInt())
+    fun Offset.toPair() = Pair(x.toInt(), y.toInt())
     fun PathData.toPath(): Path = Path(path.map { n -> Offset(n.x.toFloat(), n.y.toFloat()) }, distance)
 }
