@@ -20,6 +20,10 @@ class MapState {
     var containerSize by mutableStateOf(IntSize.Zero)
     var imageSize by mutableStateOf(Size.Zero)
 
+    var maskWidth: Int = 0
+    var maskHeight: Int = 0
+    var maskPixels: IntArray = IntArray(0)
+
     val fitScale: Float
         get() = if (containerSize == IntSize.Zero || imageSize == Size.Zero) 1f
         else min(containerSize.width.toFloat() / imageSize.width, containerSize.height.toFloat() / imageSize.height)
@@ -35,9 +39,12 @@ class MapState {
     var isSelectionMode by mutableStateOf(false)
     var isProcessing by mutableStateOf(false)
 
-    private var maskPixels: IntArray? = null
-    private var maskWidth: Int = 0
-    private var maskHeight: Int = 0
+    fun init(maskWidth: Int, maskHeight: Int, maskPixels: IntArray)
+    {
+        this.maskWidth = maskWidth
+        this.maskHeight = maskHeight
+        this.maskPixels = maskPixels
+    }
 
     fun updateTransform(centroid: Offset, pan: Offset, zoom: Float) {
         if (imageSize == Size.Zero) return
@@ -80,15 +87,15 @@ class MapState {
         return (inFittedSpace + offset) * scale
     }
 
-    fun prepareMask(mask: Bitmap) {
-        if (maskPixels == null) {
-            maskWidth = mask.width
-            maskHeight = mask.height
-            val p = IntArray(maskWidth * maskHeight)
-            mask.getPixels(p, 0, maskWidth, 0, 0, maskWidth, maskHeight)
-            maskPixels = p
-        }
-    }
+//    fun prepareMask(mask: Bitmap) {
+//        if (maskPixels == null) {
+//            maskWidth = mask.width
+//            maskHeight = mask.height
+//            println("$maskWidth $maskHeight")
+//            val p = IntArray(maskWidth * maskHeight)
+//            mask.getPixels(p, 0, maskWidth, 0, 0, maskWidth, maskHeight)
+//        }
+//    }
 
     fun addPointsDirectly(points: List<Offset>) {
         points.forEach { pt ->
@@ -96,25 +103,23 @@ class MapState {
         }
     }
 
-    suspend fun addPoint(contentPoint: Offset, mask: Bitmap?) = withContext(Dispatchers.Default) {
+    suspend fun addPoint(contentPoint: Offset) = withContext(Dispatchers.Default) {
         isProcessing = true
         try {
-            if (mask != null) {
-                prepareMask(mask)
-            }
 
             val finalPosition = findNearestAvailablePoint(contentPoint)
             withContext(Dispatchers.Main) {
                 selectedPoints.add(MapPoint(id = nextPointId++, position = finalPosition))
                 isSelectionMode = false
             }
+
         } finally {
             isProcessing = false
         }
     }
 
     fun findNearestAvailablePoint(startPoint: Offset): Offset {
-        val pixels = maskPixels ?: return startPoint
+        val pixels = maskPixels
         val w = maskWidth
         val h = maskHeight
 
@@ -138,7 +143,7 @@ class MapState {
     private fun checkPixel(x: Int, y: Int, w: Int, h: Int, pixels: IntArray): Offset? {
         if (x in 0 until w && y in 0 until h) {
             val color = pixels[y * w + x]
-            if (isColorWhite(color)) return Offset(x.toFloat(), y.toFloat())
+            if (color == 1) return Offset(x.toFloat(), y.toFloat())
         }
         return null
     }
