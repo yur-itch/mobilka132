@@ -40,12 +40,15 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mobilka132.pickBestRestaurant.DecisionTreeManager
 import com.example.mobilka132.pickBestRestaurant.DecisionDialog
 import com.example.mobilka132.data.location.LocationManager
 import com.example.mobilka132.model.MapPoint
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -57,9 +60,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         mapManager = MapManager(this)
-        mapManager.loadData()
+
         mapManager.loadPointsFromAssets()
-        viewModel.init(mapManager)
+        lifecycleScope.launch {
+            mapManager.loadData().await()
+            viewModel.init(mapManager)
+        }
         location.checkPermission()
 
         setContent {
@@ -144,7 +150,7 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.weight(1f),
                         onPointSelected = { pressOffset ->
                             val contentPoint = state.screenToContent(pressOffset)
-                            viewModel.onPointSelected(contentPoint, maskBitmap)
+                            viewModel.onPointSelected(contentPoint)
                         },
                         overlay = overlay,
                         viewModel = viewModel,
@@ -187,15 +193,16 @@ class MainActivity : ComponentActivity() {
                 text = when {
                     state.isProcessing -> "Снаппинг к дороге..."
                     state.isSelectionMode -> "Выберите точку на карте"
-                    viewModel.isGARunning -> "Генетика: ген. ${viewModel.currentGeneration}"
                     viewModel.isPathProcessing -> "Поиск пути..."
+                    viewModel.isGARunning -> "Генетика: ген. ${viewModel.currentGeneration}"
+                    viewModel.lastPath != null -> "Путь найден: ${viewModel.lastPath!!.distance} м"
                     else -> "Интерактивная карта"
                 },
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
             )
-            if (state.isProcessing || viewModel.activeJobs.isNotEmpty()) {
-                CircularProgressIndicator(modifier = Modifier.size(20.dp).align(Alignment.CenterEnd).padding(end = 16.dp))
+            if (state.isProcessing || viewModel.isProcessing) {
+                CircularProgressIndicator(modifier = Modifier.size(20.dp).align(Alignment.CenterEnd))
             }
         }
     }
@@ -210,8 +217,7 @@ class MainActivity : ComponentActivity() {
         onToggleRouteMenu: () -> Unit,
         maskBitmap: Bitmap
     ) {
-        val isBusy = viewModel.activeJobs.isNotEmpty() || state.isProcessing
-        println(isBusy)
+        val isBusy = viewModel.isProcessing || state.isProcessing
         Column(modifier = Modifier.padding(8.dp).background(Color(0xFFF5F5F5), RoundedCornerShape(16.dp)).padding(8.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 Button(onClick = onToggleRouteMenu, enabled = !isBusy) { Text("Маршрут") }
@@ -250,7 +256,7 @@ class MainActivity : ComponentActivity() {
                 Button(onClick = onShowDecisionDialog, colors = ButtonDefaults.buttonColors(Color(0xFF4CAF50))) {
                     Text("💡 Совет")
                 }
-                if (viewModel.activeJobs.isNotEmpty()) {
+                if (viewModel.isProcessing) {
                     Button(onClick = { viewModel.cancelAll() }, colors = ButtonDefaults.buttonColors(Color.Red)) {
                         Text("Остановить")
                     }

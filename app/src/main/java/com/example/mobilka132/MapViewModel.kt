@@ -44,7 +44,8 @@ class MapViewModel : ViewModel() {
     var isGARunning by mutableStateOf(false)
 
     val isProcessing: Boolean
-        get() = activeJobs.isNotEmpty()
+        get() = activeJobs.isNotEmpty() || !initialized
+    var initialized by mutableStateOf(false)
 
     var currentGeneration by mutableStateOf(0)
     var totalGenerations by mutableStateOf(0)
@@ -53,14 +54,16 @@ class MapViewModel : ViewModel() {
 
     fun init(mapManager: MapManager) {
         this.mapManager = mapManager
-        pathfinder = AStar(mapManager.grid)
+        state.init(mapManager.width, mapManager.height, mapManager.grid)
+        pathfinder = AStar(mapManager.width, mapManager.height, mapManager.grid)
         distancer = WalkableDistance(pathfinder)
+        initialized = true
     }
 
-    fun onPointSelected(point: Offset, maskBitmap: Bitmap) {
+    fun onPointSelected(point: Offset) {
         viewModelScope.launch {
             try {
-                state.addPoint(point, maskBitmap)
+                state.addPoint(point)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -113,9 +116,11 @@ class MapViewModel : ViewModel() {
                             currentStep = AStarStep(
                                 stepData.current.let { Offset(it.x.toFloat(), it.y.toFloat()) },
                                 stepData.openSet.map { Offset(it.x.toFloat(), it.y.toFloat()) },
-                                stepData.closedSet.map { Offset(it.x.toFloat(), it.y.toFloat())},
+//                                stepData.closedSet.map { Offset(it.x.toFloat(), it.y.toFloat())},
+                                emptyList(),
                                 stepData.path?.toPath()
                             )
+                            foundPath = currentStep?.path
                         }
                 }
             } catch (e: CancellationException) {
@@ -167,7 +172,7 @@ class MapViewModel : ViewModel() {
                             Random.nextInt(0, width).toFloat(),
                             Random.nextInt(0, height).toFloat()
                         )
-                        state.addPoint(randomPoint, maskBitmap)
+                        state.addPoint(randomPoint)
                     }
                 }
 
