@@ -10,6 +10,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.mobilka132.data.ant.AntColony
 import com.example.mobilka132.data.genetic.*
 import com.example.mobilka132.data.pathfinding.AStar
 import com.example.mobilka132.data.pathfinding.PathData
@@ -32,7 +33,6 @@ class MapViewModel : ViewModel() {
 
     lateinit var mapManager : MapManager
     lateinit var pathfinder: AStar
-    lateinit var distancer: WalkableDistance
     val state = MapState()
     val overlay = MapOverlayRenderer(state)
     var foundPaths : MutableList<Path> = mutableListOf()
@@ -56,7 +56,6 @@ class MapViewModel : ViewModel() {
         this.mapManager = mapManager
         state.init(mapManager.width, mapManager.height, mapManager.grid)
         pathfinder = AStar(mapManager.width, mapManager.height, mapManager.grid)
-        distancer = WalkableDistance(pathfinder)
         initialized = true
     }
 
@@ -73,6 +72,7 @@ class MapViewModel : ViewModel() {
     fun onPathFoundCallback(found: Boolean, path: Path) {
         if (found) {
             lastPath = path
+            foundPaths.add(path)
         }
     }
 
@@ -96,7 +96,7 @@ class MapViewModel : ViewModel() {
                                    visualizeSteps: Boolean = false,
                                    stepDelay: Long = 5L,
                                    onPathFound: ((Boolean, Path) -> Unit)? = null) {
-        if (activeJobs.isNotEmpty()) return
+        // if (activeJobs.isNotEmpty()) return
         lastPath = null
         currentStep = null
 
@@ -116,7 +116,6 @@ class MapViewModel : ViewModel() {
                             currentStep = AStarStep(
                                 stepData.current.let { Offset(it.x.toFloat(), it.y.toFloat()) },
                                 stepData.openSet.map { Offset(it.x.toFloat(), it.y.toFloat()) },
-//                                stepData.closedSet.map { Offset(it.x.toFloat(), it.y.toFloat())},
                                 emptyList(),
                                 stepData.path?.toPath()
                             )
@@ -128,9 +127,6 @@ class MapViewModel : ViewModel() {
                 isPathProcessing = false
                 foundPath?.let {
                     val found = !it.steps.isEmpty()
-                    if (found) {
-                        foundPaths.add(it)
-                    }
                     onPathFound?.invoke(found, it)
                 } ?: onPathFound?.invoke(false, Path(emptyList(), 0f))
             }
@@ -144,6 +140,36 @@ class MapViewModel : ViewModel() {
         }
     }
 
+    fun findTSPSolution() {
+        if (activeJobs.isNotEmpty()) return
+        val antColony = AntColony()
+        val n = 10
+        clear()
+
+        val job = viewModelScope.launch {
+            antColony.generatePoints(n)
+            withContext(pathfinderDispatcher) {
+                for (i in 0 until n) {
+                    antColony.points[i] = state.findNearestAvailablePoint(antColony.points[i])
+                    state.addPoint(antColony.points[i])
+                }
+                antColony.solve()
+            }
+            for (i in 0 until antColony.bestPath.size) {
+                requestPathfinding(antColony.points[antColony.bestPath[i]],
+                    antColony.points[antColony.bestPath[(i + 1) % antColony.bestPath.size]])
+            }
+        }
+        activeJobs.add(job)
+        job.invokeOnCompletion {
+            activeJobs.remove(job)
+        }
+    }
+
+
+    // Спрячь логику генетики в файлик
+    //
+    //
     fun startFoodShoppingGA(maskBitmap: Bitmap) {
         if (activeJobs.isNotEmpty()) return
         val job = viewModelScope.launch {
@@ -186,6 +212,7 @@ class MapViewModel : ViewModel() {
                 val numItems = 10
 
                 val gaPoints = mapPoints.map { Point(it.position.x.toInt(), it.position.y.toInt()) }
+                val distancer = WalkableDistance(pathfinder)
                 distancer.setPoints(gaPoints)
 
                 val allItems = (0 until numItems).toMutableList()
@@ -249,6 +276,7 @@ class MapViewModel : ViewModel() {
 
     fun clear() {
         if (activeJobs.isNotEmpty()) return
+        foundPaths.clear()
         currentStep = null
         lastPath = null
         state.clearPoints()
