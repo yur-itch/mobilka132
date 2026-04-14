@@ -87,16 +87,6 @@ class MapState {
         return (inFittedSpace + offset) * scale
     }
 
-//    fun prepareMask(mask: Bitmap) {
-//        if (maskPixels == null) {
-//            maskWidth = mask.width
-//            maskHeight = mask.height
-//            println("$maskWidth $maskHeight")
-//            val p = IntArray(maskWidth * maskHeight)
-//            mask.getPixels(p, 0, maskWidth, 0, 0, maskWidth, maskHeight)
-//        }
-//    }
-
     fun addPointsDirectly(points: List<Offset>) {
         points.forEach { pt ->
             selectedPoints.add(MapPoint(id = nextPointId++, position = pt))
@@ -106,7 +96,6 @@ class MapState {
     suspend fun addPoint(contentPoint: Offset) = withContext(Dispatchers.Default) {
         isProcessing = true
         try {
-
             val finalPosition = findNearestAvailablePoint(contentPoint)
             withContext(Dispatchers.Main) {
                 selectedPoints.add(MapPoint(id = nextPointId++, position = finalPosition))
