@@ -60,10 +60,10 @@ class MainActivity : ComponentActivity() {
 
         mapManager = MapManager(this)
 
-        mapManager.loadPointsFromAssets()
         lifecycleScope.launch {
             mapManager.loadData().await()
             viewModel.init(mapManager)
+            viewModel.loadPointsFromAssets(this@MainActivity)
         }
         location.checkPermission()
 
@@ -84,7 +84,6 @@ class MainActivity : ComponentActivity() {
             var visualizeRoute by remember { mutableStateOf(false) }
             var stepDelay by remember { mutableStateOf(5L) }
 
-            // Keep all three bitmaps
             val roadMask = remember {
                 val options = BitmapFactory.Options().apply { inScaled = false }
                 BitmapFactory.decodeResource(context.resources, R.drawable.map, options)
@@ -164,7 +163,6 @@ class MainActivity : ComponentActivity() {
                         location = location
                     )
 
-                    // Bottom Section with fixed height to prevent map jumping
                     Box(modifier = Modifier.height(200.dp).fillMaxWidth()) {
                         Crossfade(targetState = state.selectedBuildingInfo, label = "BottomPanel") { buildingInfo ->
                             if (buildingInfo != null) {
@@ -310,7 +308,7 @@ class MainActivity : ComponentActivity() {
                 Button(
                     onClick = { viewModel.startFoodShoppingGA(roadMask) },
                     enabled = !isBusy,
-                    colors = ButtonDefaults.buttonColors(Color(0xFFFF9800)) // Orange
+                    colors = ButtonDefaults.buttonColors(Color(0xFFFF9800))
                 ) {
                     Text("GA")
                 }
@@ -382,9 +380,12 @@ class MainActivity : ComponentActivity() {
         location: LocationManager
     ) {
         val textMeasurer = rememberTextMeasurer()
-        val cachedPath = remember(viewModel.lastPath?.steps) { overlay.generatePath(viewModel.lastPath?.steps) }
         val paths = remember(viewModel.foundPaths.size) {
             viewModel.foundPaths.map { overlay.generatePath(it.steps) }
+        }
+
+        val gaPath = remember(viewModel.currentGAStep) {
+            viewModel.currentGAStep?.path?.steps?.let { overlay.generatePath(it) }
         }
 
         val stepOffset = remember(viewModel.currentStep) {
@@ -431,10 +432,10 @@ class MainActivity : ComponentActivity() {
                 )
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     with(overlay) {
-                        // Draw all found paths (from TSP, etc.)
                         for (path in paths) {
                             drawPathScaled(path)
                         }
+                        gaPath?.let { drawPathScaled(it) }
                     }
                 }
             }

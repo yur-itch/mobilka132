@@ -15,6 +15,7 @@ import com.example.mobilka132.data.genetic.*
 import com.example.mobilka132.data.pathfinding.AStar
 import com.example.mobilka132.data.pathfinding.PathData
 import com.example.mobilka132.model.AStarStep
+import com.example.mobilka132.model.GAStep
 import com.example.mobilka132.model.MapPoint
 import com.example.mobilka132.model.Path
 import kotlinx.coroutines.Dispatchers
@@ -41,6 +42,7 @@ class MapViewModel : ViewModel() {
     var foundPaths: MutableList<Path> = mutableStateListOf()
     var lastPath by mutableStateOf<Path?>(null)
     var currentStep by mutableStateOf<AStarStep?>(null)
+    var currentGAStep by mutableStateOf<GAStep?>(null)
 
     var activeJobs: MutableList<Job> = mutableStateListOf()
 
@@ -153,6 +155,7 @@ class MapViewModel : ViewModel() {
     ) {
         lastPath = null
         currentStep = null
+        currentGAStep = null
 
         var foundPath: Path? = null
         isPathProcessing = true
@@ -171,7 +174,7 @@ class MapViewModel : ViewModel() {
                                 stepData.current.let { Offset(it.x.toFloat(), it.y.toFloat()) },
                                 stepData.openSet.map { Offset(it.x.toFloat(), it.y.toFloat()) },
                                 emptyList(),
-                                stepData.path?.toPath()
+                                stepData.path
                             )
                             foundPath = currentStep?.path
                         }
@@ -232,6 +235,7 @@ class MapViewModel : ViewModel() {
             state.clearPoints()
             lastPath = null
             currentStep = null
+            currentGAStep = null
 
             val width = state.imageSize.width.toInt()
             val height = state.imageSize.height.toInt()
@@ -302,13 +306,16 @@ class MapViewModel : ViewModel() {
                         val best = population.maxByOrNull { fitness(it, ctx) }
                         if (best != null) {
                             val actualPath = mutableListOf<Offset>()
+                            var distance = 0.0f
                             for (i in 0 until best.size - 1) {
                                 val segment = distancer.path(best[i], best[i + 1])
                                 actualPath.addAll(segment.map { Offset(it.x.toFloat(), it.y.toFloat()) })
+                                distance += distancer[best[i], best[i + 1]].toFloat()
                             }
 
                             withContext(Dispatchers.Main) {
-                                lastPath = Path(actualPath, 0f)
+                                val path = Path(actualPath, distance)
+                                currentGAStep = GAStep(gen, path)
                                 currentGeneration = gen
                             }
                         }
@@ -317,6 +324,10 @@ class MapViewModel : ViewModel() {
                 }
             } finally {
                 isGARunning = false
+                currentGAStep?.let {
+                    lastPath = it.path
+                    foundPaths.add(it.path)
+                }
             }
         }
         activeJobs.add(job)
@@ -331,6 +342,8 @@ class MapViewModel : ViewModel() {
         }
         isGARunning = false
         isPathProcessing = false
+        currentStep = null
+        currentGAStep = null
     }
 
     fun deletePoint(index: Int) {
@@ -340,6 +353,7 @@ class MapViewModel : ViewModel() {
             state.selectedPoints.removeAt(index)
             if (state.selectedPoints.size < 2) {
                 lastPath = null
+                currentGAStep = null
             }
         }
     }
@@ -349,6 +363,7 @@ class MapViewModel : ViewModel() {
 
         foundPaths.clear()
         currentStep = null
+        currentGAStep = null
         lastPath = null
         state.clearPoints()
         isGARunning = false
@@ -358,6 +373,7 @@ class MapViewModel : ViewModel() {
     fun clearResult() {
         if (isProcessing) return
         currentStep = null
+        currentGAStep = null
         lastPath = null
     }
 
