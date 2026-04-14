@@ -6,6 +6,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -13,6 +14,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -41,26 +43,31 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mobilka132.pickBestRestaurant.DecisionTreeManager
 import com.example.mobilka132.pickBestRestaurant.DecisionDialog
 import com.example.mobilka132.data.location.LocationManager
 import com.example.mobilka132.model.MapPoint
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
     private lateinit var mapManager: MapManager
-    //    private val viewModel: MapViewModel = MapViewModel()
     private val viewModel: MapViewModel by viewModels<MapViewModel>()
     private val location: LocationManager by lazy { LocationManager(this, activityResultRegistry) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         mapManager = MapManager(this)
-        mapManager.loadData()
-        viewModel.init(mapManager.grid)
+
+        lifecycleScope.launch {
+            mapManager.loadData().await()
+            viewModel.init(mapManager)
+            viewModel.loadPointsFromAssets(this@MainActivity)
+        }
         location.checkPermission()
-        viewModel.loadPointsFromAssets(this)
 
         setContent {
             val state = viewModel.state
@@ -77,26 +84,32 @@ class MainActivity : ComponentActivity() {
             var startLabel by remember { mutableStateOf("Выберите начало") }
             var endLabel by remember { mutableStateOf("Выберите конец") }
             var visualizeRoute by remember { mutableStateOf(false) }
+            var stepDelay by remember { mutableStateOf(5L) }
 
-            val maskBitmap = remember {
+            val roadMask = remember {
                 val options = BitmapFactory.Options().apply { inScaled = false }
                 BitmapFactory.decodeResource(context.resources, R.drawable.map, options)
             }
+
+            val buildingsMask = remember {
+                val options = BitmapFactory.Options().apply { inScaled = false }
+                BitmapFactory.decodeResource(context.resources, R.drawable.perfect_colored_map, options)
+            }
+
             val dummyBitmap = remember {
                 val options = BitmapFactory.Options().apply { inScaled = false }
                 BitmapFactory.decodeResource(context.resources, R.drawable.user_map_contrast, options)
             }
-            val bitmaps = arrayOf(maskBitmap, dummyBitmap)
+
+            val bitmaps = arrayOf(dummyBitmap, roadMask, buildingsMask)
             var shownIndex by remember { mutableIntStateOf(0) }
 
-            LaunchedEffect(maskBitmap) {
-                state.imageSize = Size(maskBitmap.width.toFloat(), maskBitmap.height.toFloat())
+            LaunchedEffect(roadMask) {
+                state.imageSize = Size(roadMask.width.toFloat(), roadMask.height.toFloat())
             }
 
             Scaffold(
-                modifier = Modifier
-                    .fillMaxSize(),
-//                contentWindowInsets = WindowInsets(),
+                modifier = Modifier.fillMaxSize(),
             ) { padding ->
                 Column(
                     modifier = Modifier
@@ -113,20 +126,25 @@ class MainActivity : ComponentActivity() {
                             startLabel = startLabel,
                             endLabel = endLabel,
                             isVisualized = visualizeRoute,
+                            stepDelay = stepDelay,
+                            onStepDelayChange = { stepDelay = it },
                             onVisualizationToggle = { visualizeRoute = it },
                             onStartSelected = { offset, label ->
-                                startPoint = offset; startLabel = label
+                                startPoint = offset
+                                startLabel = label
                             },
                             onEndSelected = { offset, label ->
-                                endPoint = offset; endLabel = label
+                                endPoint = offset
+                                endLabel = label
                             },
                             onClose = { showRouteMenu = false },
                             onBuildRoute = {
                                 if (startPoint != null && endPoint != null) {
                                     viewModel.requestPathfinding(
-                                        state.findNearestAvailablePoint(
-                                            startPoint!!
-                                        ), endPoint!!, visualizeRoute
+                                        state.findNearestAvailablePoint(startPoint!!),
+                                        endPoint!!,
+                                        visualizeRoute,
+                                        stepDelay
                                     )
                                     showRouteMenu = false
                                 }
@@ -139,23 +157,31 @@ class MainActivity : ComponentActivity() {
                         bitmap = bitmaps[shownIndex],
                         modifier = Modifier.weight(1f),
                         onPointSelected = { pressOffset ->
-                            val contentPoint = state.screenToContent(pressOffset)
-                            viewModel.onPointSelected(contentPoint, maskBitmap)
+                            val currentRoadMask = if (state.isSelectionMode) roadMask else null
+                            viewModel.onPointSelected(pressOffset, currentRoadMask, buildingsMask)
                         },
                         overlay = overlay,
                         viewModel = viewModel,
                         location = location
                     )
 
-                    ControlPanel(
-                        state = state,
-                        viewModel = viewModel,
-                        onShowPointsList = { showPointsList = true },
-                        onShowDecisionDialog = { showDecisionDialog = true },
-                        onToggleView = { shownIndex = (shownIndex + 1) % bitmaps.size },
-                        onToggleRouteMenu = { showRouteMenu = !showRouteMenu },
-                        maskBitmap = maskBitmap
-                    )
+                    Box(modifier = Modifier.height(200.dp).fillMaxWidth()) {
+                        Crossfade(targetState = state.selectedBuildingInfo, label = "BottomPanel") { buildingInfo ->
+                            if (buildingInfo != null) {
+                                BuildingInfoCard(info = buildingInfo, onDismiss = { state.selectedBuildingInfo = null })
+                            } else {
+                                ControlPanel(
+                                    state = state,
+                                    viewModel = viewModel,
+                                    onShowPointsList = { showPointsList = true },
+                                    onShowDecisionDialog = { showDecisionDialog = true },
+                                    onToggleView = { shownIndex = (shownIndex + 1) % bitmaps.size },
+                                    onToggleRouteMenu = { showRouteMenu = !showRouteMenu },
+                                    roadMask = roadMask
+                                )
+                            }
+                        }
+                    }
 
                     if (showPointsList) {
                         PointsListDialog(
@@ -177,21 +203,80 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
+    private fun BuildingInfoCard(info: BuildingInfo, onDismiss: () -> Unit) {
+        Card(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(8.dp),
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+            ) {
+                item {
+                    Row(verticalAlignment = Alignment.Top) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            if (info.name.isNotEmpty()) {
+                                Text(info.name, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Text(info.address, fontSize = 14.sp, color = Color.Gray)
+                        }
+                        IconButton(
+                            onClick = onDismiss,
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Text("✕", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                if (info.venues.isNotEmpty()) {
+                    item {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Заведения:", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    }
+                    items(info.venues) { venue ->
+                        Text(
+                            text = "• $venue",
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(vertical = 2.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    @Composable
     private fun HeaderSection(state: MapState, viewModel: MapViewModel) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(12.dp).fillMaxWidth()) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxWidth()
+        ) {
             Text(
                 text = when {
                     state.isProcessing -> "Снаппинг к дороге..."
                     state.isSelectionMode -> "Выберите точку на карте"
-                    viewModel.isGARunning -> "Генетика: ген. ${viewModel.currentGeneration}"
                     viewModel.isPathProcessing -> "Поиск пути..."
+                    viewModel.isGARunning -> "Генетика: ген. ${viewModel.currentGeneration}"
+                    viewModel.lastPath != null -> "Путь найден: ${viewModel.lastPath!!.distance} м"
                     else -> "Интерактивная карта"
                 },
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
             )
             if (state.isProcessing || viewModel.isAnyAlgoRunning) {
-                CircularProgressIndicator(modifier = Modifier.size(20.dp).align(Alignment.CenterEnd).padding(end = 16.dp))
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .align(Alignment.CenterEnd)
+                        .padding(end = 16.dp)
+                )
             }
         }
     }
@@ -204,28 +289,48 @@ class MainActivity : ComponentActivity() {
         onShowDecisionDialog: () -> Unit,
         onToggleView: () -> Unit,
         onToggleRouteMenu: () -> Unit,
-        maskBitmap: Bitmap
+        roadMask: Bitmap
     ) {
         val isBusy = viewModel.isAnyAlgoRunning || state.isProcessing
 
-        Column(modifier = Modifier.padding(8.dp).background(Color(0xFFF5F5F5), RoundedCornerShape(16.dp)).padding(8.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(8.dp)
+                .background(Color(0xFFF5F5F5), RoundedCornerShape(16.dp))
+                .padding(8.dp),
+            verticalArrangement = Arrangement.Center
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
                 Button(onClick = onToggleRouteMenu, enabled = !isBusy) { Text("Маршрут") }
                 Button(onClick = onToggleView) { Text("Вид") }
-                Button(onClick = { viewModel.startFoodShoppingGA(maskBitmap) }, enabled = !isBusy, colors = ButtonDefaults.buttonColors(Color(0xFFFF9800))) {
+                Button(
+                    onClick = { viewModel.startFoodShoppingGA(roadMask) },
+                    enabled = !isBusy,
+                    colors = ButtonDefaults.buttonColors(Color(0xFFFF9800))
+                ) {
                     Text("GA")
                 }
             }
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Button(
                     onClick = { state.isSelectionMode = !state.isSelectionMode },
                     enabled = !isBusy,
-                    colors = ButtonDefaults.buttonColors(containerColor = if (state.isSelectionMode) Color.Red else Color(0xFF2196F3))
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (state.isSelectionMode) Color.Red else Color(0xFF2196F3)
+                    )
                 ) {
-                    Text(if (state.isSelectionMode) "Отмена" else "Точка +")
+                    Text(if (state.isSelectionMode) "Отмена" else "Точка")
                 }
 
                 Button(onClick = onShowPointsList, colors = ButtonDefaults.buttonColors(Color.Gray)) {
@@ -237,12 +342,28 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                Button(onClick = onShowDecisionDialog, colors = ButtonDefaults.buttonColors(Color(0xFF4CAF50))) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Button(
+                    onClick = { viewModel.findTSPSolution() },
+                    enabled = !isBusy,
+                    colors = ButtonDefaults.buttonColors(Color.Green)
+                ) {
+                    Text("TSP")
+                }
+                Button(
+                    onClick = onShowDecisionDialog,
+                    colors = ButtonDefaults.buttonColors(Color(0xFF4CAF50))
+                ) {
                     Text("💡 Совет")
                 }
                 if (viewModel.isAnyAlgoRunning) {
-                    Button(onClick = { viewModel.cancelAll() }, colors = ButtonDefaults.buttonColors(Color.Red)) {
+                    Button(
+                        onClick = { viewModel.cancelAll() },
+                        colors = ButtonDefaults.buttonColors(Color.Red)
+                    ) {
                         Text("Остановить")
                     }
                 }
@@ -261,10 +382,18 @@ class MainActivity : ComponentActivity() {
         location: LocationManager
     ) {
         val textMeasurer = rememberTextMeasurer()
-        val cachedPath = remember(viewModel.lastPath?.steps) { overlay.generatePath(viewModel.lastPath?.steps) }
+        val paths = remember(viewModel.foundPaths.size) {
+            viewModel.foundPaths.map { overlay.generatePath(it.steps) }
+        }
+
+        val gaPath = remember(viewModel.currentGAStep) {
+            viewModel.currentGAStep?.path?.steps?.let { overlay.generatePath(it) }
+        }
+
         val stepOffset = remember(viewModel.currentStep) {
             viewModel.currentStep?.current?.let { (x, y) -> Offset(x.toFloat(), y.toFloat()) }
         }
+
         val nodeOffsets = remember(viewModel.currentStep) {
             viewModel.currentStep?.openSet?.map { (x, y) -> Offset(x.toFloat(), y.toFloat()) } ?: emptyList()
         }
@@ -275,27 +404,41 @@ class MainActivity : ComponentActivity() {
                 .fillMaxWidth()
                 .background(Color.DarkGray)
                 .onSizeChanged { state.containerSize = it }
-                .pointerInput(state.isSelectionMode, state.isProcessing) {
-                    if (state.isSelectionMode && !state.isProcessing) {
-                        detectTapGestures { onPointSelected(it) }
-                    } else {
-                        detectTransformGestures { centroid, pan, zoom, _ ->
-                            state.updateTransform(centroid, pan, zoom)
-                        }
+                .pointerInput(state.isProcessing) {
+                    detectTapGestures(
+                        onTap = { if (!state.isProcessing) onPointSelected(it) }
+                    )
+                }
+                .pointerInput(Unit) {
+                    detectTransformGestures { centroid, pan, zoom, _ ->
+                        state.updateTransform(centroid, pan, zoom)
                     }
                 }
         ) {
             Box(
-                modifier = Modifier.fillMaxSize().graphicsLayer(
-                    scaleX = state.scale, scaleY = state.scale,
-                    translationX = state.offset.x * state.scale,
-                    translationY = state.offset.y * state.scale,
-                    transformOrigin = TransformOrigin(0f, 0f)
-                )
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer(
+                        scaleX = state.scale,
+                        scaleY = state.scale,
+                        translationX = state.offset.x * state.scale,
+                        translationY = state.offset.y * state.scale,
+                        transformOrigin = TransformOrigin(0f, 0f)
+                    )
             ) {
-                Image(bitmap = bitmap.asImageBitmap(), contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize()
+                )
                 Canvas(modifier = Modifier.fillMaxSize()) {
-                    with(overlay) { drawPathScaled(cachedPath) }
+                    with(overlay) {
+                        for (path in paths) {
+                            drawPathScaled(path)
+                        }
+                        gaPath?.let { drawPathScaled(it) }
+                    }
                 }
             }
 
@@ -311,22 +454,30 @@ class MainActivity : ComponentActivity() {
 
             FilledIconButton(
                 onClick = { location.requestNewLocationData() },
-                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp).size(56.dp),
-                colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.Blue)
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp)
+                    .size(56.dp),
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = if (location.mapLocation == null) Color.Blue else Color.Gray
+                )
             ) {
                 Text("GPS", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
 
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val textStyle = TextStyle(color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+
                 state.selectedPoints.forEach { point ->
                     val screenPos = state.contentToScreen(point.position)
+
                     drawCircle(color = Color.Red, radius = 20f, center = screenPos)
                     drawCircle(color = Color.White, radius = 8f, center = screenPos)
 
                     val textLayoutResult = textMeasurer.measure(text = point.id.toString(), style = textStyle)
                     val textWidth = textLayoutResult.size.width.toFloat()
                     val textHeight = textLayoutResult.size.height.toFloat()
+
                     val pinWidth = maxOf(50f, textWidth + 20f)
                     val pinHeight = 70f
                     val tailHeight = 25f
@@ -340,8 +491,10 @@ class MainActivity : ComponentActivity() {
                         lineTo(screenPos.x + pinWidth / 2, screenPos.y - pinBottomOffset - tailHeight)
                         close()
                     }
+
                     drawPath(path = path, color = Color.Yellow)
                     drawPath(path = path, color = Color.Black, style = Stroke(width = 2f))
+
                     drawText(
                         textLayoutResult = textLayoutResult,
                         topLeft = Offset(
@@ -355,9 +508,19 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun PointsListDialog(points: List<MapPoint>, onDismiss: () -> Unit, onDeletePoint: (Int) -> Unit) {
+    fun PointsListDialog(
+        points: List<MapPoint>,
+        onDismiss: () -> Unit,
+        onDeletePoint: (Int) -> Unit
+    ) {
         Dialog(onDismissRequest = onDismiss) {
-            Surface(shape = RoundedCornerShape(16.dp), color = Color.White, modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = Color.White,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Выбранные локации", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(16.dp))
@@ -366,7 +529,13 @@ class MainActivity : ComponentActivity() {
                     } else {
                         LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
                             itemsIndexed(points) { index, point ->
-                                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
                                     Text(text = "Точка №${point.id}", fontSize = 18.sp)
                                     IconButton(onClick = { onDeletePoint(index) }) {
                                         Text("✕", color = Color.Red, fontSize = 20.sp)
@@ -376,7 +545,12 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
-                    Button(onClick = onDismiss, modifier = Modifier.align(Alignment.End).padding(top = 16.dp)) { Text("Закрыть") }
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .align(Alignment.End)
+                            .padding(top = 16.dp)
+                    ) { Text("Закрыть") }
                 }
             }
         }
@@ -390,13 +564,21 @@ fun RouteMenu(
     startLabel: String,
     endLabel: String,
     isVisualized: Boolean,
+    stepDelay: Long,
+    onStepDelayChange: (Long) -> Unit,
     onVisualizationToggle: (Boolean) -> Unit,
     onStartSelected: (Offset, String) -> Unit,
     onEndSelected: (Offset, String) -> Unit,
     onBuildRoute: () -> Unit,
     onClose: () -> Unit
 ) {
-    Surface(modifier = Modifier.fillMaxWidth().padding(8.dp), shape = RoundedCornerShape(16.dp), shadowElevation = 8.dp) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        shape = RoundedCornerShape(16.dp),
+        shadowElevation = 8.dp
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("Маршрут", fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
             Spacer(modifier = Modifier.height(12.dp))
@@ -407,12 +589,40 @@ fun RouteMenu(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Checkbox(checked = isVisualized, onCheckedChange = onVisualizationToggle)
-                Text("Визуализировать шаги (A*)", fontSize = 14.sp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+            ) {
+                Checkbox(
+                    checked = isVisualized,
+                    onCheckedChange = onVisualizationToggle
+                )
+                Text("A*", fontSize = 14.sp)
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Задержка: ${stepDelay.toInt()} мс", fontSize = 12.sp, color = Color.Gray)
+                    Slider(
+                        value = stepDelay.toFloat(),
+                        onValueChange = { onStepDelayChange(it.toLong()) },
+                        valueRange = 0f..50f,
+                        colors = SliderDefaults.colors(
+                            thumbColor = Color(0xFF4CAF50),
+                            activeTrackColor = Color(0xFF4CAF50)
+                        )
+                    )
+                }
             }
 
-            Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 TextButton(onClick = onClose) { Text("Закрыть", color = Color.Gray) }
                 Button(
                     onClick = onBuildRoute,
@@ -427,16 +637,37 @@ fun RouteMenu(
 }
 
 @Composable
-fun PointSelector(label: String, points: List<MapPoint>, myLocation: Offset?, onSelected: (Offset, String) -> Unit) {
+fun PointSelector(
+    label: String,
+    points: List<MapPoint>,
+    myLocation: Offset?,
+    onSelected: (Offset, String) -> Unit
+) {
     var expanded by remember { mutableStateOf(false) }
     Box {
-        OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) { Text(label) }
+        OutlinedButton(
+            onClick = { expanded = true },
+            modifier = Modifier.fillMaxWidth()
+        ) { Text(label) }
+
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             myLocation?.let {
-                DropdownMenuItem(text = { Text("Моя локация (GPS)") }, onClick = { onSelected(it, "Моя локация"); expanded = false })
+                DropdownMenuItem(
+                    text = { Text("Моя локация (GPS)") },
+                    onClick = {
+                        onSelected(it, "Моя локация")
+                        expanded = false
+                    }
+                )
             }
             points.forEach { point ->
-                DropdownMenuItem(text = { Text("Точка №${point.id}") }, onClick = { onSelected(point.position, "Точка №${point.id}"); expanded = false })
+                DropdownMenuItem(
+                    text = { Text("Точка №${point.id}") },
+                    onClick = {
+                        onSelected(point.position, "Точка №${point.id}")
+                        expanded = false
+                    }
+                )
             }
         }
     }

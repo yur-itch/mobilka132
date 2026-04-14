@@ -1,0 +1,101 @@
+package com.example.mobilka132
+
+data class BuildingInfo(
+    val name: String,
+    val address: String,
+    val venues: List<String> = emptyList()
+)
+
+object CampusDatabase {
+    private val buildingRegistry = mutableMapOf<Int, BuildingInfo>()
+
+    init {
+        addBuilding(0xFF2BD936.toInt(), BuildingInfo("Студенческий жилой комплекс «Маяк»", "улица Аркадия Иванова, 22, 24"))
+        addBuilding(0xFF9FB824.toInt(), BuildingInfo("6 корпус ТГУ", "улица Аркадия Иванова, 49"))
+        addBuilding(0xFF4C24BB.toInt(), BuildingInfo("Студенческий жилой комплекс «Парус»", "Буяновский переулок, 3а"))
+        addBuilding(0xFFB43177.toInt(), BuildingInfo("5 общежитие ТГУ", "Проспект Ленина, 49а"))
+        addBuilding(0xFFCC203D.toInt(), BuildingInfo("6 общежитие ТГУ", "Советская улица, 59", listOf("Столовая 'Укромное местечко'")))
+        addBuilding(0xFFC65818.toInt(), BuildingInfo("Центр культуры ТГУ", "Проспект Ленина, 36", listOf("Кафе-блинная 'Сибирские блины'", "Кафе 'Минутка'", "Столовая №1")))
+        addBuilding(0xFF8F17BB.toInt(), BuildingInfo("1 Корпус ТГУ", "Проспект Ленина, 36"))
+        addBuilding(0xFFF32167.toInt(), BuildingInfo("9 корпус ТГУ", "Проспект Ленина, 36, к9", listOf("Кофейня-библиотека 'Starbooks'")))
+        addBuilding(0xFFF74373.toInt(), BuildingInfo("10 корпус ТГУ", "Проспект Ленина, 36, к10", listOf("НИИ Прикладной математики и механики")))
+        addBuilding(0xFF3971D1.toInt(), BuildingInfo("2 корпус ТГУ", "Проспект Ленина, 36, к2", listOf("Кофейня 'XO Bakery'")))
+        addBuilding(0xFF98F52D.toInt(), BuildingInfo("14 корпус ТГУ (Дом Спорта ТГУ)", "Проспект Ленина, 36"))
+        addBuilding(0xFF37BC68.toInt(), BuildingInfo("4 корпус ТГУ", "Московский тракт, 8"))
+        addBuilding(0xFFE5402E.toInt(), BuildingInfo("3 корпус ТГУ", "Проспект Ленина, 34"))
+        addBuilding(0xFF02D9D2.toInt(), BuildingInfo("5 корпус ТГУ", "Проспект Ленина, 36 к5"))
+        addBuilding(0xFF3121C1.toInt(), BuildingInfo("12 корпус ТГУ", "Улица Герцена, 2 / Ново-Соборная площадь, 1 ст2"))
+        addBuilding(0xFFF6241D.toInt(), BuildingInfo("29 корпус ТГУ", "Советская улица, 46", listOf("Супермаркет 'Ярче'")))
+        addBuilding(0xFFB98904.toInt(), BuildingInfo("Сибирский физико-технический институт им. академика В. Д. Кузнецова", "Ново-Соборная площадь, 1"))
+        addBuilding(0xFF1AE7BE.toInt(), BuildingInfo("Научная библиотека ТГУ", "Проект Ленина, 34а", listOf("Кафе 'Научка'")))
+        addBuilding(0xFF9CC835.toInt(), BuildingInfo("СибГМУ, корпус деканатов", "Московский тракт, 2 ст20", listOf("Столовая 'Укромное местечко'")))
+        addBuilding(0xFF7ACE30.toInt(), BuildingInfo("Томский экономико-юридический техникум", "Московский тракт, 2г", listOf("Кафе 'Сыр-Бор'", "Кофейня - библиотека 'Starbooks'")))
+        addBuilding(0xFF2C12D3.toInt(), BuildingInfo("ТПУ. Центр управления контингентом студентов", "Проспект Ленина, 30", listOf("Столовая 'В главном'")))
+        addBuilding(0xFF37D905.toInt(), BuildingInfo("5 корпус ТПУ", "Проспект Ленина, 30/2", listOf("Кафе 'Мини-микс'")))
+        addBuilding(0xFFF88520.toInt(), BuildingInfo("", "Московский тракт, 71а", listOf("Магазин еды 'Сибирский Smoker'")))
+        addBuilding(0xFF4DBA25.toInt(), BuildingInfo("", "Московский тракт, 46", listOf("Магазин пива 'Kruger Haus'", "Магазин пива 'Tomskoe pivo'")))
+        addBuilding(0xFFFF8A31.toInt(), BuildingInfo("", "улица Аркадия Иванова, 18а", listOf("Ресторанный комплекс 'У Крюгера'")))
+        addBuilding(0xFFA6DA2C.toInt(), BuildingInfo("", "Проспект Ленина, 26 / улица Аркадия Иванова, 2", listOf("Додо Пицца", "Кафе Пряникъ", "Кафе вьетнамской кухни 'Ван Куан'")))
+        addBuilding(0xFFAEE52F.toInt(), BuildingInfo("", "Московский тракт, 45/1", listOf("Магазин 'Мясной бульвар'")))
+        addBuilding(0xFF24BF67.toInt(), BuildingInfo("", "Московский тракт, 43/1", listOf("Продуктовый магазин 'Шукран'")))
+        addBuilding(0xFF12E767.toInt(), BuildingInfo("", "Московский тракт, 37", listOf("Ресторан китайской кухни 'Цзисян'")))
+        addBuilding(0xFF4229E4.toInt(), BuildingInfo("", "Буяновский переулок, 11а", listOf("Шаурмечная 'Black grill'")))
+        addBuilding(0xFF1E77DE.toInt(), BuildingInfo("", "Буяновский переулок, 12", listOf("Продуктовый магазин 'Подкова'")))
+        addBuilding(0xFFDD813B.toInt(), BuildingInfo("", "Московский тракт, 21/1", listOf("Шаурмечная 'Батина Шаурма'")))
+        addBuilding(0xFF7C17BF.toInt(), BuildingInfo("", "Московский тракт, 17", listOf("Универсам 'Абрикос'", "Шаурмечная 'Безумно. Крутая шаурма'")))
+        addBuilding(0xFF28E147.toInt(), BuildingInfo("", "Московский тракт, 11Б", listOf("Продуктовый магазин 'Пилад'")))
+        addBuilding(0xFFD81C8D.toInt(), BuildingInfo("", "Московский тракт, 6/4", listOf("Бар 'Рюмки на стол'", "Столовая 'Магнолия'")))
+        addBuilding(0xFF94BD0D.toInt(), BuildingInfo("", "Московский тракт, 6/3", listOf("Магазин 'Красное&Белое'", "Кафе 'У Мамы'")))
+        addBuilding(0xFFF73FCC.toInt(), BuildingInfo("", "Базарный переулок, 12", listOf("Бар разливных напитков 'Аян'", "Магазин 'Паровозъ'", "Супермаркет 'Ярче'")))
+        addBuilding(0xFFD6D612.toInt(), BuildingInfo("", "Базарный переулок, 12 киоск", listOf("Магазин фруктов и овощей")))
+        addBuilding(0xFF30C74F.toInt(), BuildingInfo("", "Московский тракт, 89", listOf("Магазин 'Красное&Белое'")))
+        addBuilding(0xFFBFA603.toInt(), BuildingInfo("", "Улица Аркадия Иванова, 8 / улица Карпова, 1", listOf("Лаундж-бар 'Яблунул'")))
+        addBuilding(0xFFD32A10.toInt(), BuildingInfo("", "Источная улица, 44", listOf("Бар-пивоварня 'Beerfolio'", "Магазин у дома 'Бристоль'")))
+        addBuilding(0xFFBA02CF.toInt(), BuildingInfo("", "Источная улица, 42", listOf("Ирландский паб 'Harat's pub'", "Лаундж-бар 'Olivka'")))
+        addBuilding(0xFFB4202A.toInt(), BuildingInfo("", "Московский тракт, 38а", listOf("Супермаркет 'Мария-Ра'")))
+        addBuilding(0xFF20B1B6.toInt(), BuildingInfo("", "Московский тракт, 40", listOf("Доставка еды 'ЕлиДаЕли'", "Кафе 'Шашлычный дом'", "Кофейня 'Бyffет'")))
+        addBuilding(0xFF3AFABA.toInt(), BuildingInfo("", "Московский тракт, 44а", listOf("Киоск фастфудной продукции 'Грузинские хачапури'", "Магазин фермерских продуктов", "Магазин рыбы и морепродуктов 'Рыбка...'")))
+        addBuilding(0xFFA431B6.toInt(), BuildingInfo("", "Улица Аркадия Иванова, 37", listOf("Киоск по продаже овощей и фруктов")))
+        addBuilding(0xFFB93662.toInt(), BuildingInfo("", "Улица Аркадия Иванова, 35", listOf("Магазин-бар 'У Ксюши'")))
+        addBuilding(0xFF21CA70.toInt(), BuildingInfo("", "Улица Аркадия Иванова, 27", listOf("Лаундж-бар 'Лухари'", "Ресторан доставки 'Царь'")))
+        addBuilding(0xFF70E52D.toInt(), BuildingInfo("", "Ново-Соборная площадь, 2а", listOf("Кофейня 'Mindайk coffee'")))
+        addBuilding(0xFF7FB424.toInt(), BuildingInfo("", "Ново-Соборная площадь, 2", listOf("Рестобар 'Окно'", "Быстрое питание 'Сибирское бистро'")))
+        addBuilding(0xFF3ACA0E.toInt(), BuildingInfo("", "Улица Герцена, 6 ст8", listOf("Кафе-мороженое '33 пингвина'")))
+        addBuilding(0xFF13A2B8.toInt(), BuildingInfo("", "Улица Герцена, 6 ст1", listOf("Кафе-блинная 'Сибирские блины'", "Кафе быстрого питания 'Еда тут'")))
+        addBuilding(0xFF94CB35.toInt(), BuildingInfo("", "Советская улица, 44а", listOf("Шашлычный двор 'Томичка'")))
+        addBuilding(0xFFFDEB4A.toInt(), BuildingInfo("", "Улица Герцена, 6/12 киоск", listOf("Кафе-мороженое 'Gelato Popio'")))
+        addBuilding(0xFFE42148.toInt(), BuildingInfo("", "Улица Герцена, 6/5, киоск", listOf("Магазин жареного мороженого 'Ice cool'")))
+        addBuilding(0xFF37F029.toInt(), BuildingInfo("", "Улица Герцена, 1а", listOf("Ресто-место 'Ближе'")))
+        addBuilding(0xFF6AB41F.toInt(), BuildingInfo("", "Советская улица, 47", listOf("Трактир 'Вечный зов'")))
+        addBuilding(0xFFCE2468.toInt(), BuildingInfo("", "Проспект Ленина, 63", listOf("Кофейня 'Baba Roma'")))
+        addBuilding(0xFF2418D0.toInt(), BuildingInfo("", "Проспект Ленина, 55", listOf("Семейный ресторан 'Гербарий'")))
+        addBuilding(0xFF06E324.toInt(), BuildingInfo("", "Проспект Ленина, 51а / улица Карташова, 1а", listOf("Ресторан быстрого самообслуживания 'Rostic's'")))
+        addBuilding(0xFFB415E4.toInt(), BuildingInfo("", "Советская улица, 63", listOf("Магазин у дома 'Бристоль'")))
+        addBuilding(0xFFC10934.toInt(), BuildingInfo("", "Проспект Ленина, 47а", listOf("Экспресс-кофейня 'Точка'")))
+        addBuilding(0xFFE1DA16.toInt(), BuildingInfo("", "Улица Усова, 3", listOf("Кафе быстрого питания 'Прожарка'", "Экспресс-кофейня 'Ракета Кофе'", "Кофейня 'Baba Roma'")))
+        addBuilding(0xFFB623B1.toInt(), BuildingInfo("", "Проспект Ленина, 41", listOf("Супермаркет 'Пятёрочка'", "Магазин китайских продуктов 'Panda '", "Ирландский паб 'Клевер'", "Пати-бар 'Лайт'", "Лаундж-бар 'Хука'", "Кафе-блинная 'Сибирские блины'", "Кафе быстрого питания 'Doner master'", "Магазин 'П.рОк'", "Кофейня 'YourTime Specialty'")))
+        addBuilding(0xFFF422AE.toInt(), BuildingInfo("", "Улица Усова, 1/1", listOf("Бар 'Custom street'")))
+        addBuilding(0xFFF2DF38.toInt(), BuildingInfo("", "Проспект Ленина, 37", listOf("Кофейни 'Paradox coffee'")))
+        addBuilding(0xFF82EE06.toInt(), BuildingInfo("", "Улица Герцена, 5 / улица Кузнецова, 1", listOf("Кафе-кондитерская 'Пеки, Лола'")))
+        addBuilding(0xFF1760F2.toInt(), BuildingInfo("", "Советская улица, 50", listOf("Продуктовый магазин 'Наш гастроном'", "Кофейня самообслуживания 'Мойё кофе'")))
+        addBuilding(0xFF455EFD.toInt(), BuildingInfo("Арбитражный суд Томской области", "Проспект Кирова, 10 / Советская улица, 72", listOf("Столовые 'Уютный уголок'")))
+        addBuilding(0xFFE81CCD.toInt(), BuildingInfo("", "Улица Усова, 6 ст12", listOf("Сеть кафе уютной кухни 'Колобок. Ру'", "Кафе 'Yoki Toki'", "Кафе 'Ассорти'")))
+        addBuilding(0xFF4133BE.toInt(), BuildingInfo("", "Проспект Кирова, 3г", listOf("Супермаркет 'Ярче'")))
+        addBuilding(0xFFFE18B9.toInt(), BuildingInfo("", "Проспект Кирова, 5а", listOf("Пиццерия 'Папа Джонс'", "Кофейня 'Буланже'")))
+        addBuilding(0xFFEE0DA3.toInt(), BuildingInfo("", "Проспект Кирова, 5 ст8 / Советская улица, 76а", listOf("Пекарня-кондитерская 'Тесто'")))
+        addBuilding(0xFF7DC139.toInt(), BuildingInfo("Лампочка", "Проспект Кирова, 5 ст13 / улица Белинского, 41", listOf("Стейк-хаус 'Антрекот'", "Азиатский стритфуд 'Noods'", "Быстрое питание 'Безумно. Крутая шаурма'", "Бары 'Завод'", "Пиццерия 'Мэйк лав пицца'", "Центры паровых коктейлей 'Edison'", "Кофе-кондитерская 'Торта'", "Быстрое питание 'Мидийная'", "Быстрое питание 'Vaffel'", "Вьетнамское стритфуд-кафе 'Нам Фо'", "Пастерия 'Три сыра'", "Быстрое питание 'Большой Ребровски'", "Кафе-Бар 'Unami'", "Кафе 'Рис да Барбарис'", "Кафе-бар мексиканской кухни 'Chupito'", "Кондитерские изделия 'Мотимания'", "Быстрое питание 'У Нино'", "Кафе Бурятской кухни 'Бууза'", "Кофейни 'Surf Coffee x Lamp'", "Кафе 'Moments'", "Кафе 'Тот самый драник'", "Кондитерские изделия 'Могу себе позволить'", "Точка продажи безалкогольных напитков на основе чая 'Шейк'", "Кафе-пиццерия 'Give Me Two'", "Чайная 'Заварка'", "Центры паровых коктейлей 'Terra'", "Киоск мороженого '33 пингвина'", "Бары 'Центральный бар'", "Бары 'Beer point'")))
+        addBuilding(0xFF2B5DD1.toInt(), BuildingInfo("", "Проспект Кирова, 5/4", listOf("Бары 'Настроение'")))
+        addBuilding(0xFFB44B31.toInt(), BuildingInfo("The Елань", "Советская улица, 78", listOf("Рестораны 'Poly bistro'")))
+        addBuilding(0xFFF93E95.toInt(), BuildingInfo("", "Советская улица, 80 / проспект Кирова, 5 ст5", listOf("Кафе - кондитерская 'Кудесы'", "Кафе грузинской кухни 'Пешком постою'", "Гриль-бар 'Rebro бургеры и всё такое'", "Китайский ресторан 'Panda Jui'")))
+        addBuilding(0xFF04EB60.toInt(), BuildingInfo("", "Улица Усова, 6 ст13", listOf("Лаундж-бар 'Malevich'", "Магазин-бар 'За пивком'")))
+        addBuilding(0xFFCE9728.toInt(), BuildingInfo("", "Улица Усова, 9Б", listOf("Экспресс-кофейня 'Территория Кофе'")))
+    }
+
+    fun getBuildingByColor(color: Int): BuildingInfo? {
+        return buildingRegistry[color and 0x00FFFFFF]
+    }
+    
+    private fun addBuilding(color: Int, info: BuildingInfo) {
+        buildingRegistry[color and 0x00FFFFFF] = info
+    }
+}
