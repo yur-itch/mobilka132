@@ -41,11 +41,13 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mobilka132.pickBestRestaurant.DecisionTreeManager
 import com.example.mobilka132.pickBestRestaurant.DecisionDialog
 import com.example.mobilka132.data.location.LocationManager
 import com.example.mobilka132.model.MapPoint
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -57,10 +59,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         mapManager = MapManager(this)
-        mapManager.loadData()
-        viewModel.init(mapManager.grid)
+
+        mapManager.loadPointsFromAssets()
+        lifecycleScope.launch {
+            mapManager.loadData().await()
+            viewModel.init(mapManager)
+        }
         location.checkPermission()
-        viewModel.loadPointsFromAssets(this)
 
         setContent {
             val state = viewModel.state
@@ -77,7 +82,9 @@ class MainActivity : ComponentActivity() {
             var startLabel by remember { mutableStateOf("Выберите начало") }
             var endLabel by remember { mutableStateOf("Выберите конец") }
             var visualizeRoute by remember { mutableStateOf(false) }
+            var stepDelay by remember { mutableStateOf(5L) }
 
+            // Keep all three bitmaps
             val roadMask = remember {
                 val options = BitmapFactory.Options().apply { inScaled = false }
                 BitmapFactory.decodeResource(context.resources, R.drawable.map, options)
@@ -118,6 +125,8 @@ class MainActivity : ComponentActivity() {
                             startLabel = startLabel,
                             endLabel = endLabel,
                             isVisualized = visualizeRoute,
+                            stepDelay = stepDelay,
+                            onStepDelayChange = { stepDelay = it },
                             onVisualizationToggle = { visualizeRoute = it },
                             onStartSelected = { offset, label ->
                                 startPoint = offset
@@ -133,7 +142,8 @@ class MainActivity : ComponentActivity() {
                                     viewModel.requestPathfinding(
                                         state.findNearestAvailablePoint(startPoint!!),
                                         endPoint!!,
-                                        visualizeRoute
+                                        visualizeRoute,
+                                        stepDelay
                                     )
                                     showRouteMenu = false
                                 }
@@ -252,8 +262,9 @@ class MainActivity : ComponentActivity() {
                 text = when {
                     state.isProcessing -> "Снаппинг к дороге..."
                     state.isSelectionMode -> "Выберите точку на карте"
-                    viewModel.isGARunning -> "Генетика: ген. ${viewModel.currentGeneration}"
                     viewModel.isPathProcessing -> "Поиск пути..."
+                    viewModel.isGARunning -> "Генетика: ген. ${viewModel.currentGeneration}"
+                    viewModel.lastPath != null -> "Путь найден: ${viewModel.lastPath!!.distance} м"
                     else -> "Интерактивная карта"
                 },
                 fontSize = 18.sp,
@@ -299,7 +310,7 @@ class MainActivity : ComponentActivity() {
                 Button(
                     onClick = { viewModel.startFoodShoppingGA(roadMask) },
                     enabled = !isBusy,
-                    colors = ButtonDefaults.buttonColors(Color(0xFFFF9800))
+                    colors = ButtonDefaults.buttonColors(Color(0xFFFF9800)) // Orange
                 ) {
                     Text("GA")
                 }
@@ -319,7 +330,7 @@ class MainActivity : ComponentActivity() {
                         containerColor = if (state.isSelectionMode) Color.Red else Color(0xFF2196F3)
                     )
                 ) {
-                    Text(if (state.isSelectionMode) "Отмена" else "Точка +")
+                    Text(if (state.isSelectionMode) "Отмена" else "Точка")
                 }
 
                 Button(onClick = onShowPointsList, colors = ButtonDefaults.buttonColors(Color.Gray)) {
@@ -335,6 +346,13 @@ class MainActivity : ComponentActivity() {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
+                Button(
+                    onClick = { viewModel.findTSPSolution() },
+                    enabled = !isBusy,
+                    colors = ButtonDefaults.buttonColors(Color.Green)
+                ) {
+                    Text("TSP")
+                }
                 Button(
                     onClick = onShowDecisionDialog,
                     colors = ButtonDefaults.buttonColors(Color(0xFF4CAF50))
@@ -365,6 +383,9 @@ class MainActivity : ComponentActivity() {
     ) {
         val textMeasurer = rememberTextMeasurer()
         val cachedPath = remember(viewModel.lastPath?.steps) { overlay.generatePath(viewModel.lastPath?.steps) }
+        val paths = remember(viewModel.foundPaths.size) {
+            viewModel.foundPaths.map { overlay.generatePath(it.steps) }
+        }
 
         val stepOffset = remember(viewModel.currentStep) {
             viewModel.currentStep?.current?.let { (x, y) -> Offset(x.toFloat(), y.toFloat()) }
@@ -409,7 +430,12 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize()
                 )
                 Canvas(modifier = Modifier.fillMaxSize()) {
-                    with(overlay) { drawPathScaled(cachedPath) }
+                    with(overlay) {
+                        // Draw all found paths (from TSP, etc.)
+                        for (path in paths) {
+                            drawPathScaled(path)
+                        }
+                    }
                 }
             }
 
@@ -429,7 +455,9 @@ class MainActivity : ComponentActivity() {
                     .align(Alignment.BottomEnd)
                     .padding(16.dp)
                     .size(56.dp),
-                colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color.Blue)
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = if (location.mapLocation == null) Color.Blue else Color.Gray
+                )
             ) {
                 Text("GPS", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
@@ -533,6 +561,8 @@ fun RouteMenu(
     startLabel: String,
     endLabel: String,
     isVisualized: Boolean,
+    stepDelay: Long,
+    onStepDelayChange: (Long) -> Unit,
     onVisualizationToggle: (Boolean) -> Unit,
     onStartSelected: (Offset, String) -> Unit,
     onEndSelected: (Offset, String) -> Unit,
@@ -558,10 +588,30 @@ fun RouteMenu(
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
             ) {
-                Checkbox(checked = isVisualized, onCheckedChange = onVisualizationToggle)
-                Text("Визуализировать шаги (A*)", fontSize = 14.sp)
+                Checkbox(
+                    checked = isVisualized,
+                    onCheckedChange = onVisualizationToggle
+                )
+                Text("A*", fontSize = 14.sp)
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Задержка: ${stepDelay.toInt()} мс", fontSize = 12.sp, color = Color.Gray)
+                    Slider(
+                        value = stepDelay.toFloat(),
+                        onValueChange = { onStepDelayChange(it.toLong()) },
+                        valueRange = 0f..50f,
+                        colors = SliderDefaults.colors(
+                            thumbColor = Color(0xFF4CAF50),
+                            activeTrackColor = Color(0xFF4CAF50)
+                        )
+                    )
+                }
             }
 
             Row(

@@ -4,11 +4,13 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.mobilka132.data.ant.AntColony
 import com.example.mobilka132.data.genetic.*
 import com.example.mobilka132.data.pathfinding.AStar
 import com.example.mobilka132.data.pathfinding.PathData
@@ -22,66 +24,54 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.Collections.emptyList
 import java.util.concurrent.Executors
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.random.Random
 
 class MapViewModel : ViewModel() {
 
-    lateinit var algorithm: AStar
-    private lateinit var distancer: WalkableDistance
+    lateinit var mapManager: MapManager
+    lateinit var pathfinder: AStar
 
     val state = MapState()
     val overlay = MapOverlayRenderer(state)
 
+    var foundPaths: MutableList<Path> = mutableStateListOf()
     var lastPath by mutableStateOf<Path?>(null)
     var currentStep by mutableStateOf<AStarStep?>(null)
 
-    private var pathJob: Job? = null
+    var activeJobs: MutableList<Job> = mutableStateListOf()
 
     var isPathProcessing by mutableStateOf(false)
     var isGARunning by mutableStateOf(false)
-    val isAnyAlgoRunning get() = isPathProcessing || isGARunning
+
+    val isProcessing: Boolean
+        get() = activeJobs.isNotEmpty() || !initialized
+
+    // Backward compatibility for MainActivity checks
+    val isAnyAlgoRunning: Boolean
+        get() = isProcessing
+
+    var initialized by mutableStateOf(false)
 
     var currentGeneration by mutableStateOf(0)
     var totalGenerations by mutableStateOf(0)
 
     val pathfinderDispatcher = Executors.newFixedThreadPool(3).asCoroutineDispatcher()
 
-    private var loadedPoints: List<Offset> = emptyList()
-
-    fun init(grid: Array<Array<Int>>) {
-        algorithm = AStar(grid)
-        distancer = WalkableDistance(algorithm)
+    fun init(mapManager: MapManager) {
+        this.mapManager = mapManager
+        state.init(mapManager.width, mapManager.height, mapManager.grid)
+        pathfinder = AStar(mapManager.width, mapManager.height, mapManager.grid)
+        initialized = true
     }
 
-    fun loadPointsFromAssets(context: Context) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val points = mutableListOf<Offset>()
-                context.assets.open("ga_points.csv").bufferedReader().useLines { lines ->
-                    lines.forEach { line ->
-                        val parts = line.split(",")
-                        if (parts.size == 2) {
-                            val x = parts[0].trim().toFloatOrNull()
-                            val y = parts[1].trim().toFloatOrNull()
-                            if (x != null && y != null) {
-                                points.add(Offset(x, y))
-                            }
-                        }
-                    }
-                }
-                loadedPoints = points
-                Log.d("GA_POINTS", "Successfully loaded ${points.size} points from assets")
-            } catch (e: Exception) {
-                Log.e("GA_POINTS", "Error loading points from assets", e)
-            }
-        }
-    }
-
+    /**
+     * Full-featured point selection with road snapping and building info detection.
+     * Called from MainActivity.
+     */
     fun onPointSelected(screenOffset: Offset, roadMask: Bitmap?, buildingsMask: Bitmap) {
-        if (isAnyAlgoRunning) return
+        if (isProcessing) return
 
         viewModelScope.launch {
             try {
@@ -96,11 +86,12 @@ class MapViewModel : ViewModel() {
     fun onPathFoundCallback(found: Boolean, path: Path) {
         if (found) {
             lastPath = path
+            foundPaths.add(path)
         }
     }
 
     fun requestPathfinding(visualizeSteps: Boolean = false) {
-        if (isAnyAlgoRunning) return
+        if (activeJobs.isNotEmpty()) return
         val points = state.selectedPoints.toList()
         if (points.size >= 2) {
             val p1 = points[points.size - 2]
@@ -113,70 +104,100 @@ class MapViewModel : ViewModel() {
         p1: MapPoint,
         p2: MapPoint,
         visualizeSteps: Boolean = false,
+        stepDelay: Long = 5L,
         onPathFound: ((Boolean, Path) -> Unit)? = null
-    ) = requestPathfinding(p1.position, p2.position, visualizeSteps, onPathFound)
+    ) = requestPathfinding(p1.position, p2.position, visualizeSteps, stepDelay, onPathFound)
 
     fun requestPathfinding(
         p1: Offset,
         p2: Offset,
         visualizeSteps: Boolean = false,
+        stepDelay: Long = 5L,
         onPathFound: ((Boolean, Path) -> Unit)? = null
-    ) = requestPathfinding(p1.toPair(), p2.toPair(), visualizeSteps, onPathFound ?: ::onPathFoundCallback)
+    ) = requestPathfinding(p1.toPair(), p2.toPair(), visualizeSteps, stepDelay, onPathFound ?: ::onPathFoundCallback)
 
     private fun requestPathfinding(
         start: Pair<Int, Int>,
         dest: Pair<Int, Int>,
         visualizeSteps: Boolean = false,
+        stepDelay: Long = 5L,
         onPathFound: ((Boolean, Path) -> Unit)? = null
     ) {
-        if (isAnyAlgoRunning) return
-
-        pathJob?.cancel()
         lastPath = null
         currentStep = null
 
-        var foundPath: PathData? = null
+        var foundPath: Path? = null
         isPathProcessing = true
 
-        pathJob = viewModelScope.launch {
+        val pathJob = viewModelScope.launch {
             try {
                 if (!visualizeSteps) {
                     withContext(pathfinderDispatcher) {
-                        foundPath = algorithm.find(start, dest)
+                        foundPath = pathfinder.find(start, dest).toPath()
                     }
                 } else {
-                    algorithm.findPathAsync(start, dest, delayMs = 5)
+                    pathfinder.findPathAsync(start, dest, delayMs = stepDelay)
                         .flowOn(pathfinderDispatcher)
-                        .collect { step ->
-                            currentStep = step
-                            step.path?.let { pathObject ->
-                                foundPath = PathData(
-                                    pathObject.steps.map { offset ->
-                                        com.example.mobilka132.data.pathfinding.Node(
-                                            offset.x.toInt(),
-                                            offset.y.toInt(),
-                                            0
-                                        )
-                                    },
-                                    pathObject.distance
-                                )
-                            }
+                        .collect { stepData ->
+                            currentStep = AStarStep(
+                                stepData.current.let { Offset(it.x.toFloat(), it.y.toFloat()) },
+                                stepData.openSet.map { Offset(it.x.toFloat(), it.y.toFloat()) },
+                                emptyList(),
+                                stepData.path?.toPath()
+                            )
+                            foundPath = currentStep?.path
                         }
                 }
             } catch (e: CancellationException) {
+                // Normal cancellation, ignore
             } finally {
                 isPathProcessing = false
                 foundPath?.let {
-                    onPathFound?.invoke(it.path.isNotEmpty(), it.toPath())
+                    val found = it.steps.isNotEmpty()
+                    onPathFound?.invoke(found, it)
                 } ?: onPathFound?.invoke(false, Path(emptyList(), 0f))
             }
+        }
+        activeJobs.add(pathJob)
+        pathJob.invokeOnCompletion { cause ->
+            if (cause is CancellationException) {
+                currentStep = null
+            }
+            activeJobs.remove(pathJob)
+        }
+    }
+
+    fun findTSPSolution() {
+        if (activeJobs.isNotEmpty()) return
+        val antColony = AntColony()
+        val n = 10
+        clear()
+
+        val job = viewModelScope.launch {
+            antColony.generatePoints(n)
+            withContext(pathfinderDispatcher) {
+                for (i in 0 until n) {
+                    antColony.points[i] = state.findNearestAvailablePoint(antColony.points[i])
+                    state.addPoint(antColony.points[i])
+                }
+                antColony.solve()
+            }
+            for (i in 0 until antColony.bestPath.size) {
+                requestPathfinding(
+                    antColony.points[antColony.bestPath[i]],
+                    antColony.points[antColony.bestPath[(i + 1) % antColony.bestPath.size]]
+                )
+            }
+        }
+        activeJobs.add(job)
+        job.invokeOnCompletion {
+            activeJobs.remove(job)
         }
     }
 
     fun startFoodShoppingGA(maskBitmap: Bitmap) {
-        if (isAnyAlgoRunning) return
-
-        viewModelScope.launch {
+        if (activeJobs.isNotEmpty()) return
+        val job = viewModelScope.launch {
             isGARunning = true
             currentGeneration = 0
             totalGenerations = 200
@@ -194,15 +215,15 @@ class MapViewModel : ViewModel() {
             }
 
             try {
-                if (loadedPoints.isNotEmpty()) {
-                    state.addPointsDirectly(loadedPoints)
+                if (mapManager.loadedPoints.isNotEmpty()) {
+                    state.addPointsDirectly(mapManager.loadedPoints)
                 } else {
                     repeat(10) {
                         val randomPoint = Offset(
                             Random.nextInt(0, width).toFloat(),
                             Random.nextInt(0, height).toFloat()
                         )
-                        state.addPoint(randomPoint, maskBitmap)
+                        state.addPoint(randomPoint)
                     }
                 }
 
@@ -215,12 +236,8 @@ class MapViewModel : ViewModel() {
                 val numPoints = mapPoints.size
                 val numItems = 10
 
-                val gaPoints = mapPoints.map {
-                    com.example.mobilka132.data.genetic.Point(
-                        it.position.x.toInt(),
-                        it.position.y.toInt()
-                    )
-                }
+                val gaPoints = mapPoints.map { Point(it.position.x.toInt(), it.position.y.toInt()) }
+                val distancer = WalkableDistance(pathfinder)
                 distancer.setPoints(gaPoints)
 
                 val allItems = (0 until numItems).toMutableList()
@@ -262,22 +279,22 @@ class MapViewModel : ViewModel() {
                 isGARunning = false
             }
         }
+        activeJobs.add(job)
+        job.invokeOnCompletion {
+            activeJobs.remove(job)
+        }
     }
 
     fun cancelAll() {
-        pathJob?.cancel()
-        currentStep = null
-        lastPath = null
+        for (j in activeJobs) {
+            j.cancel()
+        }
         isGARunning = false
         isPathProcessing = false
     }
 
-    fun cancelPathfinding() {
-        cancelAll()
-    }
-
     fun deletePoint(index: Int) {
-        if (isAnyAlgoRunning) return
+        if (isProcessing) return
 
         if (index in state.selectedPoints.indices) {
             state.selectedPoints.removeAt(index)
@@ -288,17 +305,18 @@ class MapViewModel : ViewModel() {
     }
 
     fun clear() {
-        if (isAnyAlgoRunning) return
+        if (activeJobs.isNotEmpty()) return
 
-        state.clearPoints()
+        foundPaths.clear()
         currentStep = null
         lastPath = null
+        state.clearPoints()
         isGARunning = false
         isPathProcessing = false
     }
 
     fun clearResult() {
-        if (isAnyAlgoRunning) return
+        if (isProcessing) return
         currentStep = null
         lastPath = null
     }

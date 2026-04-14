@@ -20,6 +20,14 @@ class MapState {
     var containerSize by mutableStateOf(IntSize.Zero)
     var imageSize by mutableStateOf(Size.Zero)
 
+    var maskWidth: Int = 0
+    var maskHeight: Int = 0
+    var maskPixels: IntArray = IntArray(0)
+
+    private var buildingsMaskPixels: IntArray? = null
+    private var buildingsMaskWidth: Int = 0
+    private var buildingsMaskHeight: Int = 0
+
     val fitScale: Float
         get() = if (containerSize == IntSize.Zero || imageSize == Size.Zero) 1f
         else min(
@@ -29,7 +37,6 @@ class MapState {
 
     val extraSpaceX: Float
         get() = (containerSize.width - imageSize.width * fitScale) / 2f
-
     val extraSpaceY: Float
         get() = (containerSize.height - imageSize.height * fitScale) / 2f
 
@@ -41,13 +48,21 @@ class MapState {
 
     var selectedBuildingInfo by mutableStateOf<BuildingInfo?>(null)
 
-    private var maskPixels: IntArray? = null
-    private var maskWidth: Int = 0
-    private var maskHeight: Int = 0
+    fun init(maskWidth: Int, maskHeight: Int, maskPixels: IntArray) {
+        this.maskWidth = maskWidth
+        this.maskHeight = maskHeight
+        this.maskPixels = maskPixels
+    }
 
-    private var buildingsMaskPixels: IntArray? = null
-    private var buildingsMaskWidth: Int = 0
-    private var buildingsMaskHeight: Int = 0
+    private fun prepareBuildingsMask(mask: Bitmap) {
+        if (buildingsMaskPixels == null) {
+            buildingsMaskWidth = mask.width
+            buildingsMaskHeight = mask.height
+            val p = IntArray(buildingsMaskWidth * buildingsMaskHeight)
+            mask.getPixels(p, 0, buildingsMaskWidth, 0, 0, buildingsMaskWidth, buildingsMaskHeight)
+            buildingsMaskPixels = p
+        }
+    }
 
     fun updateTransform(centroid: Offset, pan: Offset, zoom: Float) {
         if (imageSize == Size.Zero) return
@@ -92,26 +107,6 @@ class MapState {
         return (inFittedSpace + offset) * scale
     }
 
-    fun prepareMask(mask: Bitmap) {
-        if (maskPixels == null) {
-            maskWidth = mask.width
-            maskHeight = mask.height
-            val p = IntArray(maskWidth * maskHeight)
-            mask.getPixels(p, 0, maskWidth, 0, 0, maskWidth, maskHeight)
-            maskPixels = p
-        }
-    }
-
-    private fun prepareBuildingsMask(mask: Bitmap) {
-        if (buildingsMaskPixels == null) {
-            buildingsMaskWidth = mask.width
-            buildingsMaskHeight = mask.height
-            val p = IntArray(buildingsMaskWidth * buildingsMaskHeight)
-            mask.getPixels(p, 0, buildingsMaskWidth, 0, 0, buildingsMaskWidth, buildingsMaskHeight)
-            buildingsMaskPixels = p
-        }
-    }
-
     fun addPointsDirectly(points: List<Offset>) {
         points.forEach { pt ->
             selectedPoints.add(MapPoint(id = nextPointId++, position = pt))
@@ -119,15 +114,11 @@ class MapState {
     }
 
     /**
-     * develop function (used in existing logic)
+     * Simple point addition using the pre-initialized road mask.
      */
-    suspend fun addPoint(contentPoint: Offset, mask: Bitmap?) = withContext(Dispatchers.Default) {
+    suspend fun addPoint(contentPoint: Offset) = withContext(Dispatchers.Default) {
         isProcessing = true
         try {
-            if (mask != null) {
-                prepareMask(mask)
-            }
-
             val finalPosition = findNearestAvailablePoint(contentPoint)
             withContext(Dispatchers.Main) {
                 selectedPoints.add(MapPoint(id = nextPointId++, position = finalPosition))
@@ -139,7 +130,8 @@ class MapState {
     }
 
     /**
-     * incoming function (needed for buildingsMask feature)
+     * Full map click handler that supports building info and point addition.
+     * Called from MainActivity with roadMask and buildingsMask parameters.
      */
     suspend fun handleMapClick(
         contentPoint: Offset,
@@ -168,8 +160,7 @@ class MapState {
                 }
             }
 
-            if (roadMask != null) {
-                prepareMask(roadMask)
+            if (roadMask != null || maskPixels.isNotEmpty()) {
                 val finalPosition = findNearestAvailablePoint(contentPoint)
                 withContext(Dispatchers.Main) {
                     selectedPoints.add(MapPoint(id = nextPointId++, position = finalPosition))
@@ -182,14 +173,14 @@ class MapState {
     }
 
     fun findNearestAvailablePoint(startPoint: Offset): Offset {
-        val pixels = maskPixels ?: return startPoint
+        val pixels = maskPixels
         val w = maskWidth
         val h = maskHeight
 
         val centerX = startPoint.x.toInt().coerceIn(0, w - 1)
         val centerY = startPoint.y.toInt().coerceIn(0, h - 1)
 
-        if (isColorWhite(pixels[centerY * w + centerX])) return startPoint
+        if (pixels[centerY * w + centerX] == 1) return startPoint
 
         val maxRadius = 1500
         for (radius in 1..maxRadius) {
@@ -206,21 +197,13 @@ class MapState {
     private fun checkPixel(x: Int, y: Int, w: Int, h: Int, pixels: IntArray): Offset? {
         if (x in 0 until w && y in 0 until h) {
             val color = pixels[y * w + x]
-            if (isColorWhite(color)) return Offset(x.toFloat(), y.toFloat())
+            if (color == 1) return Offset(x.toFloat(), y.toFloat())
         }
         return null
-    }
-
-    private fun isColorWhite(color: Int): Boolean {
-        val r = (color shr 16) and 0xFF
-        val g = (color shr 8) and 0xFF
-        val b = color and 0xFF
-        return r > 200 && g > 200 && b > 200
     }
 
     fun clearPoints() {
         selectedPoints.clear()
         nextPointId = 1
-        selectedBuildingInfo = null
     }
 }
