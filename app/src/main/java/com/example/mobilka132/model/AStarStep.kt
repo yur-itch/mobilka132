@@ -1,8 +1,10 @@
 package com.example.mobilka132.model
 
+import androidx.compose.ui.geometry.Offset
+
 data class AStarStep(
-    val current: Pair<Int, Int>,
-    val openSet: List<Pair<Int, Int>>,
-    val closedSet: List<Pair<Int, Int>>,
+    val current: Offset,
+    val openSet: List<Offset>,
+    val closedSet: List<Offset>,
     val path: Path? = null
 )
