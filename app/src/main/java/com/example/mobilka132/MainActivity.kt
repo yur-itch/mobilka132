@@ -48,7 +48,7 @@ import com.example.mobilka132.model.MapPoint
 class MainActivity : ComponentActivity() {
 
     private lateinit var mapManager: MapManager
-//    private val viewModel: MapViewModel = MapViewModel()
+    //    private val viewModel: MapViewModel = MapViewModel()
     private val viewModel: MapViewModel by viewModels<MapViewModel>()
     private val location: LocationManager by lazy { LocationManager(this, activityResultRegistry) }
 

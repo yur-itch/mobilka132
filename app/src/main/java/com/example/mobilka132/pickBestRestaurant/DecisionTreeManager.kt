@@ -8,7 +8,8 @@ import androidx.lifecycle.AndroidViewModel
 
 class DecisionTreeManager(application: Application) : AndroidViewModel(application) {
     private val treeTool = DecisionTree()
-    private var rootNode: DecisionTree.Node? = null
+
+    var rootNode by mutableStateOf<DecisionTree.Node?>(null)
 
     var currentNode by mutableStateOf<DecisionTree.Node?>(null)
     var recommendation by mutableStateOf("")
@@ -17,6 +18,7 @@ class DecisionTreeManager(application: Application) : AndroidViewModel(applicati
 
     var userCsvText by mutableStateOf("")
     var isSettingsMode by mutableStateOf(false)
+    var isVisualizerMode by mutableStateOf(false)
 
     init {
         userCsvText = loadCsvFromAssets()
@@ -26,12 +28,15 @@ class DecisionTreeManager(application: Application) : AndroidViewModel(applicati
     fun reset() {
         val data = parseCsvFromText(userCsvText)
         val attributes = listOf("location", "budget", "time_available", "food_type", "queue_tolerance", "weather")
-        rootNode = treeTool.buildTree(data, attributes, optimize = true)
+
+        rootNode = treeTool.buildTree(data, attributes, optimize = true, maxDepth = 3)
+
         currentNode = rootNode
         recommendation = ""
         budgetInput = ""
         decisionPath = emptyList()
         isSettingsMode = false
+        isVisualizerMode = false
     }
 
     private fun loadCsvFromAssets(): String {
