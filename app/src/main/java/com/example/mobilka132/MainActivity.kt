@@ -223,7 +223,7 @@ class MainActivity : ComponentActivity() {
                 Button(onClick = onToggleRouteMenu, enabled = !isBusy) { Text("Маршрут") }
                 Button(onClick = onToggleView) { Text("Вид") }
                 Button(onClick = { viewModel.startFoodShoppingGA(maskBitmap) }, enabled = !isBusy,
-                    colors = ButtonDefaults.buttonColors(Color(0xFFFF9800))) {
+                    colors = ButtonDefaults.buttonColors(Color.Magenta)) {
                     Text("GA")
                 }
             }
@@ -253,6 +253,10 @@ class MainActivity : ComponentActivity() {
             }
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                Button(onClick = { viewModel.findTSPSolution() }, enabled = !isBusy,
+                    colors = ButtonDefaults.buttonColors(Color.Green)) {
+                    Text("TSP")
+                }
                 Button(onClick = onShowDecisionDialog, colors = ButtonDefaults.buttonColors(Color(0xFF4CAF50))) {
                     Text("💡 Совет")
                 }
@@ -278,6 +282,9 @@ class MainActivity : ComponentActivity() {
         val textMeasurer = rememberTextMeasurer()
         val cachedPath = remember(viewModel.lastPath?.steps) {
             overlay.generatePath(viewModel.lastPath?.steps)
+        }
+        val paths = remember(viewModel.foundPaths.size) {
+            viewModel.foundPaths.map {overlay.generatePath(it.steps)}
         }
         val stepOffset = remember(viewModel.currentStep) {
             viewModel.currentStep?.current
@@ -312,7 +319,12 @@ class MainActivity : ComponentActivity() {
             ) {
                 Image(bitmap = bitmap.asImageBitmap(), contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
                 Canvas(modifier = Modifier.fillMaxSize()) {
-                    with(overlay) { drawPathScaled(cachedPath) }
+//                    with(overlay) { drawPathScaled(cachedPath) }
+                    with(overlay) {
+                        for (path in paths) {
+                            drawPathScaled(path)
+                        }
+                    }
                 }
             }
 
