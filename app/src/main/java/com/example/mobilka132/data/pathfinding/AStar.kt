@@ -1,6 +1,8 @@
 package com.example.mobilka132.data.pathfinding
 
+import androidx.compose.ui.geometry.Offset
 import com.example.mobilka132.model.AStarStep
+import com.example.mobilka132.model.Path
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
@@ -8,30 +10,23 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import java.util.*
 import kotlin.math.abs
-import kotlin.time.Duration.Companion.seconds
 
-class AStar {
-
-    private var width : Int
-    private var height : Int
-    private var map: IntArray
-    private val maxNodeWeight = 5;
-
-    constructor(width : Int, height : Int, map: IntArray) {
-        this.width = width
-        this.height = height
-        this.map = map
-    }
+class AStar(
+    private val width: Int,
+    private val height: Int,
+    private val map: IntArray       // 1D flattened row-major: index = y * width + x
+) {
+    private val maxNodeWeight = 5
 
     suspend fun findPath(s: Pair<Int, Int>, e: Pair<Int, Int>): List<Pair<Int, Int>> {
-        if (s.first >= map.size || s.second >= map.size || e.first >= map.size || e.second >= map.size) {
-            println("Coordinate(s) out of array's bounds (${s.first}, ${s.second}) ($e.first, ${e.second})")
+        if (s.first >= width || s.second >= height || e.first >= width || e.second >= height) {
+            println("Coordinate(s) out of array's bounds (${s.first}, ${s.second}) (${e.first}, ${e.second})")
             return emptyList()
         }
 
         val allNodes = arrayOfNulls<Node>(width * height)
-        val startNode: Node = getOrCreateNode(s.first, s.second, map, allNodes)
-        val destinationNode: Node = getOrCreateNode(e.first, e.second, map, allNodes)
+        val startNode = getOrCreateNode(s.first, s.second, allNodes)
+        val destinationNode = getOrCreateNode(e.first, e.second, allNodes)
 
         val pathData = find(startNode, destinationNode, allNodes)
         return pathData.path.map { node -> Pair(node.x, node.y) }
@@ -39,8 +34,8 @@ class AStar {
 
     suspend fun find(s: Pair<Int, Int>, e: Pair<Int, Int>): PathData {
         val allNodes = arrayOfNulls<Node>(width * height)
-        val startNode = getOrCreateNode(s.first, s.second, map, allNodes)
-        val destinationNode = getOrCreateNode(e.first, e.second, map, allNodes)
+        val startNode = getOrCreateNode(s.first, s.second, allNodes)
+        val destinationNode = getOrCreateNode(e.first, e.second, allNodes)
         return find(startNode, destinationNode, allNodes)
     }
 
@@ -56,7 +51,7 @@ class AStar {
             currentCoroutineContext().ensureActive()
 
             val current = minHeap.poll()!!
-            val currentIdx = current.x * height + current.y
+            val currentIdx = current.y * width + current.x
 
             if (closed[currentIdx]) continue
             closed[currentIdx] = true
@@ -73,10 +68,10 @@ class AStar {
                     val j = y + current.y
 
                     if (i in 0 until width && j in 0 until height) {
-                        val node = getOrCreateNode(i, j, map, allNodes)
-                        val nodeIndex = i * height + j
+                        val node = getOrCreateNode(i, j, allNodes)
+                        val nodeIdx = j * width + i
 
-                        if (closed[nodeIndex] || !walkable(node)) continue
+                        if (closed[nodeIdx] || !walkable(node)) continue
 
                         val newCost = current.cost + getDistance(current, node) + node.weight
 
@@ -90,10 +85,7 @@ class AStar {
                 }
             }
         }
-        if (found) {
-            return retrace(start, destination)
-        }
-        return PathData(emptyList(), 0f)
+        return if (found) retrace(start, destination) else PathData(emptyList(), 0f)
     }
 
     private fun getDistance(start: Node, destination: Node): Int {
@@ -107,11 +99,12 @@ class AStar {
         return node.weight < maxNodeWeight
     }
 
-    private fun getOrCreateNode(x: Int, y: Int, map: IntArray, allNodes: Array<Node?>): Node {
+    private fun getOrCreateNode(x: Int, y: Int, allNodes: Array<Node?>): Node {
         val index = y * width + x
         val existing = allNodes[index]
         if (existing != null) return existing
-        val newNode = Node(x, y, maxNodeWeight * (1 - map[index]))
+        val weight = maxNodeWeight * (1 - map[index])
+        val newNode = Node(x, y, weight)
         allNodes[index] = newNode
         return newNode
     }
@@ -132,11 +125,11 @@ class AStar {
         return PathData(path.reversed(), distance / 20f)
     }
 
-    fun findPathAsync(s: Pair<Int, Int>, e: Pair<Int, Int>, delayMs: Long = 16L): Flow<AStarStepData> = flow {
+    fun findPathAsync(s: Pair<Int, Int>, e: Pair<Int, Int>, delayMs: Long = 16L): Flow<AStarStep> = flow {
         val allNodes = arrayOfNulls<Node>(width * height)
 
-        val start: Node = getOrCreateNode(s.first, s.second, map, allNodes)
-        val destination: Node = getOrCreateNode(e.first, e.second, map, allNodes)
+        val start = getOrCreateNode(s.first, s.second, allNodes)
+        val destination = getOrCreateNode(e.first, e.second, allNodes)
 
         start.cost = 0
         val closedSet = mutableSetOf<Node>()
@@ -151,21 +144,24 @@ class AStar {
             closedSet.add(current)
 
             emit(
-                AStarStepData(
-                    current,
-                    minHeap.toList(),
-                    closedSet.toList()
+                AStarStep(
+                    current = Offset(current.x.toFloat(), current.y.toFloat()),
+                    openSet = minHeap.map { Offset(it.x.toFloat(), it.y.toFloat()) },
+                    closedSet = closedSet.map { Offset(it.x.toFloat(), it.y.toFloat()) }
                 )
             )
 
             if (current == destination) {
                 val pathData = retrace(start, destination)
                 emit(
-                    AStarStepData(
-                        current,
-                        minHeap.toList(),
-                        closedSet.toList(),
-                        pathData
+                    AStarStep(
+                        current = Offset(current.x.toFloat(), current.y.toFloat()),
+                        openSet = minHeap.map { Offset(it.x.toFloat(), it.y.toFloat()) },
+                        closedSet = closedSet.map { Offset(it.x.toFloat(), it.y.toFloat()) },
+                        path = Path(
+                            steps = pathData.path.map { node -> Offset(node.x.toFloat(), node.y.toFloat()) },
+                            distance = pathData.distance
+                        )
                     )
                 )
                 return@flow
@@ -178,7 +174,7 @@ class AStar {
                     val j = y + current.y
 
                     if (i in 0 until width && j in 0 until height) {
-                        val node = getOrCreateNode(i, j, map, allNodes)
+                        val node = getOrCreateNode(i, j, allNodes)
                         if (closedSet.contains(node) || !walkable(node)) continue
 
                         val newCost = current.cost + getDistance(current, node) + node.weight
@@ -193,5 +189,16 @@ class AStar {
             }
             delay(delayMs)
         }
+    }
+
+    fun pathLength(path: List<Pair<Int, Int>>): Double {
+        return (1 until path.size).sumOf { x ->
+            val start = path[x - 1]
+            val destination = path[x]
+            val dX = abs(start.first - destination.first)
+            val dY = abs(start.second - destination.second)
+            (if (dX >= dY) 14 * dY + 10 * (dX - dY)
+            else 14 * dX + 10 * (dY - dX)).toDouble()
+        } / 20.0
     }
 }

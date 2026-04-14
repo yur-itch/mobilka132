@@ -24,6 +24,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Calendar
 import java.util.concurrent.Executors
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.random.Random
@@ -32,6 +33,7 @@ class MapViewModel : ViewModel() {
 
     lateinit var mapManager: MapManager
     lateinit var pathfinder: AStar
+    private lateinit var distancer: WalkableDistance
 
     val state = MapState()
     val overlay = MapOverlayRenderer(state)
@@ -48,7 +50,6 @@ class MapViewModel : ViewModel() {
     val isProcessing: Boolean
         get() = activeJobs.isNotEmpty() || !initialized
 
-    // Backward compatibility for MainActivity checks
     val isAnyAlgoRunning: Boolean
         get() = isProcessing
 
@@ -59,17 +60,44 @@ class MapViewModel : ViewModel() {
 
     val pathfinderDispatcher = Executors.newFixedThreadPool(3).asCoroutineDispatcher()
 
+    private var loadedPointsWithTiming: List<MapPointData> = emptyList()
+
     fun init(mapManager: MapManager) {
         this.mapManager = mapManager
         state.init(mapManager.width, mapManager.height, mapManager.grid)
         pathfinder = AStar(mapManager.width, mapManager.height, mapManager.grid)
+        distancer = WalkableDistance(pathfinder)
         initialized = true
     }
 
-    /**
-     * Full-featured point selection with road snapping and building info detection.
-     * Called from MainActivity.
-     */
+    fun loadPointsFromAssets(context: Context) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val points = mutableListOf<MapPointData>()
+                context.assets.open("ga_points.csv").bufferedReader().useLines { lines ->
+                    lines.forEach { line ->
+                        val parts = line.split(",")
+                        if (parts.size >= 2) {
+                            val x = parts[0].trim().toFloatOrNull()
+                            val y = parts[1].trim().toFloatOrNull()
+                            val start = if (parts.size >= 4) parts[2].trim().toIntOrNull() ?: 0 else 0
+                            val end = if (parts.size >= 4) parts[3].trim().toIntOrNull() ?: 1440 else 1440
+                            val d = if (parts.size >= 5) parts[4].trim().toIntOrNull() ?: 0 else 0
+
+                            if (x != null && y != null) {
+                                points.add(MapPointData(Offset(x, y), start, end, d))
+                            }
+                        }
+                    }
+                }
+                loadedPointsWithTiming = points
+                Log.d("GA_POINTS", "Successfully loaded ${points.size} points from assets")
+            } catch (e: Exception) {
+                Log.e("GA_POINTS", "Error loading points from assets", e)
+            }
+        }
+    }
+
     fun onPointSelected(screenOffset: Offset, roadMask: Bitmap?, buildingsMask: Bitmap) {
         if (isProcessing) return
 
@@ -149,7 +177,6 @@ class MapViewModel : ViewModel() {
                         }
                 }
             } catch (e: CancellationException) {
-                // Normal cancellation, ignore
             } finally {
                 isPathProcessing = false
                 foundPath?.let {
@@ -215,8 +242,8 @@ class MapViewModel : ViewModel() {
             }
 
             try {
-                if (mapManager.loadedPoints.isNotEmpty()) {
-                    state.addPointsDirectly(mapManager.loadedPoints)
+                if (loadedPointsWithTiming.isNotEmpty()) {
+                    state.addPointsWithTiming(loadedPointsWithTiming)
                 } else {
                     repeat(10) {
                         val randomPoint = Offset(
@@ -236,20 +263,33 @@ class MapViewModel : ViewModel() {
                 val numPoints = mapPoints.size
                 val numItems = 10
 
-                val gaPoints = mapPoints.map { Point(it.position.x.toInt(), it.position.y.toInt()) }
-                val distancer = WalkableDistance(pathfinder)
+                val gaPoints = mapPoints.map {
+                    Point(
+                        x = it.position.x.toInt(),
+                        y = it.position.y.toInt(),
+                        workingStart = it.workingStart,
+                        workingEnd = it.workingEnd,
+                        delay = it.delay
+                    )
+                }
                 distancer.setPoints(gaPoints)
 
                 val allItems = (0 until numItems).toMutableList()
                 val items = MutableList(numPoints) { mutableListOf<Int>() }
                 allItems.forEach { item -> items[Random.nextInt(0, numPoints)].add(item) }
 
+                val calendar = Calendar.getInstance()
+                val currentMinutes = calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE)
+
                 val ctx = MutationContext(
                     allPoints = (0 until numPoints).toMutableList(),
                     dist = distancer,
                     items = items,
                     allItems = allItems,
-                    initial = Random.nextInt(0, numPoints)
+                    initial = Random.nextInt(0, numPoints),
+                    startTime = currentMinutes,
+                    speedKmh = 5.0,
+                    metersPerPixel = 0.5
                 )
 
                 withContext(Dispatchers.Default) {
