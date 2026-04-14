@@ -113,9 +113,20 @@ class MapState {
         }
     }
 
-    /**
-     * Simple point addition using the pre-initialized road mask.
-     */
+    fun addPointsWithTiming(points: List<MapPointData>) {
+        points.forEach { p ->
+            selectedPoints.add(
+                MapPoint(
+                    id = nextPointId++,
+                    position = p.position,
+                    workingStart = p.start,
+                    workingEnd = p.end,
+                    delay = p.delay
+                )
+            )
+        }
+    }
+
     suspend fun addPoint(contentPoint: Offset) = withContext(Dispatchers.Default) {
         isProcessing = true
         try {
@@ -129,10 +140,6 @@ class MapState {
         }
     }
 
-    /**
-     * Full map click handler that supports building info and point addition.
-     * Called from MainActivity with roadMask and buildingsMask parameters.
-     */
     suspend fun handleMapClick(
         contentPoint: Offset,
         roadMask: Bitmap?,
@@ -207,3 +214,10 @@ class MapState {
         nextPointId = 1
     }
 }
+
+data class MapPointData(
+    val position: Offset,
+    val start: Int,
+    val end: Int,
+    val delay: Int
+)

@@ -224,8 +224,9 @@ class WalkableDistance(
         val k = key(p1, p2)
         coordinateCache[k]?.let { return it }
 
-        val path = algo.find(k.first.toPair(), k.second.toPair())
-        val cached = CachedPath(path = path.path.map { Point(it.x, it.y) }, length = path.distance.toDouble())
+        val path = algo.findPath(k.first.toPair(), k.second.toPair())
+        val length = algo.pathLength(path)
+        val cached = CachedPath(path = path.map { Point(it.first, it.second) }, length = length)
 
         coordinateCache[k] = cached
         return cached
@@ -370,11 +371,15 @@ fun main() = runBlocking {
     val populationSize = 200
     val generations = 100
 
-    println("Generating $numPoints random points...")
-    val points = List(numPoints) { index ->
+    println("Generating $numPoints random points with random working times...")
+    val points = List(numPoints) { _ ->
+        val start = Random.nextInt(480, 720) // Between 8:00 and 12:00
+        val end = Random.nextInt(960, 1380)  // Between 16:00 and 23:00
         Point(
             x = Random.nextInt(0, 1000),
-            y = Random.nextInt(0, 1000)
+            y = Random.nextInt(0, 1000),
+            workingStart = start,
+            workingEnd = end
         )
     }
 
@@ -392,7 +397,7 @@ fun main() = runBlocking {
         }
     }
 
-    val presentItems = items.flatMap { it }.toSet()
+    val presentItems = items.flatten().toSet()
     val missingItems = allItems.filter { it !in presentItems }
     missingItems.forEach { item ->
         val randomPoint = Random.nextInt(0, numPoints)
