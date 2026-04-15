@@ -4,28 +4,45 @@ import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.geometry.Offset
-import com.example.mobilka132.MapViewModel
+import com.example.mobilka132.data.pathfinding.AStar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlin.math.pow
-import kotlin.math.sqrt
 import kotlin.random.Random
 
-class AntColony() {
+class AntColony(val pathfinder: AStar) {
     val points = mutableStateListOf<Offset>()
     val bestPath = mutableStateListOf<Int>()
     val currentIteration = mutableIntStateOf(0)
     val bestDistance = mutableDoubleStateOf(Double.MAX_VALUE)
 
+    private val distanceCache = mutableMapOf<Pair<Int, Int>, Double>()
+
     fun generatePoints(n: Int) {
         points.clear()
         bestPath.clear()
+        distanceCache.clear()
         currentIteration.intValue = 0
         bestDistance.doubleValue = Double.MAX_VALUE
         repeat(n) {
             points.add(Offset(Random.nextFloat() * 3000, Random.nextFloat() * 3000))
         }
+    }
+
+    private suspend fun getDistance(i: Int, j: Int): Double {
+        if (i == j) return 0.0
+        val key = if (i < j) i to j else j to i
+        distanceCache[key]?.let { return it }
+
+        val p1 = points[i]
+        val p2 = points[j]
+        
+        val path = pathfinder.findPath(p1.x.toInt() to p1.y.toInt(), p2.x.toInt() to p2.y.toInt())
+        val length = pathfinder.pathLength(path)
+        
+        distanceCache[key] = length
+        return length
     }
 
     suspend fun solve(
@@ -39,21 +56,19 @@ class AntColony() {
         val n = points.size
         if (n < 2) return
 
-        // Подготовка матрицы расстояний
-        val dist = Array(n) { i ->
-            DoubleArray(n) { j ->
-                val dx = points[i].x - points[j].x
-                val dy = points[i].y - points[j].y
-                sqrt((dx * dx + dy * dy).toDouble())
+        val dist = Array(n) { DoubleArray(n) }
+        for (i in 0 until n) {
+            for (j in i + 1 until n) {
+                val d = getDistance(i, j)
+                dist[i][j] = d
+                dist[j][i] = d
             }
         }
 
-        // Инициализация феромонов
         val pheromones = Array(n) { DoubleArray(n) { 1.0 } }
         var localBestPath = listOf<Int>()
         var localBestDist = Double.MAX_VALUE
 
-        // Вычисления проводим в фоновом потоке
         withContext(Dispatchers.Default) {
             for (iteration in 0 until maxIterations) {
                 val antPaths = mutableListOf<List<Int>>()
@@ -81,7 +96,6 @@ class AntColony() {
                         localBestDist = d
                         localBestPath = path.toList()
 
-                        // Обновляем результат в Main потоке для UI
                         withContext(Dispatchers.Main) {
                             bestDistance.doubleValue = localBestDist
                             bestPath.clear()
@@ -90,14 +104,12 @@ class AntColony() {
                     }
                 }
 
-                // Испарение феромонов
                 for (i in 0 until n) {
                     for (j in 0 until n) {
                         pheromones[i][j] *= (1.0 - evaporation)
                     }
                 }
 
-                // Обновление феромонов муравьями
                 for (ant in 0 until numAnts) {
                     val d = antDistances[ant]
                     val p = antPaths[ant]
@@ -112,7 +124,7 @@ class AntColony() {
                 withContext(Dispatchers.Main) {
                     currentIteration.intValue = iteration + 1
                 }
-                
+
                 delay(5)
             }
         }
@@ -132,11 +144,14 @@ class AntColony() {
 
         for (i in 0 until n) {
             if (!visited[i]) {
-                val eta = 1.0 / dist[current][i]
+                val d = dist[current][i]
+                val eta = if (d > 0) 1.0 / d else 1.0
                 probs[i] = pheromones[current][i].pow(alpha) * eta.pow(beta)
                 sum += probs[i]
             }
         }
+
+        if (sum == 0.0) return (0 until n).first { !visited[it] }
 
         val r = Random.nextDouble() * sum
         var currentSum = 0.0
