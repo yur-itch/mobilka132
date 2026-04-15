@@ -82,7 +82,7 @@ class MainActivity : ComponentActivity() {
             var startLabel by remember { mutableStateOf("Выберите начало") }
             var endLabel by remember { mutableStateOf("Выберите конец") }
             var visualizeRoute by remember { mutableStateOf(false) }
-            var stepDelay by remember { mutableStateOf(5L) }
+            var stepDelay by remember { mutableLongStateOf(5L) }
 
             val roadMask = remember {
                 val options = BitmapFactory.Options().apply { inScaled = false }
@@ -393,11 +393,11 @@ class MainActivity : ComponentActivity() {
         }
 
         val stepOffset = remember(viewModel.currentStep) {
-            viewModel.currentStep?.current?.let { (x, y) -> Offset(x.toFloat(), y.toFloat()) }
+            viewModel.currentStep?.current?.let { (x, y) -> Offset(x, y) }
         }
 
         val nodeOffsets = remember(viewModel.currentStep) {
-            viewModel.currentStep?.openSet?.map { (x, y) -> Offset(x.toFloat(), y.toFloat()) } ?: emptyList()
+            viewModel.currentStep?.openSet?.map { (x, y) -> Offset(x, y) } ?: emptyList()
         }
 
         Box(
