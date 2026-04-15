@@ -66,6 +66,7 @@ class MainActivity : ComponentActivity() {
             viewModel.loadPointsFromAssets(this@MainActivity)
         }
         location.checkPermission()
+        location.mapState = viewModel.state
 
         setContent {
             val state = viewModel.state
@@ -86,12 +87,12 @@ class MainActivity : ComponentActivity() {
 
             val roadMask = remember {
                 val options = BitmapFactory.Options().apply { inScaled = false }
-                BitmapFactory.decodeResource(context.resources, R.drawable.map, options)
+                BitmapFactory.decodeResource(context.resources, R.drawable.map750, options)
             }
 
             val buildingsMask = remember {
                 val options = BitmapFactory.Options().apply { inScaled = false }
-                BitmapFactory.decodeResource(context.resources, R.drawable.perfect_colored_map, options)
+                BitmapFactory.decodeResource(context.resources, R.drawable.perfect_colored_map750, options)
             }
 
             val dummyBitmap = remember {

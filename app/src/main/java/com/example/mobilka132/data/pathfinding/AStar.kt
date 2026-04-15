@@ -1,6 +1,7 @@
 package com.example.mobilka132.data.pathfinding
 
 import androidx.compose.ui.geometry.Offset
+import com.example.mobilka132.MapState
 import com.example.mobilka132.model.AStarStep
 import com.example.mobilka132.model.Path
 import kotlinx.coroutines.currentCoroutineContext
@@ -14,7 +15,8 @@ import kotlin.math.abs
 class AStar(
     private val width: Int,
     private val height: Int,
-    private val map: IntArray       // 1D flattened row-major: index = y * width + x
+    private val map: IntArray,       // 1D flattened row-major: index = y * width + x
+    private val state: MapState
 ) {
     private val maxNodeWeight = 5
 
@@ -122,7 +124,9 @@ class AStar(
             current = parent
         }
         if (current != null) path.add(current)
-        return PathData(path.reversed(), distance / 20f)
+        
+        val divisor = (10.0 / state.metersPerPixel).toFloat()
+        return PathData(path.reversed(), distance / divisor)
     }
 
     fun findPathAsync(s: Pair<Int, Int>, e: Pair<Int, Int>, delayMs: Long = 16L): Flow<AStarStep> = flow {
@@ -192,13 +196,15 @@ class AStar(
     }
 
     fun pathLength(path: List<Pair<Int, Int>>): Double {
-        return (1 until path.size).sumOf { x ->
+        val totalInternal = (1 until path.size).sumOf { x ->
             val start = path[x - 1]
             val destination = path[x]
             val dX = abs(start.first - destination.first)
             val dY = abs(start.second - destination.second)
             (if (dX >= dY) 14 * dY + 10 * (dX - dY)
             else 14 * dX + 10 * (dY - dX)).toDouble()
-        } / 20.0
+        }
+        val divisor = 10.0 / state.metersPerPixel
+        return totalInternal / divisor
     }
 }

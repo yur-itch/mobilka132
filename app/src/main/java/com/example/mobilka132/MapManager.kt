@@ -7,7 +7,6 @@ import android.graphics.Bitmap
 import android.util.Log
 import androidx.compose.ui.geometry.Offset
 import kotlinx.coroutines.*
-import kotlin.math.min
 
 class MapManager(val context: Context)  {
 
@@ -23,7 +22,7 @@ class MapManager(val context: Context)  {
         val deferred = scope.async(Dispatchers.IO)
         {
             try {
-                val cont = context.assets.open("test.png")
+                val cont = context.assets.open("map750.png")
                 bitmap = BitmapFactory.decodeStream(cont)
                 cont.close()
                 width = bitmap.width
@@ -45,29 +44,29 @@ class MapManager(val context: Context)  {
         return deferred
     }
 
-    fun loadPointsFromAssets() {
-        val job = scope.launch(Dispatchers.IO) {
-            try {
-                val points = mutableListOf<Offset>()
-                context.assets.open("ga_points.csv").bufferedReader().useLines { lines ->
-                    lines.forEach { line ->
-                        val parts = line.split(",")
-                        if (parts.size == 2) {
-                            val x = parts[0].trim().toFloatOrNull()
-                            val y = parts[1].trim().toFloatOrNull()
-                            if (x != null && y != null) {
-                                points.add(Offset(x, y))
-                            }
-                        }
-                    }
-                }
-                loadedPoints = points
-                Log.d("GA_POINTS", "Successfully loaded ${points.size} points")
-            } catch (e: Exception) {
-                Log.e("GA_POINTS", "Error loading points", e)
-            }
-        }
-    }
+//    fun loadPointsFromAssets() {
+//        val job = scope.launch(Dispatchers.IO) {
+//            try {
+//                val points = mutableListOf<Offset>()
+//                context.assets.open("ga_points.csv").bufferedReader().useLines { lines ->
+//                    lines.forEach { line ->
+//                        val parts = line.split(",")
+//                        if (parts.size == 2) {
+//                            val x = parts[0].trim().toFloatOrNull()
+//                            val y = parts[1].trim().toFloatOrNull()
+//                            if (x != null && y != null) {
+//                                points.add(Offset(x, y))
+//                            }
+//                        }
+//                    }
+//                }
+//                loadedPoints = points
+//                Log.d("GA_POINTS", "Successfully loaded ${points.size} points")
+//            } catch (e: Exception) {
+//                Log.e("GA_POINTS", "Error loading points", e)
+//            }
+//        }
+//    }
 
     fun cancelAll() {
         scope.cancel()
