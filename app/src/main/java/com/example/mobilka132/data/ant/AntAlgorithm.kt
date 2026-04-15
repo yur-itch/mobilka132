@@ -11,18 +11,20 @@ import kotlinx.coroutines.withContext
 import kotlin.math.pow
 import kotlin.random.Random
 
-class AntColony(val pathfinder: AStar) {
+class AntAlgorithm(val pathfinder: AStar) {
     val points = mutableStateListOf<Offset>()
     val bestPath = mutableStateListOf<Int>()
     val currentIteration = mutableIntStateOf(0)
     val bestDistance = mutableDoubleStateOf(Double.MAX_VALUE)
 
     private val distanceCache = mutableMapOf<Pair<Int, Int>, Double>()
+    private val pathCache = mutableMapOf<Pair<Int, Int>, List<Offset>>()
 
     fun generatePoints(n: Int) {
         points.clear()
         bestPath.clear()
         distanceCache.clear()
+        pathCache.clear()
         currentIteration.intValue = 0
         bestDistance.doubleValue = Double.MAX_VALUE
         repeat(n) {
@@ -38,11 +40,31 @@ class AntColony(val pathfinder: AStar) {
         val p1 = points[i]
         val p2 = points[j]
         
-        val path = pathfinder.findPath(p1.x.toInt() to p1.y.toInt(), p2.x.toInt() to p2.y.toInt())
-        val length = pathfinder.pathLength(path)
+        val result = pathfinder.find(p1.x.toInt() to p1.y.toInt(), p2.x.toInt() to p2.y.toInt())
+        val length = result.distance.toDouble()
+        val path = result.path.map { Offset(it.x.toFloat(), it.y.toFloat()) }
         
         distanceCache[key] = length
+        pathCache[key] = path
         return length
+    }
+
+    fun getFullBestPathSteps(): List<Offset> {
+        val tour = bestPath.toList()
+        if (tour.isEmpty()) return emptyList()
+        val fullSteps = mutableListOf<Offset>()
+        for (i in 0 until tour.size) {
+            val from = tour[i]
+            val to = tour[(i + 1) % tour.size]
+            val key = if (from < to) from to to else to to from
+            val segment = pathCache[key] ?: emptyList()
+            if (from < to) {
+                fullSteps.addAll(segment)
+            } else {
+                fullSteps.addAll(segment.reversed())
+            }
+        }
+        return fullSteps
     }
 
     suspend fun solve(
@@ -51,7 +73,8 @@ class AntColony(val pathfinder: AStar) {
         alpha: Double = 1.0,
         beta: Double = 2.0,
         evaporation: Double = 0.5,
-        Q: Double = 100.0
+        Q: Double = 100.0,
+        onIteration: (suspend (Int, List<Int>, Double) -> Unit)? = null
     ) {
         val n = points.size
         if (n < 2) return
@@ -69,64 +92,66 @@ class AntColony(val pathfinder: AStar) {
         var localBestPath = listOf<Int>()
         var localBestDist = Double.MAX_VALUE
 
-        withContext(Dispatchers.Default) {
-            for (iteration in 0 until maxIterations) {
-                val antPaths = mutableListOf<List<Int>>()
-                val antDistances = DoubleArray(numAnts)
+        for (iteration in 0 until maxIterations) {
+            val antPaths = mutableListOf<List<Int>>()
+            val antDistances = DoubleArray(numAnts)
+            var iterationImproved = false
 
-                for (ant in 0 until numAnts) {
-                    val path = mutableListOf<Int>()
-                    val visited = BooleanArray(n)
-                    var current = Random.nextInt(n)
-                    path.add(current)
-                    visited[current] = true
+            for (ant in 0 until numAnts) {
+                val path = mutableListOf<Int>()
+                val visited = BooleanArray(n)
+                var current = Random.nextInt(n)
+                path.add(current)
+                visited[current] = true
 
-                    while (path.size < n) {
-                        val next = selectNextCity(current, visited, pheromones, dist, alpha, beta)
-                        path.add(next)
-                        visited[next] = true
-                        current = next
-                    }
-
-                    antPaths.add(path)
-                    val d = calculateTotalDist(path, dist)
-                    antDistances[ant] = d
-
-                    if (d < localBestDist) {
-                        localBestDist = d
-                        localBestPath = path.toList()
-
-                        withContext(Dispatchers.Main) {
-                            bestDistance.doubleValue = localBestDist
-                            bestPath.clear()
-                            bestPath.addAll(localBestPath)
-                        }
-                    }
+                while (path.size < n) {
+                    val next = selectNextCity(current, visited, pheromones, dist, alpha, beta)
+                    path.add(next)
+                    visited[next] = true
+                    current = next
                 }
 
-                for (i in 0 until n) {
-                    for (j in 0 until n) {
-                        pheromones[i][j] *= (1.0 - evaporation)
+                antPaths.add(path)
+                val d = calculateTotalDist(path, dist)
+                antDistances[ant] = d
+
+                if (d < localBestDist) {
+                    localBestDist = d
+                    localBestPath = path.toList()
+                    iterationImproved = true
+
+                    withContext(Dispatchers.Main) {
+                        bestDistance.doubleValue = localBestDist
+                        bestPath.clear()
+                        bestPath.addAll(localBestPath)
                     }
                 }
-
-                for (ant in 0 until numAnts) {
-                    val d = antDistances[ant]
-                    val p = antPaths[ant]
-                    for (i in 0 until n) {
-                        val from = p[i]
-                        val to = p[(i + 1) % n]
-                        pheromones[from][to] += Q / d
-                        pheromones[to][from] += Q / d
-                    }
-                }
-
-                withContext(Dispatchers.Main) {
-                    currentIteration.intValue = iteration + 1
-                }
-
-                delay(5)
             }
+
+            for (i in 0 until n) {
+                for (j in 0 until n) {
+                    pheromones[i][j] *= (1.0 - evaporation)
+                }
+            }
+
+            for (ant in 0 until numAnts) {
+                val d = antDistances[ant]
+                val p = antPaths[ant]
+                for (i in 0 until n) {
+                    val from = p[i]
+                    val to = p[(i + 1) % n]
+                    pheromones[from][to] += Q / d
+                    pheromones[to][from] += Q / d
+                }
+            }
+
+            withContext(Dispatchers.Main) {
+                currentIteration.intValue = iteration + 1
+            }
+
+            onIteration?.invoke(iteration + 1, localBestPath, localBestDist)
+
+            delay((100 / (iteration + 1)).toLong())
         }
     }
 
