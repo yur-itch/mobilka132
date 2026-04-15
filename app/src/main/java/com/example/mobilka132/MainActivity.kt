@@ -175,7 +175,7 @@ class MainActivity : ComponentActivity() {
                                     onShowDecisionDialog = { showDecisionDialog = true },
                                     onToggleView = { shownIndex = (shownIndex + 1) % bitmaps.size },
                                     onToggleRouteMenu = { showRouteMenu = !showRouteMenu },
-                                    roadMask = roadMask
+                                    buildingsMask = buildingsMask
                                 )
                             }
                         }
@@ -238,7 +238,7 @@ class MainActivity : ComponentActivity() {
                     }
                     items(info.venues) { venue ->
                         Text(
-                            text = "• $venue",
+                            text = "• ${venue.name} (${venue.workingHours})",
                             fontSize = 13.sp,
                             modifier = Modifier.padding(vertical = 2.dp)
                         )
@@ -287,7 +287,7 @@ class MainActivity : ComponentActivity() {
         onShowDecisionDialog: () -> Unit,
         onToggleView: () -> Unit,
         onToggleRouteMenu: () -> Unit,
-        roadMask: Bitmap
+        buildingsMask: Bitmap
     ) {
         val isBusy = viewModel.isAnyAlgoRunning || state.isProcessing
 
@@ -306,7 +306,7 @@ class MainActivity : ComponentActivity() {
                 Button(onClick = onToggleRouteMenu, enabled = !isBusy) { Text("Маршрут") }
                 Button(onClick = onToggleView) { Text("Вид") }
                 Button(
-                    onClick = { viewModel.startFoodShoppingGA(roadMask) },
+                    onClick = { viewModel.startFoodShoppingGA(buildingsMask) },
                     enabled = !isBusy,
                     colors = ButtonDefaults.buttonColors(Color(0xFFFF9800))
                 ) {

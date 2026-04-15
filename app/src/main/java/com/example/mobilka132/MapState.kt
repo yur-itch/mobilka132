@@ -121,7 +121,8 @@ class MapState {
                     position = p.position,
                     workingStart = p.start,
                     workingEnd = p.end,
-                    delay = p.delay
+                    delay = p.delay,
+                    items = p.items
                 )
             )
         }
@@ -167,7 +168,7 @@ class MapState {
                 }
             }
 
-            if (roadMask != null || maskPixels.isNotEmpty()) {
+            if (isSelectionMode && (roadMask != null || maskPixels.isNotEmpty())) {
                 val finalPosition = findNearestAvailablePoint(contentPoint)
                 withContext(Dispatchers.Main) {
                     selectedPoints.add(MapPoint(id = nextPointId++, position = finalPosition))
@@ -219,5 +220,6 @@ data class MapPointData(
     val position: Offset,
     val start: Int,
     val end: Int,
-    val delay: Int
+    val delay: Int,
+    val items: List<String> = emptyList()
 )
