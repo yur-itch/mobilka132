@@ -6,5 +6,6 @@ data class MapPoint(
     val position: Offset,
     val workingStart: Int = 0,
     val workingEnd: Int = 1440,
-    val delay: Int = 0
+    val delay: Int = 0,
+    val items: List<String> = emptyList()
 )

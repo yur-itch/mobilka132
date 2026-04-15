@@ -84,7 +84,7 @@ class MainActivity : ComponentActivity() {
             var startLabel by remember { mutableStateOf("Выберите начало") }
             var endLabel by remember { mutableStateOf("Выберите конец") }
             var visualizeRoute by remember { mutableStateOf(false) }
-            var stepDelay by remember { mutableStateOf(5L) }
+            var stepDelay by remember { mutableLongStateOf(5L) }
 
             val roadMask = remember {
                 val options = BitmapFactory.Options().apply { inScaled = false }
@@ -177,7 +177,7 @@ class MainActivity : ComponentActivity() {
                                     onShowDecisionDialog = { showDecisionDialog = true },
                                     onToggleView = { shownIndex = (shownIndex + 1) % bitmaps.size },
                                     onToggleRouteMenu = { showRouteMenu = !showRouteMenu },
-                                    roadMask = roadMask
+                                    buildingsMask = buildingsMask
                                 )
                             }
                         }
@@ -240,7 +240,7 @@ class MainActivity : ComponentActivity() {
                     }
                     items(info.venues) { venue ->
                         Text(
-                            text = "• $venue",
+                            text = "• ${venue.name} (${venue.workingHours})",
                             fontSize = 13.sp,
                             modifier = Modifier.padding(vertical = 2.dp)
                         )
@@ -265,17 +265,17 @@ class MainActivity : ComponentActivity() {
                     viewModel.isPathProcessing -> "Поиск пути..."
                     viewModel.isGARunning -> "Генетика: ген. ${viewModel.currentGeneration}"
                     viewModel.lastPath != null -> "Путь найден: ${viewModel.lastPath!!.distance} м"
+                    viewModel.isTSPProcessing -> "Муравьиный (TSP): ${viewModel.tspPath?.distance ?: 0f} м"
                     else -> "Интерактивная карта"
                 },
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
             )
-            if (state.isProcessing || viewModel.isAnyAlgoRunning) {
+            if (state.isProcessing || viewModel.isProcessing) {
                 CircularProgressIndicator(
                     modifier = Modifier
                         .size(20.dp)
                         .align(Alignment.CenterEnd)
-                        .padding(end = 16.dp)
                 )
             }
         }
@@ -289,7 +289,7 @@ class MainActivity : ComponentActivity() {
         onShowDecisionDialog: () -> Unit,
         onToggleView: () -> Unit,
         onToggleRouteMenu: () -> Unit,
-        roadMask: Bitmap
+        buildingsMask: Bitmap
     ) {
         val isBusy = viewModel.isAnyAlgoRunning || state.isProcessing
 
@@ -308,7 +308,7 @@ class MainActivity : ComponentActivity() {
                 Button(onClick = onToggleRouteMenu, enabled = !isBusy) { Text("Маршрут") }
                 Button(onClick = onToggleView) { Text("Вид") }
                 Button(
-                    onClick = { viewModel.startFoodShoppingGA(roadMask) },
+                    onClick = { viewModel.startFoodShoppingGA(buildingsMask) },
                     enabled = !isBusy,
                     colors = ButtonDefaults.buttonColors(Color(0xFFFF9800))
                 ) {
@@ -386,16 +386,20 @@ class MainActivity : ComponentActivity() {
             viewModel.foundPaths.map { overlay.generatePath(it.steps) }
         }
 
+        val tspPath = remember(viewModel.tspPath) {
+            viewModel.tspPath?.steps?.let {overlay.generatePath(it)}
+        }
+
         val gaPath = remember(viewModel.currentGAStep) {
             viewModel.currentGAStep?.path?.steps?.let { overlay.generatePath(it) }
         }
 
         val stepOffset = remember(viewModel.currentStep) {
-            viewModel.currentStep?.current?.let { (x, y) -> Offset(x.toFloat(), y.toFloat()) }
+            viewModel.currentStep?.current?.let { (x, y) -> Offset(x, y) }
         }
 
         val nodeOffsets = remember(viewModel.currentStep) {
-            viewModel.currentStep?.openSet?.map { (x, y) -> Offset(x.toFloat(), y.toFloat()) } ?: emptyList()
+            viewModel.currentStep?.openSet?.map { (x, y) -> Offset(x, y) } ?: emptyList()
         }
 
         Box(
@@ -437,6 +441,7 @@ class MainActivity : ComponentActivity() {
                         for (path in paths) {
                             drawPathScaled(path)
                         }
+                        tspPath?.let {drawPathScaled(it)}
                         gaPath?.let { drawPathScaled(it) }
                     }
                 }
@@ -465,16 +470,27 @@ class MainActivity : ComponentActivity() {
                 Text("GPS", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
 
+            val textStyle = remember { TextStyle(color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold) }
+            val textLayoutCache = remember(state.selectedPoints.toList()) {
+                state.selectedPoints.associate { it.id to textMeasurer.measure(it.id.toString(), textStyle) }
+            }
+
             Canvas(modifier = Modifier.fillMaxSize()) {
-                val textStyle = TextStyle(color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                val canvasBounds = size
 
                 state.selectedPoints.forEach { point ->
                     val screenPos = state.contentToScreen(point.position)
 
+                    // Screen culling: Skip if point is far outside current view
+                    if (screenPos.x < -100f || screenPos.x > canvasBounds.width + 100f ||
+                        screenPos.y < -100f || screenPos.y > canvasBounds.height + 100f) {
+                        return@forEach
+                    }
+
                     drawCircle(color = Color.Red, radius = 20f, center = screenPos)
                     drawCircle(color = Color.White, radius = 8f, center = screenPos)
 
-                    val textLayoutResult = textMeasurer.measure(text = point.id.toString(), style = textStyle)
+                    val textLayoutResult = textLayoutCache[point.id] ?: return@forEach
                     val textWidth = textLayoutResult.size.width.toFloat()
                     val textHeight = textLayoutResult.size.height.toFloat()
 
