@@ -263,17 +263,17 @@ class MainActivity : ComponentActivity() {
                     viewModel.isPathProcessing -> "Поиск пути..."
                     viewModel.isGARunning -> "Генетика: ген. ${viewModel.currentGeneration}"
                     viewModel.lastPath != null -> "Путь найден: ${viewModel.lastPath!!.distance} м"
+                    viewModel.isTSPProcessing -> "Муравьиный (TSP): ${viewModel.tspPath?.distance ?: 0f} м"
                     else -> "Интерактивная карта"
                 },
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
             )
-            if (state.isProcessing || viewModel.isAnyAlgoRunning) {
+            if (state.isProcessing || viewModel.isProcessing) {
                 CircularProgressIndicator(
                     modifier = Modifier
                         .size(20.dp)
                         .align(Alignment.CenterEnd)
-                        .padding(end = 16.dp)
                 )
             }
         }
@@ -384,8 +384,8 @@ class MainActivity : ComponentActivity() {
             viewModel.foundPaths.map { overlay.generatePath(it.steps) }
         }
 
-        val tspPath = remember(viewModel.TSPPath) {
-            viewModel.TSPPath?.steps?.let {overlay.generatePath(it)}
+        val tspPath = remember(viewModel.tspPath) {
+            viewModel.tspPath?.steps?.let {overlay.generatePath(it)}
         }
 
         val gaPath = remember(viewModel.currentGAStep) {

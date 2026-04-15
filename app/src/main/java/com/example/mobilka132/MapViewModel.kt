@@ -7,7 +7,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.geometry.Offset
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.mobilka132.data.ant.AntColony
+import com.example.mobilka132.data.ant.AntAlgorithm
 import com.example.mobilka132.data.genetic.*
 import com.example.mobilka132.data.pathfinding.AStar
 import com.example.mobilka132.data.pathfinding.PathData
@@ -18,6 +18,7 @@ import com.example.mobilka132.model.Path
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.flowOn
 import java.util.Calendar
+import java.util.Collections.emptyList
 import java.util.concurrent.Executors
 import kotlin.random.Random
 
@@ -33,18 +34,18 @@ class MapViewModel : ViewModel() {
     var lastPath by mutableStateOf<Path?>(null)
     var currentStep by mutableStateOf<AStarStep?>(null)
     var currentGAStep by mutableStateOf<GAStep?>(null)
-    var TSPPath by mutableStateOf<Path?>(null)
-
+    var tspPath by mutableStateOf<Path?>(null)
     var activeJobs: MutableList<Job> = mutableStateListOf()
 
     var isPathProcessing by mutableStateOf(false)
     var isGARunning by mutableStateOf(false)
-
+    var isTSPProcessing by mutableStateOf(false)
     val isProcessing: Boolean
         get() = activeJobs.isNotEmpty() || !initialized
 
     val isAnyAlgoRunning: Boolean
         get() = isProcessing
+
 
     var initialized by mutableStateOf(false)
 
@@ -126,8 +127,9 @@ class MapViewModel : ViewModel() {
         visualizeSteps: Boolean = false,
         stepDelay: Long = 5L,
         onPathFound: ((Boolean, Path) -> Unit)? = null
-    ) = requestPathfinding(p1.position, p2.position, visualizeSteps, stepDelay, onPathFound)
-
+    ) = requestPathfinding(p1.position, p2.position, visualizeSteps, stepDelay) { success, path ->
+        onPathFound?.invoke(success, path)
+    }
     fun requestPathfinding(
         p1: Offset,
         p2: Offset,
@@ -189,40 +191,41 @@ class MapViewModel : ViewModel() {
 
     fun findTSPSolution() {
         if (activeJobs.isNotEmpty()) return
-        val antColony = AntColony(pathfinder)
+        val ant = AntAlgorithm(pathfinder)
         val n = 10
         clear()
-
+        tspPath = Path(emptyList(), 0f)
+        isTSPProcessing = true
+        var points = mutableListOf<MapPoint>()
         val job = viewModelScope.launch {
-            antColony.generatePoints(n)
+            ant.generatePoints(n)
             withContext(pathfinderDispatcher) {
                 for (i in 0 until n) {
-                    antColony.points[i] = state.findNearestAvailablePoint(antColony.points[i])
-                    state.addPoint(antColony.points[i])
+                    ant.points[i] = state.findNearestAvailablePoint(ant.points[i])
+                    state.addPoint(ant.points[i])
+                    points.add(state.selectedPoints[state.selectedPoints.size - 1])
                 }
-                antColony.solve()
+                ant.solve(
+                    onIteration = { iteration, bestTour, dist ->
+                        withContext(Dispatchers.Main) {
+                            val steps = ant.getFullBestPathSteps()
+                            tspPath = Path(steps, dist.toFloat())
+                        }
+                    }
+                )
             }
 
-            val fullSteps = mutableListOf<Offset>()
-            var totalDistance = 0f
-            for (i in 0 until antColony.bestPath.size) {
-                val p1 = antColony.points[antColony.bestPath[i]]
-                val p2 = antColony.points[antColony.bestPath[(i + 1) % antColony.bestPath.size]]
-                val result = withContext(pathfinderDispatcher) {
-                    pathfinder.find(p1.toPair(), p2.toPair())
-                }
-                fullSteps.addAll(result.path.map { Offset(it.x.toFloat(), it.y.toFloat()) })
-                totalDistance += result.distance
-            }
-            
             withContext(Dispatchers.Main) {
-                val finalPath = Path(fullSteps, totalDistance)
-                TSPPath = finalPath
+                val finalPath = Path(tspPath!!.steps, tspPath!!.distance)
+                isTSPProcessing = false
+                lastPath = finalPath
                 foundPaths.add(finalPath)
             }
         }
         activeJobs.add(job)
         job.invokeOnCompletion {
+            isTSPProcessing = false
+            tspPath = null
             activeJobs.remove(job)
         }
     }
@@ -328,6 +331,7 @@ class MapViewModel : ViewModel() {
             } finally {
                 isGARunning = false
                 currentGAStep?.let {
+                    lastPath = it.path
                     foundPaths.add(it.path)
                 }
             }
@@ -346,20 +350,12 @@ class MapViewModel : ViewModel() {
         isGARunning = false
         isPathProcessing = false
         currentStep = null
-        currentGAStep = null
-        TSPPath = null
     }
 
     fun deletePoint(index: Int) {
         if (isProcessing) return
-
         if (index in state.selectedPoints.indices) {
             state.selectedPoints.removeAt(index)
-            if (state.selectedPoints.size < 2) {
-                lastPath = null
-                currentGAStep = null
-                TSPPath = null
-            }
         }
     }
 
@@ -370,7 +366,7 @@ class MapViewModel : ViewModel() {
         currentStep = null
         currentGAStep = null
         lastPath = null
-        TSPPath = null
+        tspPath = null
         state.clearPoints()
         isGARunning = false
         isPathProcessing = false
@@ -381,7 +377,7 @@ class MapViewModel : ViewModel() {
         currentStep = null
         currentGAStep = null
         lastPath = null
-        TSPPath = null
+        tspPath = null
     }
 
     fun Pair<Int, Int>.toOffset() = Offset(first.toFloat(), second.toFloat())
