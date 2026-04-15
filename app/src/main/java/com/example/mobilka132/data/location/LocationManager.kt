@@ -16,6 +16,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.app.ActivityCompat
+import com.example.mobilka132.MapState
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest.Builder
 import com.google.android.gms.location.LocationResult
@@ -24,6 +25,7 @@ import com.google.android.gms.location.Priority
 
 class LocationManager(private val activity: Context, private val registry: ActivityResultRegistry) {
 
+    var mapState: MapState? = null
     var mapLocation by mutableStateOf<Offset?>(null)
     var worldLocation : Location? = null
     private val fusedLocationClient by lazy {
@@ -49,7 +51,13 @@ class LocationManager(private val activity: Context, private val registry: Activ
     }
 
     private fun setMapLocation() {
-        mapLocation = worldLocation?.let { l -> Offset(((l.longitude - 84.932881) * 122800).toFloat(), (-(l.latitude - 56.4758) * 222000).toFloat()) ?: null }
+        val state = mapState ?: return
+        mapLocation = worldLocation?.let { l -> 
+            Offset(
+                ((l.longitude - 84.932881) * state.lonMultiplier).toFloat(), 
+                (-(l.latitude - 56.4758) * state.latMultiplier).toFloat()
+            ) 
+        }
     }
 
     @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])

@@ -15,10 +15,27 @@ import kotlinx.coroutines.withContext
 import kotlin.math.min
 
 class MapState {
+    companion object {
+        const val REF_WIDTH = 3000f
+        const val REF_HEIGHT = 3000f
+        const val REF_MPP = 0.5
+        const val REF_LON_SCALE = 122800.0
+        const val REF_LAT_SCALE = 222000.0
+        const val REF_SNAPPING_RADIUS = 1500
+    }
+
     var offset by mutableStateOf(Offset.Zero)
     var scale by mutableFloatStateOf(1f)
     var containerSize by mutableStateOf(IntSize.Zero)
     var imageSize by mutableStateOf(Size.Zero)
+
+    val scaleFactorX: Float get() = if (imageSize.width > 0) imageSize.width / REF_WIDTH else 1f
+    val scaleFactorY: Float get() = if (imageSize.height > 0) imageSize.height / REF_HEIGHT else 1f
+
+    val metersPerPixel: Double get() = REF_MPP / scaleFactorX.toDouble()
+    val lonMultiplier: Double get() = REF_LON_SCALE * scaleFactorX.toDouble()
+    val latMultiplier: Double get() = REF_LAT_SCALE * scaleFactorY.toDouble()
+    val snappingRadius: Int get() = (REF_SNAPPING_RADIUS * scaleFactorX).toInt()
 
     var maskWidth: Int = 0
     var maskHeight: Int = 0
@@ -190,7 +207,7 @@ class MapState {
 
         if (pixels[centerY * w + centerX] == 1) return startPoint
 
-        val maxRadius = 1500
+        val maxRadius = snappingRadius
         for (radius in 1..maxRadius) {
             for (i in -radius..radius) {
                 checkPixel(centerX + i, centerY - radius, w, h, pixels)?.let { return it }
