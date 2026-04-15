@@ -329,6 +329,8 @@ object CampusDatabase {
         return buildingRegistry[color and 0x00FFFFFF]
     }
 
+    fun getAllBuildings(): Map<Int, BuildingInfo> = buildingRegistry
+
     private fun addBuilding(color: Int, info: BuildingInfo) {
         buildingRegistry[color and 0x00FFFFFF] = info
     }

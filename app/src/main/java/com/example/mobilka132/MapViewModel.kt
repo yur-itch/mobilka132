@@ -2,6 +2,7 @@ package com.example.mobilka132
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.util.Log
 import androidx.compose.runtime.*
 import androidx.compose.ui.geometry.Offset
@@ -230,7 +231,7 @@ class MapViewModel : ViewModel() {
         }
     }
 
-    fun startFoodShoppingGA(maskBitmap: Bitmap) {
+    fun startFoodShoppingGA(buildingsMask: Bitmap) {
         if (activeJobs.isNotEmpty()) return
         val job = viewModelScope.launch {
             isGARunning = true
@@ -242,8 +243,8 @@ class MapViewModel : ViewModel() {
             currentStep = null
             currentGAStep = null
 
-            val width = state.imageSize.width.toInt()
-            val height = state.imageSize.height.toInt()
+            val width = buildingsMask.width
+            val height = buildingsMask.height
 
             if (width <= 0 || height <= 0) {
                 isGARunning = false
@@ -251,15 +252,63 @@ class MapViewModel : ViewModel() {
             }
 
             try {
-                if (loadedPointsWithTiming.isNotEmpty()) {
-                    state.addPointsWithTiming(loadedPointsWithTiming)
+                val venuePoints = withContext(Dispatchers.Default) {
+                    val pixels = IntArray(width * height)
+                    buildingsMask.getPixels(pixels, 0, width, 0, 0, width, height)
+
+                    val buildingAccumulators = mutableMapOf<Int, CentroidAccumulator>()
+                    val registeredColors = CampusDatabase.getAllBuildings().keys
+
+                    for (y in 0 until height) {
+                        for (x in 0 until width) {
+                            val color = pixels[y * width + x] and 0x00FFFFFF
+                            if (color in registeredColors) {
+                                buildingAccumulators.getOrPut(color) { CentroidAccumulator() }.add(x, y)
+                            }
+                        }
+                    }
+
+                    val points = mutableListOf<MapPointData>()
+                    for ((color, acc) in buildingAccumulators) {
+                        val building = CampusDatabase.getBuildingByColor(color) ?: continue
+                        if (building.venues.isEmpty()) continue
+
+                        val centroid = acc.centroid
+                        val walkablePoint = state.findNearestAvailablePoint(centroid)
+
+                        for (venue in building.venues) {
+                            val hours = venue.workingHours.split("-")
+                            val start = if (hours.size == 2) parseTime(hours[0]) else 0
+                            val end = if (hours.size == 2) parseTime(hours[1]) else 1440
+                            points.add(
+                                MapPointData(
+                                    walkablePoint,
+                                    start,
+                                    end,
+                                    venue.estimatedVisitTimeMinutes,
+                                    venue.dishes
+                                )
+                            )
+                        }
+                    }
+                    points
+                }
+
+                if (venuePoints.isNotEmpty()) {
+                    state.addPointsWithTiming(venuePoints)
+                    Log.d("GA_POINTS", "Loaded ${venuePoints.size} venue points from CampusDatabase")
                 } else {
-                    repeat(10) {
-                        val randomPoint = Offset(
-                            Random.nextInt(0, width).toFloat(),
-                            Random.nextInt(0, height).toFloat()
-                        )
-                        state.addPoint(randomPoint)
+                    Log.w("GA_POINTS", "No venues found on buildings map! Falling back to CSV.")
+                    if (loadedPointsWithTiming.isNotEmpty()) {
+                        state.addPointsWithTiming(loadedPointsWithTiming)
+                    } else {
+                        repeat(10) {
+                            val randomPoint = Offset(
+                                Random.nextInt(0, width).toFloat(),
+                                Random.nextInt(0, height).toFloat()
+                            )
+                            state.addPoint(randomPoint)
+                        }
                     }
                 }
 
@@ -270,7 +319,11 @@ class MapViewModel : ViewModel() {
                 }
 
                 val numPoints = mapPoints.size
-                val numItems = 10
+                
+                // Collect all unique menu items
+                val uniqueMenuItems = mapPoints.flatMap { it.items }.distinct()
+                val menuItemToIndex = uniqueMenuItems.withIndex().associate { it.value to it.index }
+                val numItems = uniqueMenuItems.size
 
                 val gaPoints = mapPoints.map {
                     Point(
@@ -285,8 +338,9 @@ class MapViewModel : ViewModel() {
                 distancer.setPoints(gaPoints)
 
                 val allItems = (0 until numItems).toMutableList()
-                val items = MutableList(numPoints) { mutableListOf<Int>() }
-                allItems.forEach { item -> items[Random.nextInt(0, numPoints)].add(item) }
+                val items = MutableList(numPoints) { i -> 
+                    mapPoints[i].items.mapNotNull { menuItemToIndex[it] }.toMutableList()
+                }
 
                 val calendar = Calendar.getInstance()
                 val currentMinutes = calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE)
@@ -341,6 +395,29 @@ class MapViewModel : ViewModel() {
             currentGAStep = null
             activeJobs.remove(job)
         }
+    }
+
+    private fun parseTime(timeStr: String): Int {
+        return try {
+            val parts = timeStr.trim().split(":")
+            if (parts.size == 2) {
+                parts[0].toInt() * 60 + parts[1].toInt()
+            } else 0
+        } catch (e: Exception) {
+            0
+        }
+    }
+
+    class CentroidAccumulator {
+        var sumX = 0L
+        var sumY = 0L
+        var count = 0
+        fun add(x: Int, y: Int) {
+            sumX += x
+            sumY += y
+            count++
+        }
+        val centroid: Offset get() = if (count > 0) Offset(sumX.toFloat() / count, sumY.toFloat() / count) else Offset.Zero
     }
 
     fun cancelAll() {
