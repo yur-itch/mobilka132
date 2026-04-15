@@ -88,6 +88,7 @@ fun MapScreen(viewModel: MapViewModel, location: LocationManager) {
     val overlay = viewModel.overlay
     val context = LocalContext.current
     val treeViewModel: DecisionTreeManager = viewModel()
+    val scope = rememberCoroutineScope()
 
     var showDecisionDialog by remember { mutableStateOf(false) }
     var showPointsList by remember { mutableStateOf(false) }
@@ -232,8 +233,18 @@ fun MapScreen(viewModel: MapViewModel, location: LocationManager) {
                             info = info,
                             onDismiss = { state.selectedBuildingInfo = null },
                             onRouteTo = {
+                                val buildingPos = state.lastClickContentPoint
+                                if (buildingPos != null) {
+                                    scope.launch {
+                                        val newPoint = state.addPoint(buildingPos)
+                                        if (newPoint != null) {
+                                            endPoint = newPoint.position
+                                            endLabel = "Точка №${newPoint.id}"
+                                            showRouteMenu = true
+                                        }
+                                    }
+                                }
                                 state.selectedBuildingInfo = null
-                                showRouteMenu = true
                             }
                         )
                     }
@@ -299,8 +310,31 @@ fun MapScreen(viewModel: MapViewModel, location: LocationManager) {
             PointsListDialog(
                 points = state.selectedPoints,
                 onDismiss = { showPointsList = false },
-                onDeletePoint = { index -> viewModel.deletePoint(index) },
-                onDeleteAll = { viewModel.clear() }
+                onDeletePoint = { index -> 
+                    val pointToDelete = state.selectedPoints.getOrNull(index)
+                    viewModel.deletePoint(index)
+                    if (pointToDelete != null) {
+                        if (startPoint == pointToDelete.position && startLabel == "Точка №${pointToDelete.id}") {
+                            startPoint = null
+                            startLabel = "Откуда"
+                        }
+                        if (endPoint == pointToDelete.position && endLabel == "Точка №${pointToDelete.id}") {
+                            endPoint = null
+                            endLabel = "Куда"
+                        }
+                    }
+                },
+                onDeleteAll = { 
+                    viewModel.clear()
+                    if (startLabel.startsWith("Точка №")) {
+                        startPoint = null
+                        startLabel = "Откуда"
+                    }
+                    if (endLabel.startsWith("Точка №")) {
+                        endPoint = null
+                        endLabel = "Куда"
+                    }
+                }
             )
         }
 
@@ -363,67 +397,40 @@ fun AlgoDrawer(onDismiss: () -> Unit, onStartGA: () -> Unit, onStartTSP: () -> U
 
 @Composable
 fun BuildingInfoCard(info: BuildingInfo, onDismiss: () -> Unit, onRouteTo: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(max = 280.dp)
-            .shadow(12.dp, RoundedCornerShape(24.dp)),
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth().padding(8.dp),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = info.name.ifEmpty { "Здание ТГУ" },
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = info.address,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                }
-                IconButton(onClick = onDismiss) {
-                    Icon(Icons.Default.Close, contentDescription = "Close", tint = MaterialTheme.colorScheme.primary)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            if (info.venues.isNotEmpty()) {
-                LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
-                    items(info.venues) { venue ->
-                        Row(
-                            modifier = Modifier.padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.Restaurant, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                            Spacer(Modifier.width(8.dp))
-                            Text("${venue.name} (${venue.workingHours})", fontSize = 14.sp)
-                        }
+                    Text(text = info.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
+                    if (info.address.isNotEmpty()) {
+                        Text(text = info.address, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 4.dp))
                     }
                 }
-            } else {
-                Text("Учебный корпус ТГУ", style = MaterialTheme.typography.bodyMedium, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
+                IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(20.dp))
+                }
+            }
+            
+            if (info.venues.isNotEmpty()) {
+                val venuesText = info.venues.joinToString(", ") { it.name }
+                Text(text = venuesText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 12.dp), maxLines = 3)
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(
-                onClick = onRouteTo,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-            ) {
-                Icon(Icons.Default.Directions, null)
-                Spacer(Modifier.width(8.dp))
-                Text("Проложить маршрут")
+            Row(modifier = Modifier.fillMaxWidth().padding(top = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(
+                    onClick = onRouteTo,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(vertical = 12.dp)
+                ) {
+                    Icon(Icons.Default.Directions, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Сюда")
+                }
             }
         }
     }
@@ -432,25 +439,22 @@ fun BuildingInfoCard(info: BuildingInfo, onDismiss: () -> Unit, onRouteTo: () ->
 @Composable
 fun HeaderCard(state: MapState, viewModel: MapViewModel, onMenuClick: () -> Unit) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = Color(0xFF1A1C1E).copy(alpha = 0.9f),
-        contentColor = Color.White,
-        shadowElevation = 4.dp
+        modifier = Modifier.fillMaxWidth().shadow(4.dp, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        color = Color(0xFF1A1C1E).copy(alpha = 0.95f)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            IconButton(onClick = onMenuClick) {
-                Icon(Icons.Default.MoreVert, contentDescription = "Меню", tint = Color.White)
+            IconButton(onClick = onMenuClick, colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White)) {
+                Icon(Icons.Default.Menu, contentDescription = "Меню")
             }
             
             Text(
                 text = when {
-                    state.isProcessing -> "Снаппинг..."
-                    state.isSelectionMode -> "Выберите точку"
+                    viewModel.isTSPProcessing -> "TSP: поиск..."
                     viewModel.isGARunning -> "Генетика: поколение ${viewModel.currentGeneration}"
                     viewModel.isPathProcessing -> "Поиск пути..."
                     else -> "Карта маршрутов"

@@ -64,6 +64,7 @@ class MapState {
     var isProcessing by mutableStateOf(false)
 
     var selectedBuildingInfo by mutableStateOf<BuildingInfo?>(null)
+    var lastClickContentPoint by mutableStateOf<Offset?>(null)
 
     fun init(maskWidth: Int, maskHeight: Int, maskPixels: IntArray) {
         this.maskWidth = maskWidth
@@ -145,14 +146,18 @@ class MapState {
         }
     }
 
-    suspend fun addPoint(contentPoint: Offset) = withContext(Dispatchers.Default) {
+    suspend fun addPoint(contentPoint: Offset): MapPoint? = withContext(Dispatchers.Default) {
         isProcessing = true
         try {
             val finalPosition = findNearestAvailablePoint(contentPoint)
             withContext(Dispatchers.Main) {
-                selectedPoints.add(MapPoint(id = nextPointId++, position = finalPosition))
+                val newPoint = MapPoint(id = nextPointId++, position = finalPosition)
+                selectedPoints.add(newPoint)
                 isSelectionMode = false
+                newPoint
             }
+        } catch (e: Exception) {
+            null
         } finally {
             isProcessing = false
         }
@@ -164,6 +169,7 @@ class MapState {
         buildingsMask: Bitmap?
     ) = withContext(Dispatchers.Default) {
         isProcessing = true
+        lastClickContentPoint = contentPoint
         try {
             if (buildingsMask != null) {
                 prepareBuildingsMask(buildingsMask)
@@ -205,7 +211,7 @@ class MapState {
         val centerX = startPoint.x.toInt().coerceIn(0, w - 1)
         val centerY = startPoint.y.toInt().coerceIn(0, h - 1)
 
-        if (pixels[centerY * w + centerX] == 1) return startPoint
+        if (pixels.isNotEmpty() && pixels[centerY * w + centerX] == 1) return startPoint
 
         val maxRadius = snappingRadius
         for (radius in 1..maxRadius) {
@@ -220,7 +226,7 @@ class MapState {
     }
 
     private fun checkPixel(x: Int, y: Int, w: Int, h: Int, pixels: IntArray): Offset? {
-        if (x in 0 until w && y in 0 until h) {
+        if (x in 0 until w && y in 0 until h && pixels.isNotEmpty()) {
             val color = pixels[y * w + x]
             if (color == 1) return Offset(x.toFloat(), y.toFloat())
         }
