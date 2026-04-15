@@ -468,16 +468,27 @@ class MainActivity : ComponentActivity() {
                 Text("GPS", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
 
+            val textStyle = remember { TextStyle(color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold) }
+            val textLayoutCache = remember(state.selectedPoints.toList()) {
+                state.selectedPoints.associate { it.id to textMeasurer.measure(it.id.toString(), textStyle) }
+            }
+
             Canvas(modifier = Modifier.fillMaxSize()) {
-                val textStyle = TextStyle(color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                val canvasBounds = size
 
                 state.selectedPoints.forEach { point ->
                     val screenPos = state.contentToScreen(point.position)
 
+                    // Screen culling: Skip if point is far outside current view
+                    if (screenPos.x < -100f || screenPos.x > canvasBounds.width + 100f ||
+                        screenPos.y < -100f || screenPos.y > canvasBounds.height + 100f) {
+                        return@forEach
+                    }
+
                     drawCircle(color = Color.Red, radius = 20f, center = screenPos)
                     drawCircle(color = Color.White, radius = 8f, center = screenPos)
 
-                    val textLayoutResult = textMeasurer.measure(text = point.id.toString(), style = textStyle)
+                    val textLayoutResult = textLayoutCache[point.id] ?: return@forEach
                     val textWidth = textLayoutResult.size.width.toFloat()
                     val textHeight = textLayoutResult.size.height.toFloat()
 
