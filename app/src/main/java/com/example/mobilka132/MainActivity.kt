@@ -384,6 +384,10 @@ class MainActivity : ComponentActivity() {
             viewModel.foundPaths.map { overlay.generatePath(it.steps) }
         }
 
+        val tspPath = remember(viewModel.TSPPath) {
+            viewModel.TSPPath?.steps?.let {overlay.generatePath(it)}
+        }
+
         val gaPath = remember(viewModel.currentGAStep) {
             viewModel.currentGAStep?.path?.steps?.let { overlay.generatePath(it) }
         }
@@ -435,6 +439,7 @@ class MainActivity : ComponentActivity() {
                         for (path in paths) {
                             drawPathScaled(path)
                         }
+                        tspPath?.let {drawPathScaled(it)}
                         gaPath?.let { drawPathScaled(it) }
                     }
                 }

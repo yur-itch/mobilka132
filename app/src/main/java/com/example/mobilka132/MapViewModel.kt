@@ -3,10 +3,7 @@ package com.example.mobilka132
 import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.geometry.Offset
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -18,23 +15,16 @@ import com.example.mobilka132.model.AStarStep
 import com.example.mobilka132.model.GAStep
 import com.example.mobilka132.model.MapPoint
 import com.example.mobilka132.model.Path
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.util.Calendar
 import java.util.concurrent.Executors
-import kotlin.coroutines.cancellation.CancellationException
 import kotlin.random.Random
 
 class MapViewModel : ViewModel() {
 
     lateinit var mapManager: MapManager
     lateinit var pathfinder: AStar
-    private lateinit var distancer: WalkableDistance
 
     val state = MapState()
     val overlay = MapOverlayRenderer(state)
@@ -43,6 +33,7 @@ class MapViewModel : ViewModel() {
     var lastPath by mutableStateOf<Path?>(null)
     var currentStep by mutableStateOf<AStarStep?>(null)
     var currentGAStep by mutableStateOf<GAStep?>(null)
+    var TSPPath by mutableStateOf<Path?>(null)
 
     var activeJobs: MutableList<Job> = mutableStateListOf()
 
@@ -68,7 +59,6 @@ class MapViewModel : ViewModel() {
         this.mapManager = mapManager
         state.init(mapManager.width, mapManager.height, mapManager.grid)
         pathfinder = AStar(mapManager.width, mapManager.height, mapManager.grid)
-        distancer = WalkableDistance(pathfinder)
         initialized = true
     }
 
@@ -199,7 +189,7 @@ class MapViewModel : ViewModel() {
 
     fun findTSPSolution() {
         if (activeJobs.isNotEmpty()) return
-        val antColony = AntColony()
+        val antColony = AntColony(pathfinder)
         val n = 10
         clear()
 
@@ -212,11 +202,23 @@ class MapViewModel : ViewModel() {
                 }
                 antColony.solve()
             }
+
+            val fullSteps = mutableListOf<Offset>()
+            var totalDistance = 0f
             for (i in 0 until antColony.bestPath.size) {
-                requestPathfinding(
-                    antColony.points[antColony.bestPath[i]],
-                    antColony.points[antColony.bestPath[(i + 1) % antColony.bestPath.size]]
-                )
+                val p1 = antColony.points[antColony.bestPath[i]]
+                val p2 = antColony.points[antColony.bestPath[(i + 1) % antColony.bestPath.size]]
+                val result = withContext(pathfinderDispatcher) {
+                    pathfinder.find(p1.toPair(), p2.toPair())
+                }
+                fullSteps.addAll(result.path.map { Offset(it.x.toFloat(), it.y.toFloat()) })
+                totalDistance += result.distance
+            }
+            
+            withContext(Dispatchers.Main) {
+                val finalPath = Path(fullSteps, totalDistance)
+                TSPPath = finalPath
+                foundPaths.add(finalPath)
             }
         }
         activeJobs.add(job)
@@ -276,6 +278,7 @@ class MapViewModel : ViewModel() {
                         delay = it.delay
                     )
                 }
+                val distancer = WalkableDistance(pathfinder)
                 distancer.setPoints(gaPoints)
 
                 val allItems = (0 until numItems).toMutableList()
@@ -325,13 +328,13 @@ class MapViewModel : ViewModel() {
             } finally {
                 isGARunning = false
                 currentGAStep?.let {
-                    lastPath = it.path
                     foundPaths.add(it.path)
                 }
             }
         }
         activeJobs.add(job)
         job.invokeOnCompletion {
+            currentGAStep = null
             activeJobs.remove(job)
         }
     }
@@ -344,6 +347,7 @@ class MapViewModel : ViewModel() {
         isPathProcessing = false
         currentStep = null
         currentGAStep = null
+        TSPPath = null
     }
 
     fun deletePoint(index: Int) {
@@ -354,6 +358,7 @@ class MapViewModel : ViewModel() {
             if (state.selectedPoints.size < 2) {
                 lastPath = null
                 currentGAStep = null
+                TSPPath = null
             }
         }
     }
@@ -365,6 +370,7 @@ class MapViewModel : ViewModel() {
         currentStep = null
         currentGAStep = null
         lastPath = null
+        TSPPath = null
         state.clearPoints()
         isGARunning = false
         isPathProcessing = false
@@ -375,6 +381,7 @@ class MapViewModel : ViewModel() {
         currentStep = null
         currentGAStep = null
         lastPath = null
+        TSPPath = null
     }
 
     fun Pair<Int, Int>.toOffset() = Offset(first.toFloat(), second.toFloat())
