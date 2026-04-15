@@ -2,7 +2,6 @@ package com.example.mobilka132
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.Color
 import android.util.Log
 import androidx.compose.runtime.*
 import androidx.compose.ui.geometry.Offset
@@ -19,7 +18,6 @@ import com.example.mobilka132.model.Path
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.flowOn
 import java.util.Calendar
-import java.util.Collections.emptyList
 import java.util.concurrent.Executors
 import kotlin.random.Random
 
@@ -50,8 +48,8 @@ class MapViewModel : ViewModel() {
 
     var initialized by mutableStateOf(false)
 
-    var currentGeneration by mutableStateOf(0)
-    var totalGenerations by mutableStateOf(0)
+    var currentGeneration by mutableIntStateOf(0)
+    var totalGenerations by mutableIntStateOf(0)
 
     val pathfinderDispatcher = Executors.newFixedThreadPool(3).asCoroutineDispatcher()
 
@@ -86,8 +84,8 @@ class MapViewModel : ViewModel() {
                 }
                 loadedPointsWithTiming = points
                 Log.d("GA_POINTS", "Successfully loaded ${points.size} points from assets")
-            } catch (e: Exception) {
-                Log.e("GA_POINTS", "Error loading points from assets", e)
+            } catch (_: Exception) {
+                Log.e("GA_POINTS", "Error loading points from assets")
             }
         }
     }
@@ -163,16 +161,11 @@ class MapViewModel : ViewModel() {
                     pathfinder.findPathAsync(start, dest, delayMs = stepDelay)
                         .flowOn(pathfinderDispatcher)
                         .collect { stepData ->
-                            currentStep = AStarStep(
-                                stepData.current.let { Offset(it.x.toFloat(), it.y.toFloat()) },
-                                stepData.openSet.map { Offset(it.x.toFloat(), it.y.toFloat()) },
-                                emptyList(),
-                                stepData.path
-                            )
-                            foundPath = currentStep?.path
+                            currentStep = stepData
+                            foundPath = stepData.path
                         }
                 }
-            } catch (e: CancellationException) {
+            } catch (_: CancellationException) {
             } finally {
                 isPathProcessing = false
                 foundPath?.let {
@@ -197,7 +190,7 @@ class MapViewModel : ViewModel() {
         clear()
         tspPath = Path(emptyList(), 0f)
         isTSPProcessing = true
-        var points = mutableListOf<MapPoint>()
+        val points = mutableListOf<MapPoint>()
         val job = viewModelScope.launch {
             ant.generatePoints(n)
             withContext(pathfinderDispatcher) {
@@ -207,7 +200,7 @@ class MapViewModel : ViewModel() {
                     points.add(state.selectedPoints[state.selectedPoints.size - 1])
                 }
                 ant.solve(
-                    onIteration = { iteration, bestTour, dist ->
+                    onIteration = { _, _, dist ->
                         withContext(Dispatchers.Main) {
                             val steps = ant.getFullBestPathSteps()
                             tspPath = Path(steps, dist.toFloat())
@@ -403,7 +396,7 @@ class MapViewModel : ViewModel() {
             if (parts.size == 2) {
                 parts[0].toInt() * 60 + parts[1].toInt()
             } else 0
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             0
         }
     }
