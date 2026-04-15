@@ -58,7 +58,7 @@ class MapViewModel : ViewModel() {
     fun init(mapManager: MapManager) {
         this.mapManager = mapManager
         state.init(mapManager.width, mapManager.height, mapManager.grid)
-        pathfinder = AStar(mapManager.width, mapManager.height, mapManager.grid)
+        pathfinder = AStar(mapManager.width, mapManager.height, mapManager.grid, state)
         initialized = true
     }
 
@@ -346,7 +346,7 @@ class MapViewModel : ViewModel() {
                     initial = Random.nextInt(0, numPoints),
                     startTime = currentMinutes,
                     speedKmh = 5.0,
-                    metersPerPixel = 0.5
+                    metersPerPixel = state.metersPerPixel
                 )
 
                 withContext(Dispatchers.Default) {
