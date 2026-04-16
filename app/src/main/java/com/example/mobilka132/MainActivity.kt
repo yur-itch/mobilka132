@@ -982,12 +982,13 @@ fun PointSelectorRow(prefix: String, label: String, points: List<MapPoint>, myLo
             ) {
                 Text(label, maxLines = 1, color = MaterialTheme.colorScheme.onSurface)
             }
+            val myLocationLabel = stringResource(R.string.my_location_gps)
             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 myLocation?.let {
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.my_location_gps)) },
+                        text = { Text(myLocationLabel) },
                         leadingIcon = { Icon(Icons.Default.MyLocation, null, tint = MaterialTheme.colorScheme.primary) },
-                        onClick = { onSelected(it, stringResource(R.string.my_location_gps)); expanded = false }
+                        onClick = { onSelected(it, myLocationLabel); expanded = false }
                     )
                 }
                 points.forEach { point ->
