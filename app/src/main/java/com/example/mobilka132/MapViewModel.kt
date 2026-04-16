@@ -11,11 +11,7 @@ import com.example.mobilka132.data.ant.AntAlgorithm
 import com.example.mobilka132.data.genetic.*
 import com.example.mobilka132.data.pathfinding.AStar
 import com.example.mobilka132.data.pathfinding.PathData
-import com.example.mobilka132.model.AStarStep
-import com.example.mobilka132.model.GAStep
-import com.example.mobilka132.model.MapPoint
-import com.example.mobilka132.model.ObstacleLine
-import com.example.mobilka132.model.Path
+import com.example.mobilka132.model.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.flowOn
 import java.util.Calendar
@@ -49,7 +45,6 @@ class MapViewModel : ViewModel() {
 
     var obstacles = mutableStateListOf<ObstacleLine>()
     var isObstacleMode by mutableStateOf(false)
-    private var nextObstacleId = 0
 
     var initialized by mutableStateOf(false)
 
@@ -70,7 +65,6 @@ class MapViewModel : ViewModel() {
         initialized = true
 
         CampusDatabase.getAllBuildings().forEach { (color, building) ->
-            // TESTING CHANGE: Only select ~25% of venues initially
             val selected = building.venues
                 .filter { Random.nextDouble() < 0.25 }
                 .map { it.name }
@@ -135,7 +129,6 @@ class MapViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val contentPoint = state.screenToContent(screenOffset)
-                println(contentPoint)
                 state.handleMapClick(contentPoint, roadMask, buildingsMask)
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -150,25 +143,6 @@ class MapViewModel : ViewModel() {
         }
     }
 
-    fun requestPathfinding(visualizeSteps: Boolean = false) {
-        if (activeJobs.isNotEmpty()) return
-        val points = state.selectedPoints.toList()
-        if (points.size >= 2) {
-            val p1 = points[points.size - 2]
-            val p2 = points[points.size - 1]
-            requestPathfinding(p1, p2, visualizeSteps)
-        }
-    }
-
-    fun requestPathfinding(
-        p1: MapPoint,
-        p2: MapPoint,
-        visualizeSteps: Boolean = false,
-        stepDelay: Long = 5L,
-        onPathFound: ((Boolean, Path) -> Unit)? = null
-    ) = requestPathfinding(p1.position, p2.position, visualizeSteps, stepDelay) { success, path ->
-        onPathFound?.invoke(success, path)
-    }
     fun requestPathfinding(
         p1: Offset,
         p2: Offset,
@@ -208,10 +182,8 @@ class MapViewModel : ViewModel() {
             } catch (_: CancellationException) {
             } finally {
                 isPathProcessing = false
-                foundPath?.let {
-                    val found = it.steps.isNotEmpty()
-                    onPathFound?.invoke(found, it)
-                } ?: onPathFound?.invoke(false, Path(emptyList(), 0f))
+                val resultPath = foundPath ?: Path(emptyList(), 0f)
+                onPathFound?.invoke(resultPath.steps.isNotEmpty(), resultPath)
             }
         }
         activeJobs.add(pathJob)
@@ -230,7 +202,6 @@ class MapViewModel : ViewModel() {
         clear()
         tspPath = Path(emptyList(), 0f)
         isTSPProcessing = true
-        val points = mutableListOf<MapPoint>()
         val job = viewModelScope.launch {
             ant.generatePoints(mapManager.width, mapManager.height, n)
             withContext(pathfinderDispatcher) {
@@ -240,8 +211,8 @@ class MapViewModel : ViewModel() {
                 }
                 ant.solve(
                     onIteration = { _, _, dist ->
-                        withContext(Dispatchers.Main) {
-                            val steps = ant.getFullBestPathSteps()
+                        val steps = ant.getFullBestPathSteps()
+                        viewModelScope.launch(Dispatchers.Main) {
                             tspPath = Path(steps, dist.toFloat())
                         }
                     }
@@ -335,7 +306,6 @@ class MapViewModel : ViewModel() {
                     state.addPointsWithTiming(venuePoints)
                     Log.d("GA_POINTS", "Loaded ${venuePoints.size} venue points from CampusDatabase")
                 } else {
-                    Log.w("GA_POINTS", "No selected venues found on buildings map! Falling back to CSV.")
                     if (loadedPointsWithTiming.isNotEmpty()) {
                         state.addPointsWithTiming(loadedPointsWithTiming)
                     } else {
@@ -357,7 +327,6 @@ class MapViewModel : ViewModel() {
 
                 val numPoints = mapPoints.size
                 
-                // Collect all unique menu items
                 val uniqueMenuItems = mapPoints.flatMap { it.items }.distinct()
                 val menuItemToIndex = uniqueMenuItems.withIndex().associate { it.value to it.index }
                 val numItems = uniqueMenuItems.size
@@ -472,8 +441,8 @@ class MapViewModel : ViewModel() {
         var sumY = 0L
         var count = 0
         fun add(x: Int, y: Int) {
-            sumX += x
-            sumY += y
+            sumX += x.toLong()
+            sumY += y.toLong()
             count++
         }
         val centroid: Offset get() = if (count > 0) Offset(sumX.toFloat() / count, sumY.toFloat() / count) else Offset.Zero
