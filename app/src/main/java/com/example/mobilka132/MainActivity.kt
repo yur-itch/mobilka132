@@ -1,5 +1,6 @@
 package com.example.mobilka132
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
@@ -43,6 +44,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
@@ -59,6 +61,7 @@ import com.example.mobilka132.data.location.LocationManager
 import com.example.mobilka132.model.MapPoint
 import com.example.mobilka132.model.ObstacleLine
 import com.example.mobilka132.ui.theme.Mobilka132Theme
+import com.example.mobilka132.data.LocaleHelper
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -66,6 +69,10 @@ class MainActivity : ComponentActivity() {
     private lateinit var mapManager: MapManager
     private val viewModel: MapViewModel by viewModels<MapViewModel>()
     private val location: LocationManager by lazy { LocationManager(this, activityResultRegistry) }
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LocaleHelper.onAttach(newBase))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -83,14 +90,21 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             Mobilka132Theme {
-                MapScreen(viewModel, location)
+                MapScreen(viewModel, location) { lang ->
+                    LocaleHelper.setLocale(this, lang)
+                    recreate()
+                }
             }
         }
     }
 }
 
 @Composable
-fun MapScreen(viewModel: MapViewModel, location: LocationManager) {
+fun MapScreen(
+    viewModel: MapViewModel, 
+    location: LocationManager,
+    onLanguageChange: (String) -> Unit
+) {
     val state = viewModel.state
     val overlay = viewModel.overlay
     val context = LocalContext.current
@@ -104,10 +118,19 @@ fun MapScreen(viewModel: MapViewModel, location: LocationManager) {
     var showObstacleMenu by remember { mutableStateOf(false) }
     var showRatingDialog by remember { mutableStateOf(false) }
 
+    val defaultFrom = stringResource(R.string.route_from_placeholder)
+    val defaultTo = stringResource(R.string.route_to_placeholder)
+
     var startPoint by remember { mutableStateOf<Offset?>(null) }
     var endPoint by remember { mutableStateOf<Offset?>(null) }
-    var startLabel by remember { mutableStateOf("Откуда") }
-    var endLabel by remember { mutableStateOf("Куда") }
+    var startLabel by remember { mutableStateOf("") }
+    var endLabel by remember { mutableStateOf("") }
+    
+    LaunchedEffect(Unit) {
+        if (startLabel.isEmpty()) startLabel = defaultFrom
+        if (endLabel.isEmpty()) endLabel = defaultTo
+    }
+
     var visualizeRoute by remember { mutableStateOf(false) }
     var stepDelay by remember { mutableLongStateOf(5L) }
 
@@ -162,7 +185,7 @@ fun MapScreen(viewModel: MapViewModel, location: LocationManager) {
                     .padding(8.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Layers, contentDescription = "Вид", tint = Color.White, modifier = Modifier.size(24.dp))
+                Icon(Icons.Default.Layers, contentDescription = stringResource(R.string.map_view), tint = Color.White, modifier = Modifier.size(24.dp))
             }
             
             if (viewModel.isAnyAlgoRunning) {
@@ -173,7 +196,7 @@ fun MapScreen(viewModel: MapViewModel, location: LocationManager) {
                     shape = CircleShape,
                     modifier = Modifier.size(44.dp)
                 ) {
-                    Icon(Icons.Default.Stop, contentDescription = "Стоп")
+                    Icon(Icons.Default.Stop, contentDescription = stringResource(R.string.stop_algo))
                 }
             }
         }
@@ -264,7 +287,7 @@ fun MapScreen(viewModel: MapViewModel, location: LocationManager) {
                                         val newPoint = state.addPoint(buildingPos)
                                         if (newPoint != null) {
                                             endPoint = newPoint.position
-                                            endLabel = "Точка №${newPoint.id}"
+                                            endLabel = context.getString(R.string.point_prefix, newPoint.id)
                                             showRouteMenu = true
                                         }
                                     }
@@ -293,7 +316,7 @@ fun MapScreen(viewModel: MapViewModel, location: LocationManager) {
 
                         ControlIconButton(
                             icon = Icons.Default.Add,
-                            label = "Точка",
+                            label = stringResource(R.string.label_point),
                             isSelected = state.isSelectionMode,
                             enabled = !isBusy,
                             onClick = { state.isSelectionMode = !state.isSelectionMode },
@@ -303,7 +326,7 @@ fun MapScreen(viewModel: MapViewModel, location: LocationManager) {
 
                         ControlIconButton(
                             icon = Icons.Default.Add,
-                            label = "Препятствие",
+                            label = stringResource(R.string.label_obstacle),
                             isSelected = viewModel.isObstacleMode,
                             enabled = !isBusy,
                             onClick = { viewModel.isObstacleMode = !viewModel.isObstacleMode },
@@ -313,7 +336,7 @@ fun MapScreen(viewModel: MapViewModel, location: LocationManager) {
 
                         ControlIconButton(
                             icon = Icons.Default.Route,
-                            label = "Путь",
+                            label = stringResource(R.string.label_path),
                             enabled = !isBusy,
                             onClick = { showRouteMenu = !showRouteMenu },
                             contentColor = Color.White
@@ -342,7 +365,7 @@ fun MapScreen(viewModel: MapViewModel, location: LocationManager) {
                                 .clickable { location.requestNewLocationData() },
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Default.NearMe, contentDescription = "GPS", tint = Color.White, modifier = Modifier.size(24.dp))
+                            Icon(Icons.Default.NearMe, contentDescription = stringResource(R.string.gps_label), tint = Color.White, modifier = Modifier.size(24.dp))
                         }
                     }
                 }
@@ -357,25 +380,28 @@ fun MapScreen(viewModel: MapViewModel, location: LocationManager) {
                     val pointToDelete = state.selectedPoints.getOrNull(index)
                     viewModel.deletePoint(index)
                     if (pointToDelete != null) {
-                        if (startPoint == pointToDelete.position && startLabel == "Точка №${pointToDelete.id}") {
+                        val prefix = context.getString(R.string.point_prefix, pointToDelete.id)
+                        if (startPoint == pointToDelete.position && startLabel == prefix) {
                             startPoint = null
-                            startLabel = "Откуда"
+                            startLabel = defaultFrom
                         }
-                        if (endPoint == pointToDelete.position && endLabel == "Точка №${pointToDelete.id}") {
+                        if (endPoint == pointToDelete.position && endLabel == prefix) {
                             endPoint = null
-                            endLabel = "Куда"
+                            endLabel = defaultTo
                         }
                     }
                 },
                 onDeleteAll = { 
                     viewModel.clear()
-                    if (startLabel.startsWith("Точка №")) {
+                    val sampleLabel = context.getString(R.string.point_prefix, 0)
+                    val prefixPart = sampleLabel.substring(0, sampleLabel.indexOf("0").coerceAtLeast(0))
+                    if (startLabel.startsWith(prefixPart)) {
                         startPoint = null
-                        startLabel = "Откуда"
+                        startLabel = defaultFrom
                     }
-                    if (endLabel.startsWith("Точка №")) {
+                    if (endLabel.startsWith(prefixPart)) {
                         endPoint = null
-                        endLabel = "Куда"
+                        endLabel = defaultTo
                     }
                 }
             )
@@ -410,15 +436,17 @@ fun MapScreen(viewModel: MapViewModel, location: LocationManager) {
                 onStartGA = { viewModel.startFoodShoppingGA(buildingsMask); showAlgoMenu = false },
                 onStartTSP = { viewModel.findTSPSolution(); showAlgoMenu = false },
                 onShowAdvice = { showDecisionDialog = true },
+                onLanguageChange = onLanguageChange,
                 isBusy = viewModel.isAnyAlgoRunning || state.isProcessing
             )
         }
 
         if (showRatingDialog) {
+            val thanksMsg = stringResource(R.string.feedback_thanks, "%s")
             DigitRatingDialog(
                 onDismiss = { showRatingDialog = false },
                 onRatingSubmitted = { rating ->
-                    Toast.makeText(context, "Спасибо за оценку: $rating!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, thanksMsg.format(rating), Toast.LENGTH_SHORT).show()
                     showRatingDialog = false
                 }
             )
@@ -428,7 +456,14 @@ fun MapScreen(viewModel: MapViewModel, location: LocationManager) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AlgoDrawer(onDismiss: () -> Unit, onStartGA: () -> Unit, onStartTSP: () -> Unit, onShowAdvice: () -> Unit, isBusy: Boolean) {
+fun AlgoDrawer(
+    onDismiss: () -> Unit, 
+    onStartGA: () -> Unit, 
+    onStartTSP: () -> Unit, 
+    onShowAdvice: () -> Unit, 
+    onLanguageChange: (String) -> Unit,
+    isBusy: Boolean
+) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
@@ -436,11 +471,11 @@ fun AlgoDrawer(onDismiss: () -> Unit, onStartGA: () -> Unit, onStartTSP: () -> U
                 .padding(bottom = 32.dp, start = 16.dp, end = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("Меню", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.menu_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             
             ListItem(
-                headlineContent = { Text("Совет (Дерево решений)") },
-                supportingContent = { Text("Помощь в выборе места для перекуса") },
+                headlineContent = { Text(stringResource(R.string.algo_advice_title)) },
+                supportingContent = { Text(stringResource(R.string.algo_advice_desc)) },
                 leadingContent = { Icon(Icons.Default.Lightbulb, null, tint = Color(0xFFFFC107)) },
                 modifier = Modifier.clickable { onShowAdvice(); onDismiss() }
             )
@@ -448,19 +483,44 @@ fun AlgoDrawer(onDismiss: () -> Unit, onStartGA: () -> Unit, onStartTSP: () -> U
             HorizontalDivider()
 
             ListItem(
-                headlineContent = { Text("Генетический алгоритм (GA)") },
-                supportingContent = { Text("Поиск оптимального маршрута для покупок") },
+                headlineContent = { Text(stringResource(R.string.algo_ga_title)) },
+                supportingContent = { Text(stringResource(R.string.algo_ga_desc)) },
                 leadingContent = { Icon(Icons.Default.AutoFixHigh, null, tint = Color(0xFF1B72C0)) },
                 modifier = Modifier.clickable(enabled = !isBusy) { onStartGA() }
             )
             
             ListItem(
-                headlineContent = { Text("Муравьиный алгоритм (TSP)") },
-                supportingContent = { Text("Решение задачи коммивояжера") },
+                headlineContent = { Text(stringResource(R.string.algo_tsp_title)) },
+                supportingContent = { Text(stringResource(R.string.algo_tsp_desc)) },
                 leadingContent = { Icon(Icons.Default.TravelExplore, null, tint = Color(0xFF1B72C0)) },
                 modifier = Modifier.clickable(enabled = !isBusy) { onStartTSP() }
             )
+
+            HorizontalDivider()
+
+            Text(stringResource(R.string.settings_language), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                LanguageButton(label = stringResource(R.string.lang_ru), onClick = { onLanguageChange("ru") }, modifier = Modifier.weight(1f))
+                LanguageButton(label = stringResource(R.string.lang_en), onClick = { onLanguageChange("en") }, modifier = Modifier.weight(1f))
+                LanguageButton(label = stringResource(R.string.lang_zh), onClick = { onLanguageChange("zh") }, modifier = Modifier.weight(1f))
+            }
         }
+    }
+}
+
+@Composable
+fun LanguageButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
+    ) {
+        Text(label, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -474,19 +534,19 @@ fun BuildingInfoCard(info: BuildingInfo, onDismiss: () -> Unit, onVenueClick: (V
         Column(modifier = Modifier.padding(20.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(text = info.name.ifEmpty { "Здание без названия" }, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
+                    Text(text = info.name.ifEmpty { stringResource(R.string.building_no_name) }, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
                     if (info.address.isNotEmpty()) {
                         Text(text = info.address, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 4.dp))
                     }
                 }
                 IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(20.dp))
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.dialog_close), modifier = Modifier.size(20.dp))
                 }
             }
             
             if (info.venues.isNotEmpty()) {
                 Text(
-                    text = "Заведения в этом здании:",
+                    text = stringResource(R.string.building_venues_title),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
@@ -527,7 +587,7 @@ fun BuildingInfoCard(info: BuildingInfo, onDismiss: () -> Unit, onVenueClick: (V
                 }
             } else {
                 Text(
-                    text = "В этом здании нет зарегистрированных заведений",
+                    text = stringResource(R.string.building_no_venues),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 12.dp)
@@ -543,7 +603,7 @@ fun BuildingInfoCard(info: BuildingInfo, onDismiss: () -> Unit, onVenueClick: (V
                 ) {
                     Icon(Icons.Default.Directions, null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Сюда")
+                    Text(stringResource(R.string.btn_route_here))
                 }
             }
         }
@@ -575,7 +635,7 @@ fun VenueInfoCard(venue: VenueInfo, onDismiss: () -> Unit, onBack: () -> Unit, o
                     )
                 }
                 IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(20.dp))
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.dialog_close), modifier = Modifier.size(20.dp))
                 }
             }
 
@@ -585,12 +645,12 @@ fun VenueInfoCard(venue: VenueInfo, onDismiss: () -> Unit, onBack: () -> Unit, o
                     .heightIn(max = 250.dp)
                     .verticalScroll(rememberScrollState())
             ) {
-                InfoRow(icon = Icons.Default.Schedule, label = "Часы работы", value = venue.workingHours)
-                InfoRow(icon = Icons.Default.Timer, label = "Среднее время визита", value = "${venue.estimatedVisitTimeMinutes} мин")
+                InfoRow(icon = Icons.Default.Schedule, label = stringResource(R.string.venue_working_hours), value = venue.workingHours)
+                InfoRow(icon = Icons.Default.Timer, label = stringResource(R.string.venue_visit_time), value = stringResource(R.string.venue_visit_time_value, venue.estimatedVisitTimeMinutes))
                 
                 if (venue.dishes.isNotEmpty()) {
                     Text(
-                        text = "Меню:",
+                        text = stringResource(R.string.venue_menu_title),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
@@ -618,7 +678,7 @@ fun VenueInfoCard(venue: VenueInfo, onDismiss: () -> Unit, onBack: () -> Unit, o
             ) {
                 Icon(Icons.Default.RateReview, null)
                 Spacer(Modifier.width(8.dp))
-                Text("Оставить отзыв (оценить)")
+                Text(stringResource(R.string.venue_leave_feedback))
             }
         }
     }
@@ -652,15 +712,15 @@ fun HeaderCard(state: MapState, viewModel: MapViewModel, onMenuClick: () -> Unit
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             IconButton(onClick = onMenuClick, colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White)) {
-                Icon(Icons.Default.Menu, contentDescription = "Меню")
+                Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.menu_title))
             }
             
             Text(
                 text = when {
-                    viewModel.isTSPProcessing -> "TSP: поиск..."
-                    viewModel.isGARunning -> "Генетика: поколение ${viewModel.currentGeneration}"
-                    viewModel.isPathProcessing -> "Поиск пути..."
-                    else -> "Карта маршрутов"
+                    viewModel.isTSPProcessing -> stringResource(R.string.algo_tsp_running)
+                    viewModel.isGARunning -> stringResource(R.string.algo_ga_running, viewModel.currentGeneration)
+                    viewModel.isPathProcessing -> stringResource(R.string.searching_path)
+                    else -> stringResource(R.string.map_route_title)
                 },
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
@@ -722,23 +782,23 @@ fun RouteMenuCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("Маршрут", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.route_card_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 IconButton(onClick = onClose) {
                     Icon(Icons.Default.Close, null)
                 }
             }
             
             Spacer(modifier = Modifier.height(12.dp))
-            PointSelectorRow("От", startLabel, points, myLocation, onStartSelected)
+            PointSelectorRow(stringResource(R.string.route_from), startLabel, points, myLocation, onStartSelected)
             Spacer(modifier = Modifier.height(8.dp))
-            PointSelectorRow("До", endLabel, points, null, onEndSelected)
+            PointSelectorRow(stringResource(R.string.route_to), endLabel, points, null, onEndSelected)
 
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
                 Checkbox(checked = isVisualized, onCheckedChange = onVisualizationToggle)
                 Spacer(Modifier.width(8.dp))
                 Column {
-                    Text("Визуализация A*", style = MaterialTheme.typography.bodyMedium)
-                    Text("Задержка: $stepDelay мс", fontSize = 12.sp, color = MaterialTheme.colorScheme.outline)
+                    Text(stringResource(R.string.visualization_astar), style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.delay_label, stepDelay), fontSize = 12.sp, color = MaterialTheme.colorScheme.outline)
                 }
             }
             
@@ -754,11 +814,11 @@ fun RouteMenuCard(
             Button(
                 onClick = onBuildRoute,
                 modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-                enabled = startLabel != "Откуда" && endLabel != "Куда",
+                enabled = startLabel != stringResource(R.string.route_from_placeholder) && endLabel != stringResource(R.string.route_to_placeholder),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
-                Text("Построить маршрут")
+                Text(stringResource(R.string.btn_build_route))
             }
         }
     }
@@ -781,15 +841,16 @@ fun PointSelectorRow(prefix: String, label: String, points: List<MapPoint>, myLo
             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 myLocation?.let {
                     DropdownMenuItem(
-                        text = { Text("Моя локация (GPS)") },
+                        text = { Text(stringResource(R.string.my_location_gps)) },
                         leadingIcon = { Icon(Icons.Default.MyLocation, null, tint = MaterialTheme.colorScheme.primary) },
                         onClick = { onSelected(it, "Моя локация"); expanded = false }
                     )
                 }
                 points.forEach { point ->
+                    val pointLabel = stringResource(R.string.point_prefix, point.id)
                     DropdownMenuItem(
-                        text = { Text("Точка №${point.id}") },
-                        onClick = { onSelected(point.position, "Точка №${point.id}"); expanded = false }
+                        text = { Text(pointLabel) },
+                        onClick = { onSelected(point.position, pointLabel); expanded = false }
                     )
                 }
             }
@@ -988,17 +1049,17 @@ fun PointsListDialog(points: List<MapPoint>, onDismiss: () -> Unit, onDeletePoin
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("Мои локации", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(R.string.dialog_my_locations), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     if (points.isNotEmpty()) {
                         TextButton(onClick = onDeleteAll) {
-                            Text("Удалить всё", color = MaterialTheme.colorScheme.error)
+                            Text(stringResource(R.string.dialog_delete_all), color = MaterialTheme.colorScheme.error)
                         }
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 if (points.isEmpty()) {
                     Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
-                        Text("Список пуст", color = MaterialTheme.colorScheme.outline)
+                        Text(stringResource(R.string.dialog_empty_list), color = MaterialTheme.colorScheme.outline)
                     }
                 } else {
                     LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
@@ -1019,10 +1080,10 @@ fun PointsListDialog(points: List<MapPoint>, onDismiss: () -> Unit, onDeletePoin
                                         }
                                     }
                                     Spacer(modifier = Modifier.width(12.dp))
-                                    Text(text = "Точка №${point.id}", style = MaterialTheme.typography.bodyLarge)
+                                    Text(text = stringResource(R.string.point_prefix, point.id), style = MaterialTheme.typography.bodyLarge)
                                 }
                                 IconButton(onClick = { onDeletePoint(index) }) {
-                                    Icon(Icons.Default.Delete, contentDescription = "Удалить", tint = MaterialTheme.colorScheme.error)
+                                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.dialog_delete), tint = MaterialTheme.colorScheme.error)
                                 }
                             }
                             if (index < points.size - 1) HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
@@ -1036,7 +1097,7 @@ fun PointsListDialog(points: List<MapPoint>, onDismiss: () -> Unit, onDeletePoin
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Text("Закрыть")
+                    Text(stringResource(R.string.dialog_close))
                 }
             }
         }
@@ -1052,12 +1113,12 @@ fun ObstacleListDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Препятствия") },
+        title = { Text(stringResource(R.string.dialog_obstacles_title)) },
         text = {
             LazyColumn {
                 items(obstacles) { line ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Линия #${line.id}", modifier = Modifier.weight(1f))
+                        Text(stringResource(R.string.dialog_obstacle_line, line.id), modifier = Modifier.weight(1f))
                         IconButton(onClick = { onDelete(line.id) }) {
                             Icon(Icons.Default.Delete, contentDescription = null, tint = Color.Red)
                         }
@@ -1066,10 +1127,10 @@ fun ObstacleListDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onClearAll) { Text("Очистить все", color = Color.Red) }
+            TextButton(onClick = onClearAll) { Text(stringResource(R.string.dialog_clear_all), color = Color.Red) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Закрыть") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_close)) }
         }
     )
 }
