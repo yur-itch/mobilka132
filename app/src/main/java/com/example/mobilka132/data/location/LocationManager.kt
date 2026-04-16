@@ -6,7 +6,8 @@ import androidx.compose.ui.geometry.Offset
 import com.google.android.gms.location.LocationServices
 import android.Manifest
 import android.annotation.SuppressLint
-import android.content.Context
+import android.app.Activity
+import android.content.IntentSender
 import android.location.Location
 import android.os.Looper
 import androidx.activity.result.ActivityResultRegistry
@@ -16,18 +17,27 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.app.ActivityCompat
-import com.example.mobilka132.MapState
+import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.LocationCallback
-import com.google.android.gms.location.LocationRequest.Builder
+import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.LocationSettingsRequest
 import com.google.android.gms.location.Priority
+import com.google.android.gms.location.SettingsClient
 
 
-class LocationManager(private val activity: Context, private val registry: ActivityResultRegistry) {
+class LocationManager(private val activity: Activity, private val registry: ActivityResultRegistry, var pixelsInMeter: Float = 1f) {
 
-    var mapState: MapState? = null
     var mapLocation by mutableStateOf<Offset?>(null)
     var worldLocation : Location? = null
+
+    fun positionOnMap(l: Location) : Offset {
+        return Offset(
+            ((l.longitude - 84.932881) * 61400).toFloat(),
+            (-(l.latitude - 56.4758) * 111000).toFloat()
+        ) * pixelsInMeter
+    }
+
     private val fusedLocationClient by lazy {
         LocationServices.getFusedLocationProviderClient(activity)
     }
@@ -44,19 +54,41 @@ class LocationManager(private val activity: Context, private val registry: Activ
 
     fun checkPermission() {
         if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            getLastLocation()
+            checkLocationSettings()
         } else {
             requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
 
+    fun checkLocationSettings() {
+        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000).build()
+
+        val builder = LocationSettingsRequest.Builder()
+            .addLocationRequest(locationRequest)
+
+        val client: SettingsClient = LocationServices.getSettingsClient(activity)
+        val task = client.checkLocationSettings(builder.build())
+
+        task.addOnSuccessListener {
+            @SuppressLint("MissingPermission")
+            getLastLocation()
+        }
+
+        task.addOnFailureListener { exception ->
+            if (exception is ResolvableApiException) {
+                try {
+                    exception.startResolutionForResult(activity, 111)
+                } catch (sendEx: IntentSender.SendIntentException) {
+                }
+            }
+        }
+    }
+
     private fun setMapLocation() {
-        val state = mapState ?: return
-        mapLocation = worldLocation?.let { l -> 
-            Offset(
-                ((l.longitude - 84.932881) * state.lonMultiplier).toFloat(), 
-                (-(l.latitude - 56.4758) * state.latMultiplier).toFloat()
-            ) 
+        if (worldLocation != null) {
+            mapLocation = positionOnMap(worldLocation!!)
+            if (mapLocation!!.x > 1500 || mapLocation!!.y < 0 || mapLocation!!.x < 0 || mapLocation!!.y > 1500)
+                mapLocation = null
         }
     }
 
@@ -78,13 +110,12 @@ class LocationManager(private val activity: Context, private val registry: Activ
     }
 
     fun requestNewLocationData() {
-        val locationRequest = Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000)
-            .setWaitForAccurateLocation(false)
-            .setMinUpdateIntervalMillis(500)
-            .setMaxUpdates(1)
-            .build()
-
         if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000)
+                .setWaitForAccurateLocation(false)
+                .setMinUpdateIntervalMillis(500)
+                .setMaxUpdates(1)
+                .build()
             fusedLocationClient.requestLocationUpdates(locationRequest, object : LocationCallback() {
                 override fun onLocationResult(locationResult: LocationResult) {
                     val location = locationResult.lastLocation
