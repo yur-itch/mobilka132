@@ -1,6 +1,11 @@
 package com.example.mobilka132.data.genetic
 
 import com.example.mobilka132.data.pathfinding.AStar
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
 import kotlin.math.pow
 
 interface Distance {
@@ -55,20 +60,28 @@ class WalkableDistance(
     // Persistent cache across setup() calls
     private val persistentCache = mutableMapOf<PointPair, CachedPath>()
 
-    suspend fun setup(newPoints: List<Point>) {
-        this.points = newPoints
+    suspend fun setup(newPoints: List<Point>) = withContext(Dispatchers.Default) {
+        points = newPoints
         val n = newPoints.size
         lengthMatrix = DoubleArray(n * n) { -1.0 }
         pathCache = arrayOfNulls(n * n)
 
-        for (i in 0 until n) {
-            for (j in 0 until n) {
-                if (i == j) {
-                    lengthMatrix[i * n + j] = 0.0
-                    continue
+        coroutineScope {
+            val jobs = mutableListOf<kotlinx.coroutines.Deferred<Unit>>()
+            
+            for (i in 0 until n) {
+                for (j in 0 until n) {
+                    if (i == j) {
+                        lengthMatrix[i * n + j] = 0.0
+                        continue
+                    }
+                    jobs.add(async {
+                        internalGetOrCompute(i, j)
+                        Unit
+                    })
                 }
-                internalGetOrCompute(i, j)
             }
+            jobs.awaitAll()
         }
     }
 
@@ -84,17 +97,14 @@ class WalkableDistance(
     private suspend fun internalGetOrCompute(i: Int, j: Int): Double {
         val n = size
         val fastIdx = i * n + j
-
         val fastLen = lengthMatrix[fastIdx]
         if (fastLen >= 0) return fastLen
 
         val p1 = points[i].toPair()
         val p2 = points[j].toPair()
-
         val isReversed = p1.first > p2.first || (p1.first == p2.first && p1.second > p2.second)
         val key = if (isReversed) PointPair(p2, p1) else PointPair(p1, p2)
-
-        val cached = persistentCache[key]
+        val cached = synchronized(persistentCache) { persistentCache[key] }
         val path: List<Point>
         val len: Double
 
@@ -105,14 +115,14 @@ class WalkableDistance(
             val aStarPath = algo.findPath(p1, p2)
             len = algo.pathLength(aStarPath)
             val mappedPath = aStarPath.map { Point(it.first, it.second) }
-            
             val pathToCache = if (isReversed) mappedPath.asReversed() else mappedPath
-            persistentCache[key] = CachedPath(pathToCache, len)
+            synchronized(persistentCache) {
+                persistentCache[key] = CachedPath(pathToCache, len)
+            }
             path = mappedPath
         }
 
         lengthMatrix[fastIdx] = len
-        lengthMatrix[j * n + i] = len
         pathCache[fastIdx] = path
         return len
     }
