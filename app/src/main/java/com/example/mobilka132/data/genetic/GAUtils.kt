@@ -2,7 +2,7 @@ package com.example.mobilka132.data.genetic
 
 import kotlin.random.Random
 
-suspend fun nearestNeighborAll(ctx: MutationContext): MutableList<Int> {
+fun nearestNeighborAll(ctx: MutationContext): MutableList<Int> {
     val res = MutableList(1) { ctx.initial }
     val used = MutableList(ctx.dist.size) { false }
     used[ctx.initial] = true
@@ -23,7 +23,7 @@ suspend fun nearestNeighborAll(ctx: MutationContext): MutableList<Int> {
     return res
 }
 
-suspend fun fitness(arr: MutableList<Int>, ctx: MutationContext): Double {
+fun fitness(arr: MutableList<Int>, ctx: MutationContext): Double {
     if (arr.isEmpty()) return -ctx.allItems.size.toDouble()
 
     val collected = BooleanArray(ctx.allItems.size) { false }
@@ -70,7 +70,7 @@ suspend fun fitness(arr: MutableList<Int>, ctx: MutationContext): Double {
     return 1.0 / (totalTimeSpent + 1.0) - uncollected
 }
 
-suspend fun performGeneration(pop: Population, index: Int, total: Int, ctx: MutationContext): MutableList<MutableList<Int>> {
+fun performGeneration(pop: Population, index: Int, total: Int, ctx: MutationContext): MutableList<MutableList<Int>> {
     val fitnessPairs = mutableListOf<Pair<MutableList<Int>, Double>>()
     for (p in pop) {
         fitnessPairs.add(p to fitness(p, ctx))
@@ -105,7 +105,7 @@ suspend fun performGeneration(pop: Population, index: Int, total: Int, ctx: Muta
     return newPop
 }
 
-suspend fun newPopulation(size: Int, ctx: MutationContext): Population {
+fun newPopulation(size: Int, ctx: MutationContext): Population {
     val nn = Mutator(nearestNeighborAll(ctx), ctx).do2opt().get()
     val res: Population = mutableListOf(nn)
     for (i in 1 until size) {
@@ -122,7 +122,7 @@ suspend fun newPopulation(size: Int, ctx: MutationContext): Population {
 }
 
 
-suspend fun printPopulationStatistics(population: Population, ctx: MutationContext, label: String) {
+fun printPopulationStatistics(population: Population, ctx: MutationContext, label: String) {
     val fitnesses = mutableListOf<Double>()
     for (p in population) {
         fitnesses.add(fitness(p, ctx))
@@ -161,7 +161,7 @@ suspend fun printPopulationStatistics(population: Population, ctx: MutationConte
     println()
 }
 
-suspend fun getCollectedItemsCount(route: MutableList<Int>, ctx: MutationContext): Int {
+fun getCollectedItemsCount(route: MutableList<Int>, ctx: MutationContext): Int {
     if (route.isEmpty()) return 0
     val collected = mutableSetOf<Int>()
     var currentTime = ctx.startTime.toDouble()
@@ -190,7 +190,7 @@ suspend fun getCollectedItemsCount(route: MutableList<Int>, ctx: MutationContext
     return collected.size
 }
 
-suspend fun printDetailedRoute(route: MutableList<Int>, ctx: MutationContext, label: String) {
+fun printDetailedRoute(route: MutableList<Int>, ctx: MutationContext, label: String) {
     val fitValue = fitness(route, ctx)
     var distance = 0.0
     var currentTime = ctx.startTime.toDouble()
