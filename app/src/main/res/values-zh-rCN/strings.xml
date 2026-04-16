@@ -1,0 +1,90 @@
+<resources>
+    <string name="app_name">mobilka132</string>
+    <string name="title_activity_test">测试活动</string>
+
+    <string name="menu_title">菜单</string>
+    <string name="map_view">视图</string>
+    <string name="stop_algo">停止</string>
+    <string name="map_route_title">路线图</string>
+    <string name="searching_path">正在寻找路径…</string>
+    <string name="gps_label">GPS</string>
+
+    <string name="settings_language">应用语言</string>
+    <string name="lang_ru">Русский</string>
+    <string name="lang_en">English</string>
+    <string name="lang_zh">中文</string>
+
+    <string name="label_point">地点</string>
+    <string name="label_obstacle">障碍物</string>
+    <string name="label_path">路径</string>
+    <string name="label_locations">我的位置</string>
+    <string name="label_obstacles_list">障碍物列表</string>
+    <string name="point_prefix">地点 #%1$d</string>
+
+    <string name="algo_advice_title">建议 (决策树)</string>
+    <string name="algo_advice_desc">帮助选择用餐地点</string>
+    <string name="algo_ga_title">遗传算法 (GA)</string>
+    <string name="algo_ga_desc">寻找最佳购物路线</string>
+    <string name="algo_ga_running">遗传算法：第 %1$d 代</string>
+    <string name="algo_tsp_title">蚁群算法 (TSP)</string>
+    <string name="algo_tsp_desc">解决旅行商问题</string>
+    <string name="algo_tsp_running">TSP：正在搜索…</string>
+
+    <string name="btn_route_here">去这里</string>
+    <string name="route_card_title">路线</string>
+    <string name="route_from">从</string>
+    <string name="route_to">到</string>
+    <string name="route_from_placeholder">起点</string>
+    <string name="route_to_placeholder">终点</string>
+    <string name="my_location_gps">我的位置 (GPS)</string>
+    <string name="btn_build_route">生成路线</string>
+
+    <string name="visualization_astar">A* 可视化</string>
+    <string name="delay_label">延迟：%1$d 毫秒</string>
+
+    <string name="dialog_my_locations">我的位置</string>
+    <string name="dialog_delete_all">全部删除</string>
+    <string name="dialog_empty_list">列表为空</string>
+    <string name="dialog_close">关闭</string>
+    <string name="dialog_obstacles_title">障碍物</string>
+    <string name="dialog_obstacle_line">线条 #%1$d</string>
+    <string name="dialog_clear_all">全部清除</string>
+    <string name="dialog_delete">删除</string>
+
+    <string name="building_no_name">未命名建筑</string>
+    <string name="building_venues_title">该建筑内的场所：</string>
+    <string name="building_no_venues">该建筑内没有注册场所</string>
+    <string name="venue_working_hours">营业时间</string>
+    <string name="venue_visit_time">平均逗留时间</string>
+    <string name="venue_visit_time_value">%1$d 分钟</string>
+    <string name="venue_menu_title">菜单：</string>
+    <string name="venue_leave_feedback">留下反馈（评分）</string>
+    <string name="feedback_thanks">感谢评分：%1$s！</string>
+
+    <string name="tree_skip_and_advice">跳过并给出建议</string>
+    <string name="tree_select_establishment">选择场所</string>
+    <string name="tree_reset">重置</string>
+    <string name="tree_next">下一步</string>
+    <string name="tree_settings">数据设置</string>
+    <string name="tree_structure">树结构</string>
+    <string name="tree_recommendation">建议：</string>
+    <string name="tree_decision_path">决策路径：</string>
+    <string name="tree_question_budget">您的预算是多少？</string>
+    <string name="tree_question_location">您现在在哪里？</string>
+    <string name="tree_question_time">您有多少空闲时间？</string>
+    <string name="tree_question_food">你想吃什么？</string>
+    <string name="tree_question_queue">您对排队的耐受程度如何？</string>
+    <string name="tree_question_weather">现在的天气怎么样？</string>
+    <string name="tree_budget_label">金额（卢布）</string>
+    <string name="tree_apply">应用并重建</string>
+    <string name="tree_csv_label">训练集 (CSV)：</string>
+    <string name="tree_not_ready">树尚未就绪。请检查 CSV。</string>
+
+    <string name="node_budget">预算</string>
+    <string name="node_location">地点</string>
+    <string name="node_time">时间</string>
+    <string name="node_food">食物</string>
+    <string name="node_queue">排队</string>
+    <string name="node_weather">天气</string>
+    <string name="node_not_built">树未构建</string>
+</resources>

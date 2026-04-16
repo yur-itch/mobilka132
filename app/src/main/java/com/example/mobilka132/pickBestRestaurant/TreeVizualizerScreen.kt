@@ -1,5 +1,6 @@
 package com.example.mobilka132.pickBestRestaurant
 
+import android.content.Context
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -19,6 +20,8 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -26,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.mobilka132.R
 
 data class TreePosition(
     val node: DecisionTree.Node,
@@ -39,20 +43,22 @@ data class TreePosition(
 @Composable
 fun TreeVisualizerScreen(rootNode: DecisionTree.Node?) {
     if (rootNode == null) {
-        Text("Дерево не построено", modifier = Modifier.padding(16.dp))
+        Text(stringResource(R.string.node_not_built), modifier = Modifier.padding(16.dp))
         return
     }
 
+    val context = LocalContext.current
     val textMeasurer = rememberTextMeasurer()
 
     var scale by remember { mutableFloatStateOf(0.4f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     var initialized by remember { mutableStateOf(false) }
 
-    val treeLayout = remember(rootNode) {
+    val treeLayout = remember(rootNode, context) {
         val leafCount = countLeaves(rootNode)
         val totalWidth = (leafCount * 1200f).coerceAtLeast(3000f)
         calculateNodePositions(
+            context = context,
             node = rootNode,
             depth = 0,
             leftBounds = -totalWidth / 2f,
@@ -110,6 +116,7 @@ private fun countLeaves(node: DecisionTree.Node): Int {
 }
 
 private fun calculateNodePositions(
+    context: Context,
     node: DecisionTree.Node,
     depth: Int,
     leftBounds: Float,
@@ -122,7 +129,7 @@ private fun calculateNodePositions(
 
     val label = when (node) {
         is DecisionTree.Leaf -> node.result
-        is DecisionTree.InternalNode -> translateKey(node.problemName) + "?"
+        is DecisionTree.InternalNode -> translateKey(context, node.problemName) + "?"
     }
 
     val childrenPositions = mutableListOf<TreePosition>()
@@ -137,6 +144,7 @@ private fun calculateNodePositions(
             val childWidth = (childWeight.toFloat() / totalLeaves) * totalWidth
 
             val childPosition = calculateNodePositions(
+                context = context,
                 node = childNode,
                 depth = depth + 1,
                 leftBounds = currentLeft,
@@ -229,13 +237,13 @@ private fun DrawScope.drawTree(position: TreePosition, textMeasurer: TextMeasure
     )
 }
 
-private fun translateKey(key: String): String = when(key.trim().lowercase()) {
-    "budget" -> "Бюджет"
-    "location" -> "Локация"
-    "time_available" -> "Время"
-    "food_type" -> "Еда"
-    "queue_tolerance" -> "Очередь"
-    "weather" -> "Погода"
+private fun translateKey(context: Context, key: String): String = when(key.trim().lowercase()) {
+    "budget" -> context.getString(R.string.node_budget)
+    "location" -> context.getString(R.string.node_location)
+    "time_available" -> context.getString(R.string.node_time)
+    "food_type" -> context.getString(R.string.node_food)
+    "queue_tolerance" -> context.getString(R.string.node_queue)
+    "weather" -> context.getString(R.string.node_weather)
     else -> key
 }
 

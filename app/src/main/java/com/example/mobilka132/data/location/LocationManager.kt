@@ -52,11 +52,11 @@ class LocationManager(private val activity: Context, private val registry: Activ
 
     private fun setMapLocation() {
         val state = mapState ?: return
-        mapLocation = worldLocation?.let { l -> 
+        mapLocation = worldLocation?.let { l ->
             Offset(
-                ((l.longitude - 84.932881) * state.lonMultiplier).toFloat(), 
+                ((l.longitude - 84.932881) * state.lonMultiplier).toFloat(),
                 (-(l.latitude - 56.4758) * state.latMultiplier).toFloat()
-            ) 
+            )
         }
     }
 
