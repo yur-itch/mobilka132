@@ -47,41 +47,44 @@ class WalkableDistance(
     private var points: List<Point> = emptyList()
     override val size: Int get() = points.size
 
-    private val coordinateCache = mutableMapOf<Pair<Point, Point>, CachedPath>()
+    private var lengthMatrix = DoubleArray(0)
+    private var pathCache = arrayOfNulls<List<Point>>(0)
 
-    fun setPoints(newPoints: List<Point>) {
+    suspend fun setup(newPoints: List<Point>) {
         this.points = newPoints
+        val n = newPoints.size
+        lengthMatrix = DoubleArray(n * n)
+        pathCache = arrayOfNulls(n * n)
+
+        for (i in 0 until n) {
+            for (j in i + 1 until n) {
+                val idx = i * n + j
+                val p1 = points[i].toPair()
+                val p2 = points[j].toPair()
+
+                val aStarPath = algo.findPath(p1, p2)
+                val len = algo.pathLength(aStarPath)
+                val mappedPath = aStarPath.map { Point(it.first, it.second) }
+
+                lengthMatrix[idx] = len
+                lengthMatrix[j * n + i] = len
+                pathCache[idx] = mappedPath
+            }
+        }
     }
 
     override fun getPoint(i: Int): Point = points[i]
 
-    private fun key(p1: Point, p2: Point): Pair<Point, Point> {
-        return if (p1.x < p2.x || (p1.x == p2.x && p1.y < p2.y)) p1 to p2 else p2 to p1
+    override suspend fun get(i: Int, j: Int): Double {
+        return lengthMatrix[i * size + j]
     }
 
-    private suspend fun getCached(p1: Point, p2: Point): CachedPath {
-        val k = key(p1, p2)
-        coordinateCache[k]?.let { return it }
-
-        val path = algo.findPath(k.first.toPair(), k.second.toPair())
-        val length = algo.pathLength(path)
-        val cached = CachedPath(
-            path = path.map { Point(it.first, it.second) }, 
-            length = length
-        )
-
-        coordinateCache[k] = cached
-        return cached
-    }
-
-    override suspend operator fun get(i: Int, j: Int): Double =
-        getCached(points[i], points[j]).length
-
-    suspend fun path(i: Int, j: Int): List<Point> {
-        val p1 = points[i]
-        val p2 = points[j]
-        val res = getCached(p1, p2)
-        val k = key(p1, p2)
-        return if (p1 == k.first) res.path else res.path.reversed()
+    fun path(i: Int, j: Int): List<Point> {
+        val n = size
+        return if (i < j) {
+            pathCache[i * n + j] ?: emptyList()
+        } else {
+            pathCache[j * n + i]?.reversed() ?: emptyList()
+        }
     }
 }

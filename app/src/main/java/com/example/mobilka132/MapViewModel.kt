@@ -364,7 +364,7 @@ class MapViewModel : ViewModel() {
                     )
                 }
                 val distancer = WalkableDistance(pathfinder)
-                distancer.setPoints(gaPoints)
+                distancer.setup(gaPoints)
 
                 val allItems = (0 until numItems).toMutableList()
                 val items = MutableList(numPoints) { i -> 
