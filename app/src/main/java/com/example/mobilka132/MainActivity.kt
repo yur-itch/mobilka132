@@ -3,6 +3,7 @@ package com.example.mobilka132
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -100,7 +101,8 @@ fun MapScreen(viewModel: MapViewModel, location: LocationManager) {
     var showPointsList by remember { mutableStateOf(false) }
     var showRouteMenu by remember { mutableStateOf(false) }
     var showAlgoMenu by remember { mutableStateOf(false) }
-    var showObstacleMenu by remember {mutableStateOf(false)}
+    var showObstacleMenu by remember { mutableStateOf(false) }
+    var showRatingDialog by remember { mutableStateOf(false) }
 
     var startPoint by remember { mutableStateOf<Offset?>(null) }
     var endPoint by remember { mutableStateOf<Offset?>(null) }
@@ -239,7 +241,8 @@ fun MapScreen(viewModel: MapViewModel, location: LocationManager) {
                         VenueInfoCard(
                             venue = venue,
                             onDismiss = { state.selectedVenueInfo = null },
-                            onBack = { state.selectedVenueInfo = null }
+                            onBack = { state.selectedVenueInfo = null },
+                            onLeaveFeedback = { showRatingDialog = true }
                         )
                     }
                 }
@@ -410,6 +413,16 @@ fun MapScreen(viewModel: MapViewModel, location: LocationManager) {
                 isBusy = viewModel.isAnyAlgoRunning || state.isProcessing
             )
         }
+
+        if (showRatingDialog) {
+            DigitRatingDialog(
+                onDismiss = { showRatingDialog = false },
+                onRatingSubmitted = { rating ->
+                    Toast.makeText(context, "Спасибо за оценку: $rating!", Toast.LENGTH_SHORT).show()
+                    showRatingDialog = false
+                }
+            )
+        }
     }
 }
 
@@ -538,7 +551,7 @@ fun BuildingInfoCard(info: BuildingInfo, onDismiss: () -> Unit, onVenueClick: (V
 }
 
 @Composable
-fun VenueInfoCard(venue: VenueInfo, onDismiss: () -> Unit, onBack: () -> Unit) {
+fun VenueInfoCard(venue: VenueInfo, onDismiss: () -> Unit, onBack: () -> Unit, onLeaveFeedback: () -> Unit) {
     ElevatedCard(
         modifier = Modifier.fillMaxWidth().padding(8.dp),
         shape = RoundedCornerShape(24.dp),
@@ -569,7 +582,7 @@ fun VenueInfoCard(venue: VenueInfo, onDismiss: () -> Unit, onBack: () -> Unit) {
             Column(
                 modifier = Modifier
                     .padding(top = 16.dp)
-                    .heightIn(max = 300.dp)
+                    .heightIn(max = 250.dp)
                     .verticalScroll(rememberScrollState())
             ) {
                 InfoRow(icon = Icons.Default.Schedule, label = "Часы работы", value = venue.workingHours)
@@ -593,6 +606,19 @@ fun VenueInfoCard(venue: VenueInfo, onDismiss: () -> Unit, onBack: () -> Unit) {
                         }
                     }
                 }
+            }
+
+            Button(
+                onClick = onLeaveFeedback,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer)
+            ) {
+                Icon(Icons.Default.RateReview, null)
+                Spacer(Modifier.width(8.dp))
+                Text("Оставить отзыв (оценить)")
             }
         }
     }
