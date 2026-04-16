@@ -245,6 +245,23 @@ fun MapScreen(
 
         Box(
             modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = 170.dp, end = 24.dp),
+            contentAlignment = Alignment.BottomEnd
+        ) {
+            FloatingActionButton(
+                onClick = { location.requestNewLocationData() },
+                containerColor = Color(0xFF1B72C0),
+                contentColor = Color.White,
+                shape = CircleShape,
+                modifier = Modifier.size(44.dp)
+            ) {
+                Icon(Icons.Default.NearMe, contentDescription = stringResource(R.string.gps_label))
+            }
+        }
+
+        Box(
+            modifier = Modifier
                 .navigationBarsPadding()
                 .padding(bottom = 24.dp, start = 12.dp, end = 12.dp)
                 .fillMaxWidth()
@@ -357,16 +374,6 @@ fun MapScreen(
                             onClick = { showObstacleMenu = true },
                             contentColor = Color.White
                         )
-
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .background(Color(0xFF1B72C0), CircleShape)
-                                .clickable { location.requestNewLocationData() },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.NearMe, contentDescription = stringResource(R.string.gps_label), tint = Color.White, modifier = Modifier.size(24.dp))
-                        }
                     }
                 }
             }
@@ -746,7 +753,6 @@ fun ControlIconButton(
     contentColor: Color = Color.White
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-
         IconButton(
             onClick = onClick,
             enabled = enabled,
@@ -754,11 +760,9 @@ fun ControlIconButton(
                 containerColor = if (isSelected) selectedColor.copy(alpha = 0.2f) else Color.Transparent,
                 contentColor = if (isSelected) selectedColor else contentColor
             )
-        )
-        {
+        ) {
             Icon(icon, contentDescription = label, modifier = Modifier.size(28.dp))
         }
-
         Text(label, style = MaterialTheme.typography.labelSmall, color = if (isSelected) selectedColor else contentColor.copy(alpha = 0.7f), fontSize = 11.sp)
     }
 }
@@ -767,18 +771,14 @@ fun ControlIconButton(
 fun RouteMenuCard(
     points: List<MapPoint>,
     myLocation: Offset?,
-
     startLabel: String,
     endLabel: String,
-
     isVisualized: Boolean,
     stepDelay: Long,
     onStepDelayChange: (Long) -> Unit,
     onVisualizationToggle: (Boolean) -> Unit,
-
     onStartSelected: (Offset, String) -> Unit,
     onEndSelected: (Offset, String) -> Unit,
-
     onBuildRoute: () -> Unit,
     onClose: () -> Unit
 ) {
