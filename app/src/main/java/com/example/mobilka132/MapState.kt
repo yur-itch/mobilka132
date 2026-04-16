@@ -1,15 +1,14 @@
 package com.example.mobilka132
 
 import android.graphics.Bitmap
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.unit.IntSize
 import com.example.mobilka132.model.MapPoint
+import com.example.mobilka132.model.BuildingInfo
+import com.example.mobilka132.model.VenueInfo
+import com.example.mobilka132.model.MapPointData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.min
@@ -256,11 +255,3 @@ class MapState {
         )
     }
 }
-
-data class MapPointData(
-    val position: Offset,
-    val start: Int,
-    val end: Int,
-    val delay: Int,
-    val items: List<String> = emptyList()
-)
