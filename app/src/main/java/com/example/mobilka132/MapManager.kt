@@ -80,7 +80,7 @@ class MapManager(val context: Context)  {
             newGrid.copyInto(grid)
         }
 
-    private fun drawLineOnGrid(grid: IntArray, start: Offset, end: Offset, value: Int) {
+    private fun drawLineOnGrid(grid: IntArray, start: Offset, end: Offset, value: Int, thickness: Int = 2) {
         var x0 = start.x.toInt().coerceIn(0, width - 1)
         var y0 = start.y.toInt().coerceIn(0, height - 1)
         val x1 = end.x.toInt().coerceIn(0, width - 1)
@@ -92,9 +92,20 @@ class MapManager(val context: Context)  {
         val sy = if (y0 < y1) 1 else -1
         var err = dx - dy
 
+        val offset = thickness / 2
+
         while (true) {
-            grid[y0 * width + x0] = value
-            println("$x0 $y0")
+            for (ix in 0 until thickness) {
+                for (iy in 0 until thickness) {
+                    val px = x0 + ix - offset
+                    val py = y0 + iy - offset
+
+                    if (px in 0 until width && py in 0 until height) {
+                        grid[py * width + px] = value
+                    }
+                }
+            }
+
             if (x0 == x1 && y0 == y1) break
             val e2 = 2 * err
             if (e2 > -dy) { err -= dy; x0 += sx }
