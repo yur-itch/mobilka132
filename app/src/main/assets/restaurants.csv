@@ -1,0 +1,16 @@
+location,budget,time_available,food_type,queue_tolerance,weather,target
+main_building,low,medium,full_meal,medium,good,Main_Cafeteria
+main_building,low,short,snack,low,good,Yarche
+main_building,medium,short,coffee,low,good,Bus_Stop_Coffee
+main_building,high,medium,coffee,medium,good,Starbooks
+main_building,low,short,snack,high,bad,Yarche
+second_building,low,very_short,snack,low,good,Vending_Machine
+second_building,medium,short,coffee,medium,good,Second_Building_Cafe
+second_building,medium,medium,full_meal,medium,good,Main_Cafeteria
+second_building,low,medium,full_meal,medium,good,Canteen_2
+second_building,low,short,snack,low,bad,Vending_Machine
+second_building,high,medium,full_meal,high,good,Nearby_Restaurant
+campus_center,medium,short,pancakes,medium,good,Siberian_Pancakes
+campus_center,low,short,snack,low,good,Campus_Kiosk
+campus_center,high,long,full_meal,high,bad,Information_Center_Cafe
+campus_center,medium,medium,coffee,low,good,Pancake_House_Coffee
