@@ -9,35 +9,53 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = TSUBlue,
+    onPrimary = TSUWhite,
+    primaryContainer = TSUBlue,
+    onPrimaryContainer = TSUWhite,
+    secondary = TSUWhite,
+    onSecondary = TSUBlack,
+    secondaryContainer = Color(0xFF333333),
+    onSecondaryContainer = TSUWhite,
+    background = TSUBlack,
+    onBackground = TSUWhite,
+    surface = TSUBlack,
+    onSurface = TSUWhite,
+    surfaceVariant = Color(0xFF222222),
+    onSurfaceVariant = TSUWhite,
+    error = Color(0xFFFFB4AB)
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    primary = TSUBlue,
+    onPrimary = TSUWhite,
+    primaryContainer = TSUBlue,
+    onPrimaryContainer = TSUWhite,
+    secondary = TSUBlack,
+    onSecondary = TSUWhite,
+    secondaryContainer = Color(0xFFF0F0F0),
+    onSecondaryContainer = TSUBlue,
+    tertiary = TSUBlue,
+    onTertiary = TSUWhite,
+    background = TSUWhite,
+    onBackground = TSUBlack,
+    surface = TSUWhite,
+    onSurface = TSUBlack,
+    surfaceVariant = Color(0xFFF5F5F5),
+    onSurfaceVariant = TSUBlue,
+    error = Color.Red,
+    errorContainer = Color(0xFFFFDAD6),
+    onError = TSUWhite
 )
 
 @Composable
 fun Mobilka132Theme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {

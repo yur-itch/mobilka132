@@ -4,7 +4,7 @@ class Node : Comparable<Node> {
     val x : Int
     val y : Int
 
-    var cost : Int = 0
+    var cost : Int = Int.MAX_VALUE
     var heuristicCost : Int = 0
     val totalCost : Int
         get() = cost + heuristicCost
