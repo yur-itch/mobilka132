@@ -12,6 +12,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
@@ -33,6 +34,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -51,6 +53,7 @@ import com.example.mobilka132.pickBestRestaurant.DecisionTreeManager
 import com.example.mobilka132.pickBestRestaurant.DecisionDialog
 import com.example.mobilka132.data.location.LocationManager
 import com.example.mobilka132.model.MapPoint
+import com.example.mobilka132.model.ObstacleLine
 import com.example.mobilka132.ui.theme.Mobilka132Theme
 import kotlinx.coroutines.launch
 
@@ -94,6 +97,7 @@ fun MapScreen(viewModel: MapViewModel, location: LocationManager) {
     var showPointsList by remember { mutableStateOf(false) }
     var showRouteMenu by remember { mutableStateOf(false) }
     var showAlgoMenu by remember { mutableStateOf(false) }
+    var showObstacleMenu by remember {mutableStateOf(false)}
 
     var startPoint by remember { mutableStateOf<Offset?>(null) }
     var endPoint by remember { mutableStateOf<Offset?>(null) }
@@ -262,7 +266,7 @@ fun MapScreen(viewModel: MapViewModel, location: LocationManager) {
                             .padding(horizontal = 24.dp, vertical = 10.dp)
                             .wrapContentWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(32.dp)
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         val isBusy = viewModel.isAnyAlgoRunning || state.isProcessing
 
@@ -272,6 +276,16 @@ fun MapScreen(viewModel: MapViewModel, location: LocationManager) {
                             isSelected = state.isSelectionMode,
                             enabled = !isBusy,
                             onClick = { state.isSelectionMode = !state.isSelectionMode },
+                            selectedColor = Color(0xFF91C1F3),
+                            contentColor = Color.White
+                        )
+
+                        ControlIconButton(
+                            icon = Icons.Default.Add,
+                            label = "Препятствие",
+                            isSelected = viewModel.isObstacleMode,
+                            enabled = !isBusy,
+                            onClick = { viewModel.isObstacleMode = !viewModel.isObstacleMode },
                             selectedColor = Color(0xFF91C1F3),
                             contentColor = Color.White
                         )
@@ -289,6 +303,14 @@ fun MapScreen(viewModel: MapViewModel, location: LocationManager) {
                             label = "${state.selectedPoints.size}",
                             enabled = !isBusy,
                             onClick = { showPointsList = true },
+                            contentColor = Color.White
+                        )
+
+                        ControlIconButton(
+                            icon = Icons.Default.Archive,
+                            label = "${viewModel.obstacles.size}",
+                            enabled = !isBusy,
+                            onClick = { showObstacleMenu = true },
                             contentColor = Color.White
                         )
 
@@ -334,6 +356,22 @@ fun MapScreen(viewModel: MapViewModel, location: LocationManager) {
                         endPoint = null
                         endLabel = "Куда"
                     }
+                }
+            )
+        }
+
+        if (showObstacleMenu) {
+            ObstacleListDialog(
+                obstacles = viewModel.obstacles,
+                onDismiss = { showObstacleMenu = false },
+                onDelete = { id ->
+                    viewModel.removeObstacle(id)
+                    viewModel.syncObstacles()
+                },
+                onClearAll = {
+                    viewModel.clearObstacles()
+                    viewModel.syncObstacles()
+                    showObstacleMenu = false
                 }
             )
         }
@@ -605,42 +643,131 @@ private fun MapContainer(
     location: LocationManager
 ) {
     val textMeasurer = rememberTextMeasurer()
-    val paths = remember(viewModel.foundPaths.size) { viewModel.foundPaths.map { overlay.generatePath(it.steps) } }
+    val scope = rememberCoroutineScope()
+
+    var draggingLine by remember { mutableStateOf<Pair<Int, Boolean>?>(null) }
+
+    val paths = remember(viewModel.foundPaths.size) {
+        viewModel.foundPaths.map { overlay.generatePath(it.steps) }
+    }
+
     val stepOffset = remember(viewModel.currentStep) {
         viewModel.currentStep?.current?.let { (x, y) -> Offset(x.toFloat(), y.toFloat()) }
     }
+
     val nodeOffsets = remember(viewModel.currentStep) {
         viewModel.currentStep?.openSet?.map { (x, y) -> Offset(x.toFloat(), y.toFloat()) } ?: emptyList()
     }
+
     val primaryColor = MaterialTheme.colorScheme.primary
 
     Box(
         modifier = modifier
             .clipToBounds()
             .onSizeChanged { state.containerSize = it }
-            .pointerInput(state.isProcessing) {
-                detectTapGestures { if (!state.isProcessing) onPointSelected(it) }
+            .pointerInput(state.isSelectionMode, state.isProcessing) {
+                detectTapGestures { offset ->
+                    if (!state.isProcessing && !viewModel.isObstacleMode && !viewModel.isProcessing) {
+                        onPointSelected(offset)
+                    }
+                }
             }
-            .pointerInput(Unit) {
-                detectTransformGestures { centroid, pan, zoom, _ ->
-                    state.updateTransform(centroid, pan, zoom)
+            .pointerInput(viewModel.isObstacleMode) {
+                if (viewModel.isObstacleMode) {
+                    detectDragGestures(
+                        onDragStart = { touchOffset ->
+                            val contentPos = state.screenToContent(touchOffset)
+                            val threshold = 25f / state.scale
+                            val hit = viewModel.obstacles.firstNotNullOfOrNull { line ->
+                                when {
+                                    (contentPos - line.start).getDistance() < threshold -> line.id to true
+                                    (contentPos - line.end).getDistance() < threshold -> line.id to false
+                                    else -> null
+                                }
+                            }
+
+                            if (hit != null) {
+                                draggingLine = hit
+                            } else {
+                                val newId = (viewModel.obstacles.maxOfOrNull { it.id } ?: 0) + 1
+                                val newLine = ObstacleLine(newId, contentPos, contentPos)
+                                viewModel.addObstacle(newLine)
+                                draggingLine = newId to false
+                            }
+                        },
+                        onDrag = { change, _ ->
+                            change.consume()
+                            val contentPos = state.screenToContent(change.position)
+                            draggingLine?.let { (id, isStart) ->
+                                val index = viewModel.obstacles.indexOfFirst { it.id == id }
+                                if (index != -1) {
+                                    val line = viewModel.obstacles[index]
+                                    viewModel.obstacles[index] = if (isStart) {
+                                        line.copy(start = contentPos)
+                                    } else {
+                                        line.copy(end = contentPos)
+                                    }
+                                }
+                            }
+                        },
+                        onDragEnd = {
+                            draggingLine = null
+                            viewModel.isObstacleMode = false
+                            viewModel.syncObstacles()
+                        }
+                    )
+                }
+            }
+            .pointerInput(viewModel.isObstacleMode) {
+                if (!viewModel.isObstacleMode) {
+                    detectTransformGestures { centroid, pan, zoom, _ ->
+                        state.updateTransform(centroid, pan, zoom)
+                    }
                 }
             }
     ) {
         Box(
-            modifier = Modifier.fillMaxSize().graphicsLayer(
-                scaleX = state.scale, scaleY = state.scale,
-                translationX = state.offset.x * state.scale,
-                translationY = state.offset.y * state.scale,
-                transformOrigin = TransformOrigin(0f, 0f)
-            )
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer(
+                    scaleX = state.scale,
+                    scaleY = state.scale,
+                    translationX = state.offset.x * state.scale,
+                    translationY = state.offset.y * state.scale,
+                    transformOrigin = TransformOrigin(0f, 0f)
+                )
         ) {
-            Image(bitmap = bitmap.asImageBitmap(), contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+            Image(
+                bitmap = bitmap.asImageBitmap(),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize()
+            )
+
             Canvas(modifier = Modifier.fillMaxSize()) {
-                with(overlay) { 
-                    for (path in paths) drawPathScaled(path, color = primaryColor, thickness = 6f)
+                with(overlay) {
+                    for (p in paths) {
+                        drawPathScaled(p)
+                    }
                     viewModel.tspPath?.steps?.let { drawPathScaled(generatePath(it), color = Color(0xFF4CAF50)) }
                     viewModel.currentGAStep?.path?.steps?.let { drawPathScaled(generatePath(it), color = Color(0xFFFF9800)) }
+
+                    withTransform({
+                        translate(state.extraSpaceX, state.extraSpaceY)
+                        scale(state.fitScale, state.fitScale, pivot = Offset.Zero)
+                    }) {
+                        viewModel.obstacles.forEach { line ->
+                            drawLine(
+                                color = Color.Red,
+                                start = line.start,
+                                end = line.end,
+                                strokeWidth = 8f / state.scale,
+                                cap = StrokeCap.Round
+                            )
+                            drawCircle(Color.Red, radius = 10f / state.scale, center = line.start)
+                            drawCircle(Color.Red, radius = 10f / state.scale, center = line.end)
+                        }
+                    }
                 }
             }
         }
@@ -659,20 +786,27 @@ private fun MapContainer(
             val textStyle = TextStyle(color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             state.selectedPoints.forEach { point ->
                 val screenPos = state.contentToScreen(point.position)
-                drawCircle(color = primaryColor, radius = 15f, center = screenPos)
-                drawCircle(color = Color.White, radius = 6f, center = screenPos)
 
-                val textLayoutResult = textMeasurer.measure(point.id.toString(), textStyle)
-                val textWidth = textLayoutResult.size.width.toFloat()
-                val textHeight = textLayoutResult.size.height.toFloat()
-                
-                drawRoundRect(
-                    color = primaryColor,
-                    topLeft = Offset(screenPos.x - textWidth/2 - 8f, screenPos.y - 45f),
-                    size = Size(textWidth + 16f, textHeight + 8f),
-                    cornerRadius = CornerRadius(8f, 8f)
-                )
-                drawText(textLayoutResult = textLayoutResult, color = Color.White, topLeft = Offset(screenPos.x - textWidth/2, screenPos.y - 41f))
+                if (screenPos.x in 0f..size.width && screenPos.y in 0f..size.height) {
+                    drawCircle(color = primaryColor, radius = 15f, center = screenPos)
+                    drawCircle(color = Color.White, radius = 6f, center = screenPos)
+
+                    val textLayoutResult = textMeasurer.measure(point.id.toString(), textStyle)
+                    val textWidth = textLayoutResult.size.width.toFloat()
+                    val textHeight = textLayoutResult.size.height.toFloat()
+
+                    drawRoundRect(
+                        color = primaryColor,
+                        topLeft = Offset(screenPos.x - textWidth / 2 - 8f, screenPos.y - 45f),
+                        size = Size(textWidth + 16f, textHeight + 8f),
+                        cornerRadius = CornerRadius(8f, 8f)
+                    )
+                    drawText(
+                        textLayoutResult = textLayoutResult,
+                        color = Color.White,
+                        topLeft = Offset(screenPos.x - textWidth / 2, screenPos.y - 41f)
+                    )
+                }
             }
         }
     }
@@ -742,4 +876,35 @@ fun PointsListDialog(points: List<MapPoint>, onDismiss: () -> Unit, onDeletePoin
             }
         }
     }
+}
+
+@Composable
+fun ObstacleListDialog(
+    obstacles: List<ObstacleLine>,
+    onDismiss: () -> Unit,
+    onDelete: (Int) -> Unit,
+    onClearAll: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Препятствия") },
+        text = {
+            LazyColumn {
+                items(obstacles) { line ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Линия #${line.id}", modifier = Modifier.weight(1f))
+                        IconButton(onClick = { onDelete(line.id) }) {
+                            Icon(Icons.Default.Delete, contentDescription = null, tint = Color.Red)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onClearAll) { Text("Очистить все", color = Color.Red) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Закрыть") }
+        }
+    )
 }

@@ -14,6 +14,7 @@ import com.example.mobilka132.data.pathfinding.PathData
 import com.example.mobilka132.model.AStarStep
 import com.example.mobilka132.model.GAStep
 import com.example.mobilka132.model.MapPoint
+import com.example.mobilka132.model.ObstacleLine
 import com.example.mobilka132.model.Path
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.flowOn
@@ -45,6 +46,9 @@ class MapViewModel : ViewModel() {
     val isAnyAlgoRunning: Boolean
         get() = isProcessing
 
+    var obstacles = mutableStateListOf<ObstacleLine>()
+    var isObstacleMode by mutableStateOf(false)
+    private var nextObstacleId = 0
 
     var initialized by mutableStateOf(false)
 
@@ -96,6 +100,7 @@ class MapViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val contentPoint = state.screenToContent(screenOffset)
+                println(contentPoint)
                 state.handleMapClick(contentPoint, roadMask, buildingsMask)
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -192,12 +197,11 @@ class MapViewModel : ViewModel() {
         isTSPProcessing = true
         val points = mutableListOf<MapPoint>()
         val job = viewModelScope.launch {
-            ant.generatePoints(n)
+            ant.generatePoints(mapManager.width, mapManager.height, n)
             withContext(pathfinderDispatcher) {
                 for (i in 0 until n) {
                     ant.points[i] = state.findNearestAvailablePoint(ant.points[i])
                     state.addPoint(ant.points[i])
-                    points.add(state.selectedPoints[state.selectedPoints.size - 1])
                 }
                 ant.solve(
                     onIteration = { _, _, dist ->
@@ -388,6 +392,25 @@ class MapViewModel : ViewModel() {
             currentGAStep = null
             activeJobs.remove(job)
         }
+    }
+
+    fun addObstacle(line: ObstacleLine) {
+        obstacles.add(line)
+        syncObstacles()
+    }
+
+    fun removeObstacle(id: Int) {
+        obstacles.removeAll { it.id == id }
+        syncObstacles()
+    }
+
+    fun clearObstacles() {
+        obstacles.clear()
+        syncObstacles()
+    }
+
+    fun syncObstacles() {
+        mapManager.updateObstacles(obstacles)
     }
 
     private fun parseTime(timeStr: String): Int {
