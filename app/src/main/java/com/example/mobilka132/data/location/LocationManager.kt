@@ -33,8 +33,8 @@ class LocationManager(private val activity: Activity, private val registry: Acti
 
     fun positionOnMap(l: Location) : Offset {
         return Offset(
-            ((l.longitude - 84.932881) * 61400).toFloat(),
-            (-(l.latitude - 56.4758) * 111000).toFloat()
+            ((l.longitude - /*84.932881*/ 84.944904) * 61400 + 747).toFloat(),
+            (-(l.latitude - /*56.4758*/ 56.468946) * 111000 + 713).toFloat()
         ) * pixelsInMeter
     }
 
