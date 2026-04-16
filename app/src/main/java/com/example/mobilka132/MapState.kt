@@ -64,6 +64,7 @@ class MapState {
     var isProcessing by mutableStateOf(false)
 
     var selectedBuildingInfo by mutableStateOf<BuildingInfo?>(null)
+    var selectedVenueInfo by mutableStateOf<VenueInfo?>(null)
     var lastClickContentPoint by mutableStateOf<Offset?>(null)
 
     fun init(maskWidth: Int, maskHeight: Int, maskPixels: IntArray) {
@@ -188,6 +189,7 @@ class MapState {
 
                 withContext(Dispatchers.Main) {
                     selectedBuildingInfo = buildingInfo
+                    selectedVenueInfo = null
                 }
             }
 

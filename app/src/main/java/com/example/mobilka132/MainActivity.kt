@@ -19,8 +19,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
@@ -44,6 +46,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -228,7 +231,21 @@ fun MapScreen(viewModel: MapViewModel, location: LocationManager) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 AnimatedVisibility(
-                    visible = state.selectedBuildingInfo != null,
+                    visible = state.selectedVenueInfo != null,
+                    enter = slideInVertically { it } + fadeIn(),
+                    exit = slideOutVertically { it } + fadeOut()
+                ) {
+                    state.selectedVenueInfo?.let { venue ->
+                        VenueInfoCard(
+                            venue = venue,
+                            onDismiss = { state.selectedVenueInfo = null },
+                            onBack = { state.selectedVenueInfo = null }
+                        )
+                    }
+                }
+
+                AnimatedVisibility(
+                    visible = state.selectedBuildingInfo != null && state.selectedVenueInfo == null,
                     enter = slideInVertically { it } + fadeIn(),
                     exit = slideOutVertically { it } + fadeOut()
                 ) {
@@ -236,6 +253,7 @@ fun MapScreen(viewModel: MapViewModel, location: LocationManager) {
                         BuildingInfoCard(
                             info = info,
                             onDismiss = { state.selectedBuildingInfo = null },
+                            onVenueClick = { venue -> state.selectedVenueInfo = venue },
                             onRouteTo = {
                                 val buildingPos = state.lastClickContentPoint
                                 if (buildingPos != null) {
@@ -434,7 +452,7 @@ fun AlgoDrawer(onDismiss: () -> Unit, onStartGA: () -> Unit, onStartTSP: () -> U
 }
 
 @Composable
-fun BuildingInfoCard(info: BuildingInfo, onDismiss: () -> Unit, onRouteTo: () -> Unit) {
+fun BuildingInfoCard(info: BuildingInfo, onDismiss: () -> Unit, onVenueClick: (VenueInfo) -> Unit, onRouteTo: () -> Unit) {
     ElevatedCard(
         modifier = Modifier.fillMaxWidth().padding(8.dp),
         shape = RoundedCornerShape(24.dp),
@@ -443,7 +461,7 @@ fun BuildingInfoCard(info: BuildingInfo, onDismiss: () -> Unit, onRouteTo: () ->
         Column(modifier = Modifier.padding(20.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(text = info.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
+                    Text(text = info.name.ifEmpty { "Здание без названия" }, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
                     if (info.address.isNotEmpty()) {
                         Text(text = info.address, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 4.dp))
                     }
@@ -454,8 +472,53 @@ fun BuildingInfoCard(info: BuildingInfo, onDismiss: () -> Unit, onRouteTo: () ->
             }
             
             if (info.venues.isNotEmpty()) {
-                val venuesText = info.venues.joinToString(", ") { it.name }
-                Text(text = venuesText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 12.dp), maxLines = 3)
+                Text(
+                    text = "Заведения в этом здании:",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 250.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    info.venues.forEach { venue ->
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onVenueClick(venue) },
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Restaurant, null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.width(12.dp))
+                                Text(
+                                    text = venue.name,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium,
+                                    modifier = Modifier.weight(1f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Icon(Icons.Default.ChevronRight, null, modifier = Modifier.size(20.dp))
+                            }
+                        }
+                    }
+                }
+            } else {
+                Text(
+                    text = "В этом здании нет зарегистрированных заведений",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 12.dp)
+                )
             }
 
             Row(modifier = Modifier.fillMaxWidth().padding(top = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -470,6 +533,82 @@ fun BuildingInfoCard(info: BuildingInfo, onDismiss: () -> Unit, onRouteTo: () ->
                     Text("Сюда")
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun VenueInfoCard(venue: VenueInfo, onDismiss: () -> Unit, onBack: () -> Unit) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth().padding(8.dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    IconButton(onClick = onBack, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", modifier = Modifier.size(20.dp))
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = venue.name,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(20.dp))
+                }
+            }
+
+            Column(
+                modifier = Modifier
+                    .padding(top = 16.dp)
+                    .heightIn(max = 300.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                InfoRow(icon = Icons.Default.Schedule, label = "Часы работы", value = venue.workingHours)
+                InfoRow(icon = Icons.Default.Timer, label = "Среднее время визита", value = "${venue.estimatedVisitTimeMinutes} мин")
+                
+                if (venue.dishes.isNotEmpty()) {
+                    Text(
+                        text = "Меню:",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                    )
+                    venue.dishes.forEach { dish ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp)
+                        ) {
+                            Box(modifier = Modifier.size(6.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
+                            Spacer(Modifier.width(12.dp))
+                            Text(dish, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun InfoRow(icon: ImageVector, label: String, value: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(vertical = 8.dp)
+    ) {
+        Icon(icon, null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.width(12.dp))
+        Column {
+            Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+            Text(value, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
         }
     }
 }
