@@ -1,4 +1,90 @@
 <resources>
     <string name="app_name">mobilka132</string>
-    <string name="title_activity_test">TestActivity</string>
+    <string name="title_activity_test">Test Activity</string>
+
+    <string name="menu_title">Меню</string>
+    <string name="map_view">Вид</string>
+    <string name="stop_algo">Стоп</string>
+    <string name="map_route_title">Карта маршрутов</string>
+    <string name="searching_path">Поиск пути…</string>
+    <string name="gps_label">GPS</string>
+
+    <string name="settings_language">Язык приложения</string>
+    <string name="lang_ru">Русский</string>
+    <string name="lang_en">English</string>
+    <string name="lang_zh">中文</string>
+
+    <string name="label_point">Точка</string>
+    <string name="label_obstacle">Препятствие</string>
+    <string name="label_path">Путь</string>
+    <string name="label_locations">Локации</string>
+    <string name="label_obstacles_list">Препятствия</string>
+    <string name="point_prefix">Точка №%1$d</string>
+
+    <string name="algo_advice_title">Совет (Дерево решений)</string>
+    <string name="algo_advice_desc">Помощь в выборе места для перекуса</string>
+    <string name="algo_ga_title">Генетический алгоритм (GA)</string>
+    <string name="algo_ga_desc">Поиск оптимального маршрута для покупок</string>
+    <string name="algo_ga_running">Генетика: поколение %1$d</string>
+    <string name="algo_tsp_title">Муравьиный алгоритм (TSP)</string>
+    <string name="algo_tsp_desc">Решение задачи коммивояжера</string>
+    <string name="algo_tsp_running">TSP: поиск…</string>
+
+    <string name="btn_route_here">Сюда</string>
+    <string name="route_card_title">Маршрут</string>
+    <string name="route_from">От</string>
+    <string name="route_to">До</string>
+    <string name="route_from_placeholder">Откуда</string>
+    <string name="route_to_placeholder">Куда</string>
+    <string name="my_location_gps">Моя локация (GPS)</string>
+    <string name="btn_build_route">Построить маршрут</string>
+
+    <string name="visualization_astar">Визуализация A*</string>
+    <string name="delay_label">Задержка: %1$d мс</string>
+
+    <string name="dialog_my_locations">Мои локации</string>
+    <string name="dialog_delete_all">Удалить всё</string>
+    <string name="dialog_empty_list">Список пуст</string>
+    <string name="dialog_close">Закрыть</string>
+    <string name="dialog_obstacles_title">Препятствия</string>
+    <string name="dialog_obstacle_line">Линия #%1$d</string>
+    <string name="dialog_clear_all">Очистить все</string>
+    <string name="dialog_delete">Удалить</string>
+
+    <string name="building_no_name">Здание без названия</string>
+    <string name="building_venues_title">Заведения в этом здании:</string>
+    <string name="building_no_venues">В этом здании нет зарегистрированных заведений</string>
+    <string name="venue_working_hours">Часы работы</string>
+    <string name="venue_visit_time">Среднее время визита</string>
+    <string name="venue_visit_time_value">%1$d мин</string>
+    <string name="venue_menu_title">Меню:</string>
+    <string name="venue_leave_feedback">Оставить отзыв (оценить)</string>
+    <string name="feedback_thanks">Спасибо за оценку: %1$s!</string>
+
+    <string name="tree_skip_and_advice">Пропустить и дать совет</string>
+    <string name="tree_select_establishment">Подбор заведения</string>
+    <string name="tree_reset">Сбросить</string>
+    <string name="tree_next">Далее</string>
+    <string name="tree_settings">Настройка данных</string>
+    <string name="tree_structure">Структура дерева</string>
+    <string name="tree_recommendation">РЕКОМЕНДАЦИЯ:</string>
+    <string name="tree_decision_path">Ход решения:</string>
+    <string name="tree_question_budget">Какой у вас бюджет?</string>
+    <string name="tree_question_location">Где вы сейчас находитесь?</string>
+    <string name="tree_question_time">Сколько у вас свободного времени?</string>
+    <string name="tree_question_food">Что именно хотите поесть?</string>
+    <string name="tree_question_queue">Насколько вы терпимы к очередям?</string>
+    <string name="tree_question_weather">Какая сейчас погода?</string>
+    <string name="tree_budget_label">Сумма (руб)</string>
+    <string name="tree_apply">Применить и перестроить</string>
+    <string name="tree_csv_label">Обучающая выборка (CSV):</string>
+    <string name="tree_not_ready">Дерево не готово. Проверьте CSV.</string>
+
+    <string name="node_budget">Бюджет</string>
+    <string name="node_location">Локация</string>
+    <string name="node_time">Время</string>
+    <string name="node_food">Еда</string>
+    <string name="node_queue">Очередь</string>
+    <string name="node_weather">Погода</string>
+    <string name="node_not_built">Дерево не построено</string>
 </resources>

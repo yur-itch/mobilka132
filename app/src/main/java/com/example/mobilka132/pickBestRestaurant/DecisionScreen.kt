@@ -13,11 +13,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.example.mobilka132.R
 
 @Composable
 fun DecisionDialog(
@@ -44,9 +46,9 @@ fun DecisionDialog(
                 ) {
                     Text(
                         text = when {
-                            viewModel.isVisualizerMode -> "Структура дерева"
-                            viewModel.isSettingsMode -> "Настройка данных"
-                            else -> "Подбор заведения"
+                            viewModel.isVisualizerMode -> stringResource(R.string.tree_structure)
+                            viewModel.isSettingsMode -> stringResource(R.string.tree_settings)
+                            else -> stringResource(R.string.tree_select_establishment)
                         },
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
@@ -120,7 +122,7 @@ fun DecisionDialog(
                                         ResultView(node.result, viewModel.decisionPath, onRestart = { viewModel.reset() })
                                     }
                                     else -> {
-                                        Text("Дерево не готово. Проверьте CSV.")
+                                        Text(stringResource(R.string.tree_not_ready))
                                     }
                                 }
                             }
@@ -132,7 +134,7 @@ fun DecisionDialog(
                     onClick = onDismiss,
                     modifier = Modifier.align(Alignment.End)
                 ) {
-                    Text("Закрыть")
+                    Text(stringResource(R.string.dialog_close))
                 }
             }
         }
@@ -146,7 +148,7 @@ fun SettingsView(
     onApply: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Обучающая выборка (CSV):", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        Text(stringResource(R.string.tree_csv_label), fontSize = 14.sp, fontWeight = FontWeight.Medium)
         OutlinedTextField(
             value = csvText,
             onValueChange = onCsvChange,
@@ -160,7 +162,7 @@ fun SettingsView(
             onClick = onApply,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Применить и перестроить")
+            Text(stringResource(R.string.tree_apply))
         }
     }
 }
@@ -175,13 +177,13 @@ fun QuestionView(
     onQuickPrediction: () -> Unit
 ) {
     val questionTitle = when(node.problemName) {
-        "budget" -> "Какой у вас бюджет?"
-        "location" -> "Где вы сейчас находитесь?"
-        "time_available" -> "Сколько у вас свободного времени?"
-        "food_type" -> "Что именно хотите поесть?"
-        "queue_tolerance" -> "Насколько вы терпимы к очередям?"
-        "weather" -> "Какая сейчас погода?"
-        else -> "Вопрос: ${node.problemName}"
+        "budget" -> stringResource(R.string.tree_question_budget)
+        "location" -> stringResource(R.string.tree_question_location)
+        "time_available" -> stringResource(R.string.tree_question_time)
+        "food_type" -> stringResource(R.string.tree_question_food)
+        "queue_tolerance" -> stringResource(R.string.tree_question_queue)
+        "weather" -> stringResource(R.string.tree_question_weather)
+        else -> "Question: ${node.problemName}"
     }
 
     Text(text = questionTitle, style = MaterialTheme.typography.titleMedium)
@@ -190,13 +192,13 @@ fun QuestionView(
         OutlinedTextField(
             value = budgetInput,
             onValueChange = onBudgetChange,
-            label = { Text("Сумма (руб)") },
+            label = { Text(stringResource(R.string.tree_budget_label)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
         Button(onClick = onBudgetSubmit, modifier = Modifier.fillMaxWidth(), enabled = budgetInput.isNotEmpty()) {
-            Text("Далее")
+            Text(stringResource(R.string.tree_next))
         }
     } else {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
@@ -214,7 +216,7 @@ fun QuestionView(
     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
     
     TextButton(onClick = onQuickPrediction) {
-        Text("Пропустить и дать совет", fontSize = 12.sp)
+        Text(stringResource(R.string.tree_skip_and_advice), fontSize = 12.sp)
     }
 }
 
@@ -226,13 +228,13 @@ fun ResultView(result: String, path: List<Pair<String, String>>, onRestart: () -
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("РЕКОМЕНДАЦИЯ:", fontSize = 12.sp, fontWeight = FontWeight.Light)
+                Text(stringResource(R.string.tree_recommendation), fontSize = 12.sp, fontWeight = FontWeight.Light)
                 Text(text = result, style = MaterialTheme.typography.headlineMedium, color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold)
             }
         }
 
         if (path.isNotEmpty()) {
-            Text("Ход решения:", fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Start))
+            Text(stringResource(R.string.tree_decision_path), fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Start))
             Column(modifier = Modifier.fillMaxWidth()) {
                 path.forEachIndexed { index, pair ->
                     Text("${index + 1}. ${pair.first} -> ${pair.second}", fontSize = 13.sp, color = Color.Gray)
@@ -241,7 +243,7 @@ fun ResultView(result: String, path: List<Pair<String, String>>, onRestart: () -
         }
         
         Button(onClick = onRestart, modifier = Modifier.fillMaxWidth()) {
-            Text("Начать заново")
+            Text(stringResource(R.string.tree_reset))
         }
     }
 }
