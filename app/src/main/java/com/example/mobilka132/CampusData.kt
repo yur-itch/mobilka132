@@ -1,6 +1,5 @@
 package com.example.mobilka132
 
-// Новый дата-класс для заведения
 data class VenueInfo(
     val name: String,
     val workingHours: String,

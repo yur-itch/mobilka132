@@ -26,6 +26,7 @@ class MapViewModel : ViewModel() {
 
     lateinit var mapManager: MapManager
     lateinit var pathfinder: AStar
+    lateinit var walkableDistance: WalkableDistance
 
     val state = MapState()
     val overlay = MapOverlayRenderer(state)
@@ -65,11 +66,18 @@ class MapViewModel : ViewModel() {
         this.mapManager = mapManager
         state.init(mapManager.width, mapManager.height, mapManager.grid)
         pathfinder = AStar(mapManager.width, mapManager.height, mapManager.grid, state)
+        walkableDistance = WalkableDistance(pathfinder)
         initialized = true
 
         CampusDatabase.getAllBuildings().forEach { (color, building) ->
-            if (building.venues.isNotEmpty()) {
-                selectedVenues[color] = building.venues.map { it.name }.toSet()
+            // TESTING CHANGE: Only select ~25% of venues initially
+            val selected = building.venues
+                .filter { Random.nextDouble() < 0.25 }
+                .map { it.name }
+                .toSet()
+            
+            if (selected.isNotEmpty()) {
+                selectedVenues[color] = selected
             }
         }
     }
@@ -363,8 +371,8 @@ class MapViewModel : ViewModel() {
                         delay = it.delay
                     )
                 }
-                val distancer = WalkableDistance(pathfinder)
-                distancer.setPoints(gaPoints)
+                
+                walkableDistance.setup(gaPoints)
 
                 val allItems = (0 until numItems).toMutableList()
                 val items = MutableList(numPoints) { i -> 
@@ -376,7 +384,7 @@ class MapViewModel : ViewModel() {
 
                 val ctx = MutationContext(
                     allPoints = (0 until numPoints).toMutableList(),
-                    dist = distancer,
+                    dist = walkableDistance,
                     items = items,
                     allItems = allItems,
                     initial = Random.nextInt(0, numPoints),
@@ -397,9 +405,9 @@ class MapViewModel : ViewModel() {
                             val actualPath = mutableListOf<Offset>()
                             var distance = 0.0f
                             for (i in 0 until best.size - 1) {
-                                val segment = distancer.path(best[i], best[i + 1])
+                                val segment = walkableDistance.path(best[i], best[i + 1])
                                 actualPath.addAll(segment.map { Offset(it.x.toFloat(), it.y.toFloat()) })
-                                distance += distancer[best[i], best[i + 1]].toFloat()
+                                distance += walkableDistance[best[i], best[i + 1]].toFloat()
                             }
 
                             withContext(Dispatchers.Main) {
@@ -443,6 +451,9 @@ class MapViewModel : ViewModel() {
 
     fun syncObstacles() {
         mapManager.updateObstacles(obstacles)
+        if (::walkableDistance.isInitialized) {
+            walkableDistance.clearPersistentCache()
+        }
     }
 
     private fun parseTime(timeStr: String): Int {
