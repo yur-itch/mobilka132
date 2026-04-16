@@ -24,20 +24,11 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.withStyle
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -46,6 +37,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -58,11 +51,16 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.state.ToggleableState
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -77,7 +75,9 @@ import com.example.mobilka132.ui.theme.Mobilka132Theme
 import com.example.mobilka132.ui.theme.ThemeMode
 import com.example.mobilka132.data.LocaleHelper
 import com.example.mobilka132.data.ThemeHelper
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 sealed class SearchResult {
     data class BuildingResult(val info: BuildingInfo, val matchType: MatchType) : SearchResult()
@@ -107,7 +107,6 @@ class MainActivity : ComponentActivity() {
             viewModel.init(mapManager)
             viewModel.loadPointsFromAssets(this@MainActivity)
         }
-        location.checkPermission()
         location.pixelsInMeter = viewModel.state.metersPerPixel.toFloat()
 
         setContent {
@@ -319,24 +318,31 @@ fun MapScreen(
                 .align(Alignment.TopCenter),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            HeaderCard(state, viewModel,
-                onMenuClick = { showAlgoMenu = true },
-                onThemeClick = { showThemeMenu = true }
-            )
             if (!showSearch) {
-                HeaderCard(state, viewModel, onMenuClick = { showAlgoMenu = true })
+                HeaderCard(state, viewModel,
+                    onMenuClick = { showAlgoMenu = true },
+                    onThemeClick = { showThemeMenu = true }
+                )
 
                 Box(
                     modifier = Modifier
                         .align(Alignment.End)
                         .size(44.dp)
-                        .background(Color(0xFF0D2137), RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(10.dp))
                         .clickable { showSearch = true }
                         .padding(8.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Search, contentDescription = "Поиск", tint = Color.White, modifier = Modifier.size(24.dp))
+                    Icon(Icons.Default.Search, contentDescription = "Поиск", tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(24.dp))
                 }
+            } else {
+                SearchBar(
+                    query = searchQuery,
+                    onQueryChange = { searchQuery = it },
+                    results = filteredResults,
+                    onResultClick = onSearchResultClick,
+                    onClose = { showSearch = false; searchQuery = "" }
+                )
             }
 
             AnimatedVisibility(
@@ -604,16 +610,6 @@ fun MapScreen(
                 }
             )
         }
-
-        if (showSearch) {
-            SearchOverlay(
-                query = searchQuery,
-                onQueryChange = { searchQuery = it },
-                results = filteredResults,
-                onDismiss = { showSearch = false; searchQuery = "" },
-                onResultClick = onSearchResultClick
-            )
-        }
     }
 }
 
@@ -628,7 +624,7 @@ fun ThemeSelectionDialog(onDismiss: () -> Unit, onThemeChange: (ThemeMode, Color
         ) {
             Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text("Настройка темы", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-
+                
                 Button(
                     onClick = { onThemeChange(ThemeMode.LIGHT, null); onDismiss() },
                     modifier = Modifier.fillMaxWidth(),
@@ -645,25 +641,25 @@ fun ThemeSelectionDialog(onDismiss: () -> Unit, onThemeChange: (ThemeMode, Color
                     Text("Темная")
                 }
 
-                Divider()
+                HorizontalDivider()
                 Text("Кастомный цвет", style = MaterialTheme.typography.titleMedium)
-
+                
                 val colors = listOf(Color(0xFFE91E63), Color(0xFF9C27B0), Color(0xFF2196F3), Color(0xFF4CAF50), Color(0xFFFF9800), Color(0xFF795548))
-
+                
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     colors.forEach { color ->
                         Box(
                             modifier = Modifier
                                 .size(40.dp)
                                 .background(color, CircleShape)
-                                .clickable {
+                                .clickable { 
                                     onThemeChange(ThemeMode.CUSTOM, color)
                                     onDismiss()
                                 }
                         )
                     }
                 }
-
+                
                 TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
                     Text("Закрыть")
                 }
@@ -704,7 +700,7 @@ fun AlgoDrawer(
             ListItem(
                 headlineContent = { Text(stringResource(R.string.algo_ga_title)) },
                 supportingContent = { Text(stringResource(R.string.algo_ga_desc)) },
-                leadingContent = { Icon(Icons.Default.AutoFixHigh, null, tint = Color(0xFF1B72C0)) },
+                leadingContent = { Icon(Icons.Default.AutoFixHigh, null, tint = MaterialTheme.colorScheme.primary) },
                 trailingContent = {
                     IconButton(onClick = { onConfigureGA() }) {
                         Icon(Icons.Default.Settings, contentDescription = "Настроить")
@@ -716,7 +712,7 @@ fun AlgoDrawer(
             ListItem(
                 headlineContent = { Text(stringResource(R.string.algo_tsp_title)) },
                 supportingContent = { Text(stringResource(R.string.algo_tsp_desc)) },
-                leadingContent = { Icon(Icons.Default.TravelExplore, null, tint = Color(0xFF1B72C0)) },
+                leadingContent = { Icon(Icons.Default.TravelExplore, null, tint = MaterialTheme.colorScheme.primary) },
                 modifier = Modifier.clickable(enabled = !isBusy) { onStartTSP() }
             )
 
@@ -955,7 +951,7 @@ fun VenueInfoCard(venue: VenueInfo, onDismiss: () -> Unit, onBack: () -> Unit, o
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                     IconButton(onClick = onBack, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", modifier = Modifier.size(20.dp))
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", modifier = Modifier.size(20.dp))
                     }
                     Spacer(Modifier.width(8.dp))
                     Text(
@@ -1047,7 +1043,7 @@ fun HeaderCard(state: MapState, viewModel: MapViewModel, onMenuClick: () -> Unit
         ) {
             IconButton(onClick = onMenuClick) {
                 Icon(
-                    Icons.Default.Menu,
+                    Icons.Default.Menu, 
                     contentDescription = stringResource(R.string.menu_title),
                     tint = MaterialTheme.colorScheme.onSurface
                 )
@@ -1196,175 +1192,6 @@ fun PointSelectorRow(prefix: String, label: String, points: List<MapPoint>, myLo
                         onClick = { onSelected(point.position, pointLabel); expanded = false }
                     )
                 }
-            }
-        }
-    }
-}
-
-@Composable
-fun SearchOverlay(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    results: List<SearchResult>,
-    onDismiss: () -> Unit,
-    onResultClick: (SearchResult) -> Unit
-) {
-    val searchFocusRequester = remember { FocusRequester() }
-
-    LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(150)
-        runCatching { searchFocusRequester.requestFocus() }
-    }
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.5f))
-                .clickable(
-                    indication = null,
-                    interactionSource = remember { MutableInteractionSource() }
-                ) { onDismiss() }
-        )
-        Column(
-            modifier = Modifier
-                .statusBarsPadding()
-                .padding(top = 8.dp, start = 16.dp, end = 16.dp)
-                .fillMaxWidth()
-        ) {
-            OutlinedTextField(
-                value = query,
-                onValueChange = onQueryChange,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(searchFocusRequester),
-                placeholder = { Text("Поиск зданий и заведений...", color = Color.Gray) },
-                trailingIcon = {
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, null, tint = Color.White)
-                    }
-                },
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    focusedContainerColor = Color(0xFF1A1C1E),
-                    unfocusedContainerColor = Color(0xFF1A1C1E),
-                    focusedBorderColor = Color(0xFF1B72C0),
-                    unfocusedBorderColor = Color(0xFF3C4043),
-                    cursorColor = Color(0xFF1B72C0)
-                ),
-                shape = RoundedCornerShape(16.dp),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = {})
-            )
-
-            if (query.isNotEmpty()) {
-                Spacer(Modifier.height(8.dp))
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 420.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    color = Color(0xFF1A1C1E),
-                    shadowElevation = 8.dp
-                ) {
-                    if (results.isEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(20.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("Ничего не найдено", color = Color.Gray)
-                        }
-                    } else {
-                        LazyColumn {
-                            itemsIndexed(results) { index, result ->
-                                SearchResultRow(result, query, onResultClick)
-                                if (index < results.lastIndex) {
-                                    HorizontalDivider(color = Color(0xFF2C2F31), modifier = Modifier.padding(horizontal = 16.dp))
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-fun highlightMatches(text: String, query: String): AnnotatedString {
-    if (query.isEmpty()) return AnnotatedString(text)
-    return buildAnnotatedString {
-        val lowerText = text.lowercase()
-        val lowerQuery = query.lowercase()
-        var cursor = 0
-        while (cursor < text.length) {
-            val matchAt = lowerText.indexOf(lowerQuery, cursor)
-            if (matchAt == -1) {
-                append(text.substring(cursor))
-                break
-            }
-            append(text.substring(cursor, matchAt))
-            withStyle(
-                SpanStyle(
-                    color = Color(0xFF5BB8FF),
-                    fontWeight = FontWeight.Bold,
-                    background = Color(0xFF1B72C0).copy(alpha = 0.25f)
-                )
-            ) {
-                append(text.substring(matchAt, matchAt + query.length))
-            }
-            cursor = matchAt + query.length
-        }
-    }
-}
-
-@Composable
-fun SearchResultRow(
-    result: SearchResult,
-    query: String = "",
-    onResultClick: (SearchResult) -> Unit = {}
-) {
-    val icon: ImageVector
-    val title: String
-    val subtitle: String
-    when (result) {
-        is SearchResult.BuildingResult -> {
-            icon = Icons.Default.Business
-            title = result.info.name.ifEmpty { "Здание ТГУ" }
-            subtitle = result.info.address
-        }
-        is SearchResult.VenueResult -> {
-            icon = Icons.Default.Restaurant
-            title = result.venue.name
-            subtitle = "В здании: ${result.building.name.ifEmpty { result.building.address }}"
-        }
-    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onResultClick(result) }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Icon(icon, contentDescription = null, tint = Color(0xFF1B72C0), modifier = Modifier.size(22.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = highlightMatches(title, query),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-                color = Color.White
-            )
-            if (subtitle.isNotEmpty()) {
-                Text(
-                    text = highlightMatches(subtitle, query),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
-                )
             }
         }
     }
@@ -1645,4 +1472,120 @@ fun ObstacleListDialog(
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_close)) }
         }
     )
+}
+
+fun highlightMatches(text: String, query: String, highlightColor: Color, highlightBackground: Color): AnnotatedString {
+    if (query.isEmpty()) return AnnotatedString(text)
+    return buildAnnotatedString {
+        val lowerText = text.lowercase()
+        val lowerQuery = query.lowercase()
+        var cursor = 0
+        while (cursor < text.length) {
+            val matchAt = lowerText.indexOf(lowerQuery, cursor)
+            if (matchAt == -1) {
+                append(text.substring(cursor))
+                break
+            }
+            append(text.substring(cursor, matchAt))
+            withStyle(
+                SpanStyle(
+                    color = highlightColor,
+                    fontWeight = FontWeight.Bold,
+                    background = highlightBackground
+                )
+            ) {
+                append(text.substring(matchAt, matchAt + query.length))
+            }
+            cursor = matchAt + query.length
+        }
+    }
+}
+
+@Composable
+fun SearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    results: List<SearchResult>,
+    onResultClick: (SearchResult) -> Unit,
+    onClose: () -> Unit
+) {
+    val focusRequester = remember { FocusRequester() }
+    val highlightColor = MaterialTheme.colorScheme.primary
+    val highlightBg = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+    
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 8.dp,
+        shadowElevation = 8.dp
+    ) {
+        Column {
+            Row(
+                modifier = Modifier.padding(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onClose) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
+                }
+                TextField(
+                    value = query,
+                    onValueChange = onQueryChange,
+                    modifier = Modifier
+                        .weight(1f)
+                        .focusRequester(focusRequester),
+                    placeholder = { Text("Поиск зданий или заведений...") },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent
+                    ),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = {})
+                )
+                if (query.isNotEmpty()) {
+                    IconButton(onClick = { onQueryChange("") }) {
+                        Icon(Icons.Default.Clear, contentDescription = "Очистить")
+                    }
+                }
+            }
+            
+            if (results.isNotEmpty()) {
+                HorizontalDivider()
+                LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
+                    items(results) { result ->
+                        val (title, sub) = when(result) {
+                            is SearchResult.BuildingResult -> result.info.name to result.info.address
+                            is SearchResult.VenueResult -> result.venue.name to result.building.name
+                        }
+                        ListItem(
+                            headlineContent = { 
+                                Text(highlightMatches(title, query, highlightColor, highlightBg)) 
+                            },
+                            supportingContent = { 
+                                Text(
+                                    highlightMatches(sub, query, highlightColor, highlightBg),
+                                    fontSize = 12.sp
+                                ) 
+                            },
+                            leadingContent = { 
+                                Icon(
+                                    if (result is SearchResult.BuildingResult) Icons.Default.Business else Icons.Default.Restaurant,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            },
+                            modifier = Modifier.clickable { onResultClick(result) }
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
