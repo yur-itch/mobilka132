@@ -52,7 +52,26 @@ import com.example.mobilka132.pickBestRestaurant.DecisionDialog
 import com.example.mobilka132.data.location.LocationManager
 import com.example.mobilka132.model.MapPoint
 import com.example.mobilka132.ui.theme.Mobilka132Theme
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.withStyle
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+sealed class SearchResult {
+    data class BuildingResult(val info: BuildingInfo, val matchType: MatchType) : SearchResult()
+    data class VenueResult(val venue: VenueInfo, val building: BuildingInfo) : SearchResult()
+}
+
+enum class MatchType { NAME, ADDRESS }
 
 class MainActivity : ComponentActivity() {
 
@@ -93,6 +112,35 @@ fun MapScreen(viewModel: MapViewModel, location: LocationManager) {
     var showPointsList by remember { mutableStateOf(false) }
     var showRouteMenu by remember { mutableStateOf(false) }
     var showAlgoMenu by remember { mutableStateOf(false) }
+    var showSearch by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    val searchFocusRequester = remember { FocusRequester() }
+
+    val filteredResults: List<SearchResult> = remember(searchQuery) {
+        if (searchQuery.isEmpty()) emptyList()
+        else {
+            val q = searchQuery.lowercase()
+            val results = mutableListOf<SearchResult>()
+            CampusDatabase.getAllBuildings().values.forEach { building ->
+                if (building.name.lowercase().contains(q))
+                    results.add(SearchResult.BuildingResult(building, MatchType.NAME))
+                else if (building.address.lowercase().contains(q))
+                    results.add(SearchResult.BuildingResult(building, MatchType.ADDRESS))
+                building.venues.forEach { venue ->
+                    if (venue.name.lowercase().contains(q))
+                        results.add(SearchResult.VenueResult(venue, building))
+                }
+            }
+            results
+        }
+    }
+
+    LaunchedEffect(showSearch) {
+        if (showSearch) {
+            kotlinx.coroutines.delay(150)
+            runCatching { searchFocusRequester.requestFocus() }
+        }
+    }
 
     var startPoint by remember { mutableStateOf<Offset?>(null) }
     var endPoint by remember { mutableStateOf<Offset?>(null) }
@@ -118,12 +166,39 @@ fun MapScreen(viewModel: MapViewModel, location: LocationManager) {
 
     val bitmaps = arrayOf(dummyBitmap, roadMask, buildingsMask)
     var shownIndex by remember { mutableIntStateOf(0) }
+    val coroutineScope = rememberCoroutineScope()
+
+    val onSearchResultClick: (BuildingInfo) -> Unit = { buildingInfo ->
+        showSearch = false
+        searchQuery = ""
+        coroutineScope.launch(Dispatchers.Default) {
+            val colorKey = CampusDatabase.getAllBuildings().entries.find { it.value == buildingInfo }?.key
+            if (colorKey != null) {
+                val w = buildingsMask.width
+                val h = buildingsMask.height
+                val pixels = IntArray(w * h)
+                buildingsMask.getPixels(pixels, 0, w, 0, 0, w, h)
+                var sumX = 0L; var sumY = 0L; var count = 0
+                for (i in pixels.indices) {
+                    if ((pixels[i] and 0x00FFFFFF) == colorKey) { sumX += i % w; sumY += i / w; count++ }
+                }
+                if (count > 0) {
+                    val centroid = Offset(sumX.toFloat() / count, sumY.toFloat() / count)
+                    val snapped = state.findNearestAvailablePoint(centroid)
+                    withContext(Dispatchers.Main) {
+                        state.addPointsDirectly(listOf(snapped))
+                        state.centerOnContent(snapped)
+                    }
+                }
+            }
+        }
+    }
 
     LaunchedEffect(roadMask) {
         state.imageSize = Size(roadMask.width.toFloat(), roadMask.height.toFloat())
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
         MapContainer(
             state = state,
             bitmap = bitmaps[shownIndex],
@@ -136,6 +211,84 @@ fun MapScreen(viewModel: MapViewModel, location: LocationManager) {
             viewModel = viewModel,
             location = location
         )
+
+        // Поисковый оверлей
+        if (showSearch) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        ) { showSearch = false; searchQuery = "" }
+                )
+                Column(
+                    modifier = Modifier
+                        .statusBarsPadding()
+                        .padding(top = 8.dp, start = 16.dp, end = 16.dp)
+                        .fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(searchFocusRequester),
+                        placeholder = { Text("Поиск зданий и заведений...", color = Color.Gray) },
+                        trailingIcon = {
+                            IconButton(onClick = { showSearch = false; searchQuery = "" }) {
+                                Icon(Icons.Default.Close, null, tint = Color.White)
+                            }
+                        },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedContainerColor = Color(0xFF1A1C1E),
+                            unfocusedContainerColor = Color(0xFF1A1C1E),
+                            focusedBorderColor = Color(0xFF1B72C0),
+                            unfocusedBorderColor = Color(0xFF3C4043),
+                            cursorColor = Color(0xFF1B72C0)
+                        ),
+                        shape = RoundedCornerShape(16.dp),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        keyboardActions = KeyboardActions(onSearch = {})
+                    )
+
+                    if (searchQuery.isNotEmpty()) {
+                        Spacer(Modifier.height(8.dp))
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 420.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            color = Color(0xFF1A1C1E),
+                            shadowElevation = 8.dp
+                        ) {
+                            if (filteredResults.isEmpty()) {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().padding(20.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("Ничего не найдено", color = Color.Gray)
+                                }
+                            } else {
+                                LazyColumn {
+                                    itemsIndexed(filteredResults) { index, result ->
+                                        SearchResultRow(result, searchQuery, onSearchResultClick)
+                                        if (index < filteredResults.lastIndex) {
+                                            HorizontalDivider(color = Color(0xFF2C2F31), modifier = Modifier.padding(horizontal = 16.dp))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         Column(
             modifier = Modifier
@@ -176,8 +329,24 @@ fun MapScreen(viewModel: MapViewModel, location: LocationManager) {
                 .align(Alignment.TopCenter),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            HeaderCard(state, viewModel, onMenuClick = { showAlgoMenu = true })
-            
+            if (!showSearch) {
+                HeaderCard(state, viewModel, onMenuClick = { showAlgoMenu = true })
+            }
+
+            if (!showSearch) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .size(44.dp)
+                        .background(Color(0xFF0D2137), RoundedCornerShape(10.dp))
+                        .clickable { showSearch = true }
+                        .padding(8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Search, contentDescription = "Поиск", tint = Color.White, modifier = Modifier.size(24.dp))
+                }
+            }
+
             AnimatedVisibility(
                 visible = showRouteMenu,
                 enter = fadeIn() + expandVertically(),
@@ -434,9 +603,8 @@ fun HeaderCard(state: MapState, viewModel: MapViewModel, onMenuClick: () -> Unit
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        color = Color(0xFF1A1C1E).copy(alpha = 0.9f),
-        contentColor = Color.White,
-        shadowElevation = 4.dp
+        color = Color(0xFF1A1C1E),
+        contentColor = Color.White
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
@@ -590,6 +758,79 @@ fun PointSelectorRow(prefix: String, label: String, points: List<MapPoint>, myLo
     }
 }
 
+fun highlightMatches(text: String, query: String): AnnotatedString {
+    if (query.isEmpty()) return AnnotatedString(text)
+    return buildAnnotatedString {
+        val lowerText = text.lowercase()
+        val lowerQuery = query.lowercase()
+        var cursor = 0
+        while (cursor < text.length) {
+            val matchAt = lowerText.indexOf(lowerQuery, cursor)
+            if (matchAt == -1) {
+                append(text.substring(cursor))
+                break
+            }
+            append(text.substring(cursor, matchAt))
+            withStyle(SpanStyle(color = Color(0xFF5BB8FF), fontWeight = FontWeight.Bold, background = Color(0xFF1B72C0).copy(alpha = 0.25f))) {
+                append(text.substring(matchAt, matchAt + query.length))
+            }
+            cursor = matchAt + query.length
+        }
+    }
+}
+
+@Composable
+fun SearchResultRow(
+    result: SearchResult,
+    query: String = "",
+    onResultClick: (BuildingInfo) -> Unit = {}
+) {
+    val icon: ImageVector
+    val title: String
+    val subtitle: String
+    val buildingInfo: BuildingInfo
+    when (result) {
+        is SearchResult.BuildingResult -> {
+            icon = Icons.Default.Business
+            title = result.info.name.ifEmpty { "Здание ТГУ" }
+            subtitle = result.info.address
+            buildingInfo = result.info
+        }
+        is SearchResult.VenueResult -> {
+            icon = Icons.Default.Restaurant
+            title = result.venue.name
+            subtitle = "В здании: ${result.building.name.ifEmpty { result.building.address }}"
+            buildingInfo = result.building
+        }
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onResultClick(buildingInfo) }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Icon(icon, contentDescription = null, tint = Color(0xFF1B72C0), modifier = Modifier.size(22.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = highlightMatches(title, query),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                color = Color.White
+            )
+            if (subtitle.isNotEmpty()) {
+                Text(
+                    text = highlightMatches(subtitle, query),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun MapContainer(
     state: MapState,
@@ -653,22 +894,28 @@ private fun MapContainer(
 
         Canvas(modifier = Modifier.fillMaxSize()) {
             val textStyle = TextStyle(color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            val circleRadius = 15f
+            // Проход 1: все круги
             state.selectedPoints.forEach { point ->
                 val screenPos = state.contentToScreen(point.position)
-                drawCircle(color = primaryColor, radius = 15f, center = screenPos)
+                drawCircle(color = primaryColor, radius = circleRadius, center = screenPos)
                 drawCircle(color = Color.White, radius = 6f, center = screenPos)
-
+            }
+            // Проход 2: все метки поверх кругов
+            state.selectedPoints.forEach { point ->
+                val screenPos = state.contentToScreen(point.position)
                 val textLayoutResult = textMeasurer.measure(point.id.toString(), textStyle)
                 val textWidth = textLayoutResult.size.width.toFloat()
                 val textHeight = textLayoutResult.size.height.toFloat()
-                
+                val rectHeight = textHeight + 8f
+                val rectTopY = screenPos.y - circleRadius - 6f - rectHeight
                 drawRoundRect(
                     color = primaryColor,
-                    topLeft = Offset(screenPos.x - textWidth/2 - 8f, screenPos.y - 45f),
-                    size = Size(textWidth + 16f, textHeight + 8f),
+                    topLeft = Offset(screenPos.x - textWidth / 2 - 8f, rectTopY),
+                    size = Size(textWidth + 16f, rectHeight),
                     cornerRadius = CornerRadius(8f, 8f)
                 )
-                drawText(textLayoutResult = textLayoutResult, color = Color.White, topLeft = Offset(screenPos.x - textWidth/2, screenPos.y - 41f))
+                drawText(textLayoutResult = textLayoutResult, color = Color.White, topLeft = Offset(screenPos.x - textWidth / 2, rectTopY + 4f))
             }
         }
     }
