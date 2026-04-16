@@ -45,12 +45,10 @@ fun TreeVisualizerScreen(rootNode: DecisionTree.Node?) {
 
     val textMeasurer = rememberTextMeasurer()
 
-    // Состояние трансформации
     var scale by remember { mutableFloatStateOf(0.4f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     var initialized by remember { mutableStateOf(false) }
 
-    // Рассчитываем структуру дерева
     val treeLayout = remember(rootNode) {
         val leafCount = countLeaves(rootNode)
         val totalWidth = (leafCount * 1200f).coerceAtLeast(3000f)
@@ -70,7 +68,6 @@ fun TreeVisualizerScreen(rootNode: DecisionTree.Node?) {
             .clipToBounds()
             .background(Color(0xFFF8F9FA))
             .onSizeChanged { size ->
-                // Центрируем дерево при первом получении размеров экрана
                 if (!initialized && size.width > 0) {
                     offset = Offset(size.width / 2f, 150f)
                     initialized = true
@@ -80,7 +77,6 @@ fun TreeVisualizerScreen(rootNode: DecisionTree.Node?) {
                 detectTransformGestures { centroid, pan, zoom, _ ->
                     val oldScale = scale
                     val newScale = (scale * zoom).coerceIn(0.05f, 4f)
-                    // Зум относительно точки касания
                     offset = centroid - (centroid - offset) * (newScale / oldScale) + pan
                     scale = newScale
                 }
@@ -125,7 +121,7 @@ private fun calculateNodePositions(
     val y = depth * 800f
 
     val label = when (node) {
-        is DecisionTree.Leaf -> node.result // Оставляем оригинальное название
+        is DecisionTree.Leaf -> node.result
         is DecisionTree.InternalNode -> translateKey(node.problemName) + "?"
     }
 
@@ -162,14 +158,12 @@ private fun calculateNodePositions(
 
 private fun DrawScope.drawTree(position: TreePosition, textMeasurer: TextMeasurer) {
     val textStyle = TextStyle(color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
-    
-    // Сначала измеряем текст, чтобы узнать размер узла
+
     val textLayout = textMeasurer.measure(
         text = position.label,
         style = textStyle
     )
 
-    // Рассчитываем размеры узла на основе текста + отступы (padding)
     val horizontalPadding = 60f
     val verticalPadding = 40f
     val nodeWidth = textLayout.size.width + horizontalPadding
@@ -212,7 +206,6 @@ private fun DrawScope.drawTree(position: TreePosition, textMeasurer: TextMeasure
 
     val isLeaf = position.node is DecisionTree.Leaf
 
-    // Рисуем тень
     drawRoundRect(
         color = Color.Black.copy(alpha = 0.15f),
         topLeft = Offset(position.x - nodeWidth / 2 + 6f, position.y - nodeHeight / 2 + 6f),
@@ -220,7 +213,6 @@ private fun DrawScope.drawTree(position: TreePosition, textMeasurer: TextMeasure
         cornerRadius = CornerRadius(24f, 24f)
     )
 
-    // Рисуем основной прямоугольник
     drawRoundRect(
         color = if (isLeaf) Color(0xFF2D6A4F) else Color(0xFF0056B3),
         topLeft = Offset(position.x - nodeWidth / 2, position.y - nodeHeight / 2),
@@ -228,7 +220,6 @@ private fun DrawScope.drawTree(position: TreePosition, textMeasurer: TextMeasure
         cornerRadius = CornerRadius(24f, 24f)
     )
 
-    // Рисуем текст
     drawText(
         textLayoutResult = textLayout,
         topLeft = Offset(
