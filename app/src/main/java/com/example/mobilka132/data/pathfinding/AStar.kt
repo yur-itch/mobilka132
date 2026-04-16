@@ -15,7 +15,7 @@ import kotlin.math.abs
 class AStar(
     private val width: Int,
     private val height: Int,
-    private val map: IntArray,       // 1D flattened row-major: index = y * width + x
+    private val map: IntArray,
     private val state: MapState
 ) {
     private val maxNodeWeight = 5

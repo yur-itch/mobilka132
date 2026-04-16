@@ -20,7 +20,7 @@ class AntAlgorithm(val pathfinder: AStar) {
     private val distanceCache = mutableMapOf<Pair<Int, Int>, Double>()
     private val pathCache = mutableMapOf<Pair<Int, Int>, List<Offset>>()
 
-    fun generatePoints(n: Int) {
+    fun generatePoints(w : Int, h : Int, n: Int) {
         points.clear()
         bestPath.clear()
         distanceCache.clear()
@@ -28,7 +28,7 @@ class AntAlgorithm(val pathfinder: AStar) {
         currentIteration.intValue = 0
         bestDistance.doubleValue = Double.MAX_VALUE
         repeat(n) {
-            points.add(Offset(Random.nextFloat() * 3000, Random.nextFloat() * 3000))
+            points.add(Offset(Random.nextFloat() * w, Random.nextFloat() * h))
         }
     }
 
