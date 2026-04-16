@@ -115,7 +115,6 @@ object CampusDatabase {
         addBuilding(0xFF4229E4.toInt(), BuildingInfo("", "Буяновский переулок, 11а", listOf(
             VenueInfo("Шаурмечная 'Black grill'", "10:00 - 23:00", TIME_SNACK, SHAWARMA_MENU)
         )))
-        /*
         addBuilding(0xFF1E77DE.toInt(), BuildingInfo("", "Буяновский переулок, 12", listOf(
             VenueInfo("Продуктовый магазин 'Подкова'", "08:00 - 22:00", TIME_QUICK, GROCERY_MENU)
         )))
@@ -324,7 +323,7 @@ object CampusDatabase {
         addBuilding(0xFFCE9728.toInt(), BuildingInfo("", "Улица Усова, 9Б", listOf(
             VenueInfo("Экспресс-кофейня 'Территория Кофе'", "08:00 - 21:00", TIME_QUICK, COFFEE_MENU)
         )))
-        */
+
     }
 
     fun getBuildingByColor(color: Int): BuildingInfo? {
