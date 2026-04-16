@@ -87,8 +87,7 @@ class MainActivity : ComponentActivity() {
             viewModel.init(mapManager)
             viewModel.loadPointsFromAssets(this@MainActivity)
         }
-        location.checkPermission()
-        location.mapState = viewModel.state
+        location.pixelsInMeter = viewModel.state.metersPerPixel.toFloat()
 
         setContent {
             Mobilka132Theme {
