@@ -255,7 +255,10 @@ fun MapScreen(
             contentAlignment = Alignment.BottomEnd
         ) {
             FloatingActionButton(
-                onClick = { location.requestNewLocationData() },
+                onClick = {
+                    location.checkPermission()
+                    location.requestNewLocationData()
+                },
                 containerColor = Color(0xFF1B72C0),
                 contentColor = Color.White,
                 shape = CircleShape,
