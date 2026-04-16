@@ -746,6 +746,7 @@ fun ControlIconButton(
     contentColor: Color = Color.White
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
+
         IconButton(
             onClick = onClick,
             enabled = enabled,
@@ -753,9 +754,11 @@ fun ControlIconButton(
                 containerColor = if (isSelected) selectedColor.copy(alpha = 0.2f) else Color.Transparent,
                 contentColor = if (isSelected) selectedColor else contentColor
             )
-        ) {
+        )
+        {
             Icon(icon, contentDescription = label, modifier = Modifier.size(28.dp))
         }
+
         Text(label, style = MaterialTheme.typography.labelSmall, color = if (isSelected) selectedColor else contentColor.copy(alpha = 0.7f), fontSize = 11.sp)
     }
 }
@@ -764,14 +767,18 @@ fun ControlIconButton(
 fun RouteMenuCard(
     points: List<MapPoint>,
     myLocation: Offset?,
+
     startLabel: String,
     endLabel: String,
+
     isVisualized: Boolean,
     stepDelay: Long,
     onStepDelayChange: (Long) -> Unit,
     onVisualizationToggle: (Boolean) -> Unit,
+
     onStartSelected: (Offset, String) -> Unit,
     onEndSelected: (Offset, String) -> Unit,
+
     onBuildRoute: () -> Unit,
     onClose: () -> Unit
 ) {
