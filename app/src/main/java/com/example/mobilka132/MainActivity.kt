@@ -69,8 +69,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.mobilka132.pickBestRestaurant.DecisionTreeManager
 import com.example.mobilka132.pickBestRestaurant.DecisionDialog
 import com.example.mobilka132.data.location.LocationManager
-import com.example.mobilka132.model.MapPoint
-import com.example.mobilka132.model.ObstacleLine
+import com.example.mobilka132.model.*
 import com.example.mobilka132.ui.theme.Mobilka132Theme
 import com.example.mobilka132.ui.theme.ThemeMode
 import com.example.mobilka132.data.LocaleHelper
@@ -78,13 +77,6 @@ import com.example.mobilka132.data.ThemeHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
-sealed class SearchResult {
-    data class BuildingResult(val info: BuildingInfo, val matchType: MatchType) : SearchResult()
-    data class VenueResult(val venue: VenueInfo, val building: BuildingInfo) : SearchResult()
-}
-
-enum class MatchType { NAME, ADDRESS }
 
 class MainActivity : ComponentActivity() {
 
@@ -226,8 +218,8 @@ fun MapScreen(
         var count = 0
         for (i in pixels.indices) {
             if ((pixels[i] and 0x00FFFFFF) == colorKey) {
-                sumX += i % w
-                sumY += i / w
+                sumX += (i % w).toLong()
+                sumY += (i / w).toLong()
                 count++
             }
         }
@@ -624,7 +616,7 @@ fun ThemeSelectionDialog(onDismiss: () -> Unit, onThemeChange: (ThemeMode, Color
         ) {
             Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text("Настройка темы", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                
+
                 Button(
                     onClick = { onThemeChange(ThemeMode.LIGHT, null); onDismiss() },
                     modifier = Modifier.fillMaxWidth(),
@@ -643,23 +635,23 @@ fun ThemeSelectionDialog(onDismiss: () -> Unit, onThemeChange: (ThemeMode, Color
 
                 HorizontalDivider()
                 Text("Кастомный цвет", style = MaterialTheme.typography.titleMedium)
-                
+
                 val colors = listOf(Color(0xFFE91E63), Color(0xFF9C27B0), Color(0xFF2196F3), Color(0xFF4CAF50), Color(0xFFFF9800), Color(0xFF795548))
-                
+
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     colors.forEach { color ->
                         Box(
                             modifier = Modifier
                                 .size(40.dp)
                                 .background(color, CircleShape)
-                                .clickable { 
+                                .clickable {
                                     onThemeChange(ThemeMode.CUSTOM, color)
                                     onDismiss()
                                 }
                         )
                     }
                 }
-                
+
                 TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
                     Text("Закрыть")
                 }
@@ -1043,7 +1035,7 @@ fun HeaderCard(state: MapState, viewModel: MapViewModel, onMenuClick: () -> Unit
         ) {
             IconButton(onClick = onMenuClick) {
                 Icon(
-                    Icons.Default.Menu, 
+                    Icons.Default.Menu,
                     contentDescription = stringResource(R.string.menu_title),
                     tint = MaterialTheme.colorScheme.onSurface
                 )
@@ -1217,11 +1209,11 @@ private fun MapContainer(
     }
 
     val stepOffset = remember(viewModel.currentStep) {
-        viewModel.currentStep?.current?.let { (x, y) -> Offset(x.toFloat(), y.toFloat()) }
+        viewModel.currentStep?.current?.let { (x, y) -> Offset(x, y) }
     }
 
     val nodeOffsets = remember(viewModel.currentStep) {
-        viewModel.currentStep?.openSet?.map { (x, y) -> Offset(x.toFloat(), y.toFloat()) } ?: emptyList()
+        viewModel.currentStep?.openSet?.map { (x, y) -> Offset(x, y) } ?: emptyList()
     }
 
     val primaryColor = MaterialTheme.colorScheme.primary
@@ -1512,7 +1504,7 @@ fun SearchBar(
     val focusRequester = remember { FocusRequester() }
     val highlightColor = MaterialTheme.colorScheme.primary
     val highlightBg = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-    
+
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
     }
@@ -1555,7 +1547,7 @@ fun SearchBar(
                     }
                 }
             }
-            
+
             if (results.isNotEmpty()) {
                 HorizontalDivider()
                 LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
@@ -1565,16 +1557,16 @@ fun SearchBar(
                             is SearchResult.VenueResult -> result.venue.name to result.building.name
                         }
                         ListItem(
-                            headlineContent = { 
-                                Text(highlightMatches(title, query, highlightColor, highlightBg)) 
+                            headlineContent = {
+                                Text(highlightMatches(title, query, highlightColor, highlightBg))
                             },
-                            supportingContent = { 
+                            supportingContent = {
                                 Text(
                                     highlightMatches(sub, query, highlightColor, highlightBg),
                                     fontSize = 12.sp
-                                ) 
+                                )
                             },
-                            leadingContent = { 
+                            leadingContent = {
                                 Icon(
                                     if (result is SearchResult.BuildingResult) Icons.Default.Business else Icons.Default.Restaurant,
                                     contentDescription = null,
