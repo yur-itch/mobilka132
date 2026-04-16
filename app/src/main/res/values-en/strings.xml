@@ -1,0 +1,90 @@
+<resources>
+    <string name="app_name">mobilka132</string>
+    <string name="title_activity_test">Test Activity</string>
+
+    <string name="menu_title">Menu</string>
+    <string name="map_view">View</string>
+    <string name="stop_algo">Stop</string>
+    <string name="map_route_title">Route Map</string>
+    <string name="searching_path">Searching path…</string>
+    <string name="gps_label">GPS</string>
+
+    <string name="settings_language">App Language</string>
+    <string name="lang_ru">Русский</string>
+    <string name="lang_en">English</string>
+    <string name="lang_zh">中文</string>
+
+    <string name="label_point">Point</string>
+    <string name="label_obstacle">Obstacle</string>
+    <string name="label_path">Path</string>
+    <string name="label_locations">Locations</string>
+    <string name="label_obstacles_list">Obstacles</string>
+    <string name="point_prefix">Point #%1$d</string>
+
+    <string name="algo_advice_title">Advice (Decision Tree)</string>
+    <string name="algo_advice_desc">Help in choosing a place for a snack</string>
+    <string name="algo_ga_title">Genetic Algorithm (GA)</string>
+    <string name="algo_ga_desc">Finding the optimal route for shopping</string>
+    <string name="algo_ga_running">Genetics: generation %1$d</string>
+    <string name="algo_tsp_title">Ant Algorithm (TSP)</string>
+    <string name="algo_tsp_desc">Solving the traveling salesman problem</string>
+    <string name="algo_tsp_running">TSP: searching…</string>
+
+    <string name="btn_route_here">Route Here</string>
+    <string name="route_card_title">Route</string>
+    <string name="route_from">From</string>
+    <string name="route_to">To</string>
+    <string name="route_from_placeholder">From where</string>
+    <string name="route_to_placeholder">To where</string>
+    <string name="my_location_gps">My location (GPS)</string>
+    <string name="btn_build_route">Build Route</string>
+
+    <string name="visualization_astar">A* Visualization</string>
+    <string name="delay_label">Delay: %1$d ms</string>
+
+    <string name="dialog_my_locations">My Locations</string>
+    <string name="dialog_delete_all">Delete All</string>
+    <string name="dialog_empty_list">List is empty</string>
+    <string name="dialog_close">Close</string>
+    <string name="dialog_obstacles_title">Obstacles</string>
+    <string name="dialog_obstacle_line">Line #%1$d</string>
+    <string name="dialog_clear_all">Clear All</string>
+    <string name="dialog_delete">Delete</string>
+
+    <string name="building_no_name">Unnamed Building</string>
+    <string name="building_venues_title">Venues in this building:</string>
+    <string name="building_no_venues">No registered venues in this building</string>
+    <string name="venue_working_hours">Working hours</string>
+    <string name="venue_visit_time">Average visit time</string>
+    <string name="venue_visit_time_value">%1$d min</string>
+    <string name="venue_menu_title">Menu:</string>
+    <string name="venue_leave_feedback">Leave feedback (rate)</string>
+    <string name="feedback_thanks">Thanks for the rating: %1$s!</string>
+
+    <string name="tree_skip_and_advice">Skip and give advice</string>
+    <string name="tree_select_establishment">Select Establishment</string>
+    <string name="tree_reset">Reset</string>
+    <string name="tree_next">Next</string>
+    <string name="tree_settings">Data Settings</string>
+    <string name="tree_structure">Tree Structure</string>
+    <string name="tree_recommendation">RECOMMENDATION:</string>
+    <string name="tree_decision_path">Decision Path:</string>
+    <string name="tree_question_budget">What is your budget?</string>
+    <string name="tree_question_location">Where are you now?</string>
+    <string name="tree_question_time">How much free time do you have?</string>
+    <string name="tree_question_food">What do you want to eat?</string>
+    <string name="tree_question_queue">How tolerant are you of queues?</string>
+    <string name="tree_question_weather">What is the weather like?</string>
+    <string name="tree_budget_label">Amount (rub)</string>
+    <string name="tree_apply">Apply and rebuild</string>
+    <string name="tree_csv_label">Training set (CSV):</string>
+    <string name="tree_not_ready">Tree is not ready. Check CSV.</string>
+
+    <string name="node_budget">Budget</string>
+    <string name="node_location">Location</string>
+    <string name="node_time">Time</string>
+    <string name="node_food">Food</string>
+    <string name="node_queue">Queue</string>
+    <string name="node_weather">Weather</string>
+    <string name="node_not_built">Tree not built</string>
+</resources>
