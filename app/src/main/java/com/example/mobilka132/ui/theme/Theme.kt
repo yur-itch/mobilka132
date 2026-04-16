@@ -1,16 +1,15 @@
 package com.example.mobilka132.ui.theme
 
-import android.app.Activity
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+
+enum class ThemeMode {
+    LIGHT, DARK, CUSTOM
+}
 
 private val DarkColorScheme = darkColorScheme(
     primary = TSUBlue,
@@ -54,18 +53,29 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun Mobilka132Theme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = false,
+    themeMode: ThemeMode = if (isSystemInDarkTheme()) ThemeMode.DARK else ThemeMode.LIGHT,
+    customColor: Color = TSUBlue,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+    val colorScheme = when (themeMode) {
+        ThemeMode.LIGHT -> LightColorScheme
+        ThemeMode.DARK -> DarkColorScheme
+        ThemeMode.CUSTOM -> {
+            lightColorScheme(
+                primary = customColor,
+                onPrimary = Color.White,
+                primaryContainer = customColor.copy(alpha = 0.1f),
+                onPrimaryContainer = customColor,
+                secondary = Color.Black,
+                onSecondary = Color.White,
+                background = Color.White,
+                onBackground = Color.Black,
+                surface = Color.White,
+                onSurface = Color.Black,
+                surfaceVariant = Color(0xFFF5F5F5),
+                onSurfaceVariant = customColor
+            )
         }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
     }
 
     MaterialTheme(

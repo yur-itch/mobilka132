@@ -62,7 +62,9 @@ import com.example.mobilka132.data.location.LocationManager
 import com.example.mobilka132.model.MapPoint
 import com.example.mobilka132.model.ObstacleLine
 import com.example.mobilka132.ui.theme.Mobilka132Theme
+import com.example.mobilka132.ui.theme.ThemeMode
 import com.example.mobilka132.data.LocaleHelper
+import com.example.mobilka132.data.ThemeHelper
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -89,11 +91,26 @@ class MainActivity : ComponentActivity() {
         location.pixelsInMeter = viewModel.state.metersPerPixel.toFloat()
 
         setContent {
-            Mobilka132Theme {
-                MapScreen(viewModel, location) { lang ->
-                    LocaleHelper.setLocale(this, lang)
-                    recreate()
-                }
+            var currentTheme by remember { mutableStateOf(ThemeHelper.getTheme(this)) }
+            var customColor by remember { mutableStateOf(ThemeHelper.getCustomColor(this)) }
+
+            Mobilka132Theme(themeMode = currentTheme, customColor = customColor) {
+                MapScreen(
+                    viewModel = viewModel,
+                    location = location,
+                    onLanguageChange = { lang ->
+                        LocaleHelper.setLocale(this, lang)
+                        recreate()
+                    },
+                    onThemeChange = { theme, color ->
+                        ThemeHelper.setTheme(this, theme)
+                        if (color != null) {
+                            ThemeHelper.setCustomColor(this, color)
+                            customColor = color
+                        }
+                        currentTheme = theme
+                    }
+                )
             }
         }
     }
@@ -103,7 +120,8 @@ class MainActivity : ComponentActivity() {
 fun MapScreen(
     viewModel: MapViewModel,
     location: LocationManager,
-    onLanguageChange: (String) -> Unit
+    onLanguageChange: (String) -> Unit,
+    onThemeChange: (ThemeMode, Color?) -> Unit
 ) {
     val state = viewModel.state
     val overlay = viewModel.overlay
@@ -118,6 +136,7 @@ fun MapScreen(
     var showObstacleMenu by remember { mutableStateOf(false) }
     var showRatingDialog by remember { mutableStateOf(false) }
     var showVenueSelectionDialog by remember { mutableStateOf(false) }
+    var showThemeMenu by remember { mutableStateOf(false) }
 
     val defaultFrom = stringResource(R.string.route_from_placeholder)
     val defaultTo = stringResource(R.string.route_to_placeholder)
@@ -181,12 +200,12 @@ fun MapScreen(
             Box(
                 modifier = Modifier
                     .size(44.dp)
-                    .background(Color(0xFF3C4043).copy(alpha = 0.9f), RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f), RoundedCornerShape(10.dp))
                     .clickable { shownIndex = (shownIndex + 1) % bitmaps.size }
                     .padding(8.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Layers, contentDescription = stringResource(R.string.map_view), tint = Color.White, modifier = Modifier.size(24.dp))
+                Icon(Icons.Default.Layers, contentDescription = stringResource(R.string.map_view), tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
             }
 
             if (viewModel.isAnyAlgoRunning) {
@@ -210,7 +229,10 @@ fun MapScreen(
                 .align(Alignment.TopCenter),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            HeaderCard(state, viewModel, onMenuClick = { showAlgoMenu = true })
+            HeaderCard(state, viewModel, 
+                onMenuClick = { showAlgoMenu = true },
+                onThemeClick = { showThemeMenu = true }
+            )
 
             AnimatedVisibility(
                 visible = showRouteMenu,
@@ -255,8 +277,8 @@ fun MapScreen(
                     location.checkPermission()
                     location.requestNewLocationData()
                 },
-                containerColor = Color(0xFF1B72C0),
-                contentColor = Color.White,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = CircleShape,
                 modifier = Modifier.size(44.dp)
             ) {
@@ -321,8 +343,8 @@ fun MapScreen(
 
                 Surface(
                     shape = RoundedCornerShape(32.dp),
-                    color = Color(0xFF1A1C1E),
-                    contentColor = Color.White,
+                    color = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
                     tonalElevation = 8.dp,
                     shadowElevation = 12.dp
                 ) {
@@ -341,8 +363,8 @@ fun MapScreen(
                             isSelected = state.isSelectionMode,
                             enabled = !isBusy,
                             onClick = { state.isSelectionMode = !state.isSelectionMode },
-                            selectedColor = Color(0xFF91C1F3),
-                            contentColor = Color.White
+                            selectedColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onSurface
                         )
 
                         ControlIconButton(
@@ -351,8 +373,8 @@ fun MapScreen(
                             isSelected = viewModel.isObstacleMode,
                             enabled = !isBusy,
                             onClick = { viewModel.isObstacleMode = !viewModel.isObstacleMode },
-                            selectedColor = Color(0xFF91C1F3),
-                            contentColor = Color.White
+                            selectedColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onSurface
                         )
 
                         ControlIconButton(
@@ -360,7 +382,7 @@ fun MapScreen(
                             label = stringResource(R.string.label_path),
                             enabled = !isBusy,
                             onClick = { showRouteMenu = !showRouteMenu },
-                            contentColor = Color.White
+                            contentColor = MaterialTheme.colorScheme.onSurface
                         )
 
                         ControlIconButton(
@@ -368,7 +390,7 @@ fun MapScreen(
                             label = "${state.selectedPoints.size}",
                             enabled = !isBusy,
                             onClick = { showPointsList = true },
-                            contentColor = Color.White
+                            contentColor = MaterialTheme.colorScheme.onSurface
                         )
 
                         ControlIconButton(
@@ -376,11 +398,18 @@ fun MapScreen(
                             label = "${viewModel.obstacles.size}",
                             enabled = !isBusy,
                             onClick = { showObstacleMenu = true },
-                            contentColor = Color.White
+                            contentColor = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
             }
+        }
+
+        if (showThemeMenu) {
+            ThemeSelectionDialog(
+                onDismiss = { showThemeMenu = false },
+                onThemeChange = onThemeChange
+            )
         }
 
         if (showPointsList) {
@@ -473,6 +502,61 @@ fun MapScreen(
     }
 }
 
+@Composable
+fun ThemeSelectionDialog(onDismiss: () -> Unit, onThemeChange: (ThemeMode, Color?) -> Unit) {
+    val context = LocalContext.current
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp
+        ) {
+            Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text("Настройка темы", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                
+                Button(
+                    onClick = { onThemeChange(ThemeMode.LIGHT, null); onDismiss() },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer)
+                ) {
+                    Text("Светлая (ТГУ)")
+                }
+
+                Button(
+                    onClick = { onThemeChange(ThemeMode.DARK, null); onDismiss() },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer)
+                ) {
+                    Text("Темная")
+                }
+
+                Divider()
+                Text("Кастомный цвет", style = MaterialTheme.typography.titleMedium)
+                
+                val colors = listOf(Color(0xFFE91E63), Color(0xFF9C27B0), Color(0xFF2196F3), Color(0xFF4CAF50), Color(0xFFFF9800), Color(0xFF795548))
+                
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    colors.forEach { color ->
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(color, CircleShape)
+                                .clickable { 
+                                    onThemeChange(ThemeMode.CUSTOM, color)
+                                    onDismiss()
+                                }
+                        )
+                    }
+                }
+                
+                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
+                    Text("Закрыть")
+                }
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlgoDrawer(
@@ -505,7 +589,7 @@ fun AlgoDrawer(
             ListItem(
                 headlineContent = { Text(stringResource(R.string.algo_ga_title)) },
                 supportingContent = { Text(stringResource(R.string.algo_ga_desc)) },
-                leadingContent = { Icon(Icons.Default.AutoFixHigh, null, tint = Color(0xFF1B72C0)) },
+                leadingContent = { Icon(Icons.Default.AutoFixHigh, null, tint = MaterialTheme.colorScheme.primary) },
                 trailingContent = {
                     IconButton(onClick = { onConfigureGA() }) {
                         Icon(Icons.Default.Settings, contentDescription = "Настроить")
@@ -517,7 +601,7 @@ fun AlgoDrawer(
             ListItem(
                 headlineContent = { Text(stringResource(R.string.algo_tsp_title)) },
                 supportingContent = { Text(stringResource(R.string.algo_tsp_desc)) },
-                leadingContent = { Icon(Icons.Default.TravelExplore, null, tint = Color(0xFF1B72C0)) },
+                leadingContent = { Icon(Icons.Default.TravelExplore, null, tint = MaterialTheme.colorScheme.primary) },
                 modifier = Modifier.clickable(enabled = !isBusy) { onStartTSP() }
             )
 
@@ -835,19 +919,23 @@ fun InfoRow(icon: ImageVector, label: String, value: String) {
 }
 
 @Composable
-fun HeaderCard(state: MapState, viewModel: MapViewModel, onMenuClick: () -> Unit) {
+fun HeaderCard(state: MapState, viewModel: MapViewModel, onMenuClick: () -> Unit, onThemeClick: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth().shadow(4.dp, RoundedCornerShape(16.dp)),
         shape = RoundedCornerShape(16.dp),
-        color = Color(0xFF1A1C1E).copy(alpha = 0.95f)
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            IconButton(onClick = onMenuClick, colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White)) {
-                Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.menu_title))
+            IconButton(onClick = onMenuClick) {
+                Icon(
+                    Icons.Default.Menu, 
+                    contentDescription = stringResource(R.string.menu_title),
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
             }
 
             Text(
@@ -860,11 +948,15 @@ fun HeaderCard(state: MapState, viewModel: MapViewModel, onMenuClick: () -> Unit
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
-                color = Color.White
+                color = MaterialTheme.colorScheme.onSurface
             )
 
+            IconButton(onClick = onThemeClick) {
+                Icon(Icons.Default.Palette, contentDescription = "Theme", tint = MaterialTheme.colorScheme.primary)
+            }
+
             if (state.isProcessing || viewModel.isAnyAlgoRunning) {
-                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = Color.White)
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
             }
         }
     }
@@ -877,8 +969,8 @@ fun ControlIconButton(
     enabled: Boolean,
     onClick: () -> Unit,
     isSelected: Boolean = false,
-    selectedColor: Color = Color(0xFF91C1F3),
-    contentColor: Color = Color.White
+    selectedColor: Color = MaterialTheme.colorScheme.primary,
+    contentColor: Color = MaterialTheme.colorScheme.onSurface
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         IconButton(
