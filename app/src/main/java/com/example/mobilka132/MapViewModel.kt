@@ -59,11 +59,38 @@ class MapViewModel : ViewModel() {
 
     private var loadedPointsWithTiming: List<MapPointData> = emptyList()
 
+    val selectedVenues = mutableStateMapOf<Int, Set<String>>()
+
     fun init(mapManager: MapManager) {
         this.mapManager = mapManager
         state.init(mapManager.width, mapManager.height, mapManager.grid)
         pathfinder = AStar(mapManager.width, mapManager.height, mapManager.grid, state)
         initialized = true
+
+        CampusDatabase.getAllBuildings().forEach { (color, building) ->
+            if (building.venues.isNotEmpty()) {
+                selectedVenues[color] = building.venues.map { it.name }.toSet()
+            }
+        }
+    }
+
+    fun toggleVenue(buildingColor: Int, venueName: String) {
+        val currentSet = selectedVenues[buildingColor]?.toMutableSet() ?: mutableSetOf()
+        if (currentSet.contains(venueName)) {
+            currentSet.remove(venueName)
+        } else {
+            currentSet.add(venueName)
+        }
+        selectedVenues[buildingColor] = currentSet
+    }
+
+    fun setBuildingVenues(buildingColor: Int, selected: Boolean) {
+        val building = CampusDatabase.getBuildingByColor(buildingColor) ?: return
+        if (selected) {
+            selectedVenues[buildingColor] = building.venues.map { it.name }.toSet()
+        } else {
+            selectedVenues[buildingColor] = emptySet()
+        }
     }
 
     fun loadPointsFromAssets(context: Context) {
@@ -270,10 +297,15 @@ class MapViewModel : ViewModel() {
                         val building = CampusDatabase.getBuildingByColor(color) ?: continue
                         if (building.venues.isEmpty()) continue
 
+                        val selectedInBuilding = selectedVenues[color] ?: emptySet()
+                        if (selectedInBuilding.isEmpty()) continue
+
                         val centroid = acc.centroid
                         val walkablePoint = state.findNearestAvailablePoint(centroid)
 
                         for (venue in building.venues) {
+                            if (venue.name !in selectedInBuilding) continue
+
                             val hours = venue.workingHours.split("-")
                             val start = if (hours.size == 2) parseTime(hours[0]) else 0
                             val end = if (hours.size == 2) parseTime(hours[1]) else 1440
@@ -295,7 +327,7 @@ class MapViewModel : ViewModel() {
                     state.addPointsWithTiming(venuePoints)
                     Log.d("GA_POINTS", "Loaded ${venuePoints.size} venue points from CampusDatabase")
                 } else {
-                    Log.w("GA_POINTS", "No venues found on buildings map! Falling back to CSV.")
+                    Log.w("GA_POINTS", "No selected venues found on buildings map! Falling back to CSV.")
                     if (loadedPointsWithTiming.isNotEmpty()) {
                         state.addPointsWithTiming(loadedPointsWithTiming)
                     } else {

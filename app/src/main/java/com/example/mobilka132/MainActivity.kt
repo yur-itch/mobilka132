@@ -43,6 +43,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
@@ -103,6 +104,7 @@ fun MapScreen(viewModel: MapViewModel, location: LocationManager) {
     var showAlgoMenu by remember { mutableStateOf(false) }
     var showObstacleMenu by remember { mutableStateOf(false) }
     var showRatingDialog by remember { mutableStateOf(false) }
+    var showVenueSelectionDialog by remember { mutableStateOf(false) }
 
     var startPoint by remember { mutableStateOf<Offset?>(null) }
     var endPoint by remember { mutableStateOf<Offset?>(null) }
@@ -410,7 +412,15 @@ fun MapScreen(viewModel: MapViewModel, location: LocationManager) {
                 onStartGA = { viewModel.startFoodShoppingGA(buildingsMask); showAlgoMenu = false },
                 onStartTSP = { viewModel.findTSPSolution(); showAlgoMenu = false },
                 onShowAdvice = { showDecisionDialog = true },
+                onConfigureGA = { showVenueSelectionDialog = true },
                 isBusy = viewModel.isAnyAlgoRunning || state.isProcessing
+            )
+        }
+
+        if (showVenueSelectionDialog) {
+            VenueSelectionDialog(
+                viewModel = viewModel,
+                onDismiss = { showVenueSelectionDialog = false }
             )
         }
 
@@ -428,7 +438,14 @@ fun MapScreen(viewModel: MapViewModel, location: LocationManager) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AlgoDrawer(onDismiss: () -> Unit, onStartGA: () -> Unit, onStartTSP: () -> Unit, onShowAdvice: () -> Unit, isBusy: Boolean) {
+fun AlgoDrawer(
+    onDismiss: () -> Unit,
+    onStartGA: () -> Unit,
+    onStartTSP: () -> Unit,
+    onShowAdvice: () -> Unit,
+    onConfigureGA: () -> Unit,
+    isBusy: Boolean
+) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
@@ -451,6 +468,11 @@ fun AlgoDrawer(onDismiss: () -> Unit, onStartGA: () -> Unit, onStartTSP: () -> U
                 headlineContent = { Text("Генетический алгоритм (GA)") },
                 supportingContent = { Text("Поиск оптимального маршрута для покупок") },
                 leadingContent = { Icon(Icons.Default.AutoFixHigh, null, tint = Color(0xFF1B72C0)) },
+                trailingContent = {
+                    IconButton(onClick = { onConfigureGA() }) {
+                        Icon(Icons.Default.Settings, contentDescription = "Настроить")
+                    }
+                },
                 modifier = Modifier.clickable(enabled = !isBusy) { onStartGA() }
             )
             
@@ -461,6 +483,116 @@ fun AlgoDrawer(onDismiss: () -> Unit, onStartGA: () -> Unit, onStartTSP: () -> U
                 modifier = Modifier.clickable(enabled = !isBusy) { onStartTSP() }
             )
         }
+    }
+}
+
+@Composable
+fun VenueSelectionDialog(viewModel: MapViewModel, onDismiss: () -> Unit) {
+    val buildings = remember { CampusDatabase.getAllBuildings().filter { it.value.venues.isNotEmpty() } }
+    
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text(
+                    "Настройка точек GA",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    buildings.forEach { (color, building) ->
+                        item {
+                            BuildingSelectionItem(
+                                building = building,
+                                color = color,
+                                viewModel = viewModel
+                            )
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier.align(Alignment.End),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Готово")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun BuildingSelectionItem(building: BuildingInfo, color: Int, viewModel: MapViewModel) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedVenues = viewModel.selectedVenues[color] ?: emptySet()
+    
+    val toggleState = when {
+        selectedVenues.isEmpty() -> ToggleableState.Off
+        selectedVenues.size == building.venues.size -> ToggleableState.On
+        else -> ToggleableState.Indeterminate
+    }
+
+    Column {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = !expanded }
+                .padding(vertical = 8.dp)
+        ) {
+            TriStateCheckbox(
+                state = toggleState,
+                onClick = {
+                    val newState = toggleState != ToggleableState.On
+                    viewModel.setBuildingVenues(color, newState)
+                }
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = building.name.ifEmpty { building.address },
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
+            )
+            Icon(
+                if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                contentDescription = null
+            )
+        }
+        
+        if (expanded) {
+            Column(modifier = Modifier.padding(start = 32.dp)) {
+                building.venues.forEach { venue ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { viewModel.toggleVenue(color, venue.name) }
+                            .padding(vertical = 4.dp)
+                    ) {
+                        Checkbox(
+                            checked = selectedVenues.contains(venue.name),
+                            onCheckedChange = { viewModel.toggleVenue(color, venue.name) }
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(venue.name, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+        }
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     }
 }
 
