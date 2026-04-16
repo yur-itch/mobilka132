@@ -71,7 +71,6 @@ class MainActivity : ComponentActivity() {
     private val viewModel: MapViewModel by viewModels<MapViewModel>()
     private val location: LocationManager by lazy { LocationManager(this, activityResultRegistry) }
 
-    // V2: runtime locale override
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(LocaleHelper.onAttach(newBase))
     }
@@ -91,7 +90,6 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             Mobilka132Theme {
-                // V2: pass onLanguageChange callback
                 MapScreen(viewModel, location) { lang ->
                     LocaleHelper.setLocale(this, lang)
                     recreate()
@@ -119,7 +117,6 @@ fun MapScreen(
     var showAlgoMenu by remember { mutableStateOf(false) }
     var showObstacleMenu by remember { mutableStateOf(false) }
     var showRatingDialog by remember { mutableStateOf(false) }
-    // V1: venue selection for GA configuration
     var showVenueSelectionDialog by remember { mutableStateOf(false) }
 
     val defaultFrom = stringResource(R.string.route_from_placeholder)
@@ -247,7 +244,6 @@ fun MapScreen(
             }
         }
 
-        // V2: GPS as standalone FAB above the bottom bar
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -382,7 +378,6 @@ fun MapScreen(
                             onClick = { showObstacleMenu = true },
                             contentColor = Color.White
                         )
-                        // GPS button removed from here — moved to standalone FAB (V2)
                     }
                 }
             }
@@ -452,14 +447,12 @@ fun MapScreen(
                 onStartGA = { viewModel.startFoodShoppingGA(buildingsMask); showAlgoMenu = false },
                 onStartTSP = { viewModel.findTSPSolution(); showAlgoMenu = false },
                 onShowAdvice = { showDecisionDialog = true },
-                // V1: GA configuration gear
                 onConfigureGA = { showVenueSelectionDialog = true },
                 onLanguageChange = onLanguageChange,
                 isBusy = viewModel.isAnyAlgoRunning || state.isProcessing
             )
         }
 
-        // V1: VenueSelectionDialog for GA point configuration
         if (showVenueSelectionDialog) {
             VenueSelectionDialog(
                 viewModel = viewModel,
@@ -487,8 +480,8 @@ fun AlgoDrawer(
     onStartGA: () -> Unit,
     onStartTSP: () -> Unit,
     onShowAdvice: () -> Unit,
-    onConfigureGA: () -> Unit,          // V1: GA settings gear
-    onLanguageChange: (String) -> Unit, // V2: language switcher
+    onConfigureGA: () -> Unit,
+    onLanguageChange: (String) -> Unit,
     isBusy: Boolean
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -509,7 +502,6 @@ fun AlgoDrawer(
 
             HorizontalDivider()
 
-            // V1: GA item with settings gear restored
             ListItem(
                 headlineContent = { Text(stringResource(R.string.algo_ga_title)) },
                 supportingContent = { Text(stringResource(R.string.algo_ga_desc)) },
@@ -531,7 +523,6 @@ fun AlgoDrawer(
 
             HorizontalDivider()
 
-            // V2: language switcher section
             Text(stringResource(R.string.settings_language), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
 
             Row(
@@ -558,7 +549,6 @@ fun LanguageButton(label: String, onClick: () -> Unit, modifier: Modifier = Modi
     }
 }
 
-// V1: VenueSelectionDialog — absent in V2, restored here
 @Composable
 fun VenueSelectionDialog(viewModel: MapViewModel, onDismiss: () -> Unit) {
     val buildings = remember { CampusDatabase.getAllBuildings().filter { it.value.venues.isNotEmpty() } }
@@ -606,7 +596,6 @@ fun VenueSelectionDialog(viewModel: MapViewModel, onDismiss: () -> Unit) {
     }
 }
 
-// V1: BuildingSelectionItem — absent in V2, restored here
 @Composable
 fun BuildingSelectionItem(building: BuildingInfo, color: Int, viewModel: MapViewModel) {
     var expanded by remember { mutableStateOf(false) }
