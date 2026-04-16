@@ -60,10 +60,7 @@ class Mutator(private val path: MutableList<Int>, private val ctx: MutationConte
     }
 
     suspend fun do2opt(): Mutator {
-        while (true) {
-            val pair = this.path.findFirst2opt(ctx) ?: break
-            this.path.invertRange(pair.first + 1, pair.second)
-        }
+        while (this.path.apply2OptPass(this.ctx)) {}
         return this
     }
 
@@ -127,4 +124,16 @@ suspend fun MutableList<Int>.findFirst2opt(ctx: MutationContext): Pair<Int, Int>
         }
     }
     return null
+}
+
+suspend fun MutableList<Int>.apply2OptPass(ctx: MutationContext): Boolean {
+    for (i in 0 until size - 3) {
+        for (j in i + 2 until size - 1) {
+            if (this.improvesWith2opt(i, j, ctx)) {
+                this.invertRange(i + 1, j)
+                return true
+            }
+        }
+    }
+    return false
 }
