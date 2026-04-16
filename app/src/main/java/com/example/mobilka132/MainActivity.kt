@@ -24,6 +24,18 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.withStyle
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
@@ -67,6 +79,13 @@ import com.example.mobilka132.data.LocaleHelper
 import com.example.mobilka132.data.ThemeHelper
 import kotlinx.coroutines.launch
 
+sealed class SearchResult {
+    data class BuildingResult(val info: BuildingInfo, val matchType: MatchType) : SearchResult()
+    data class VenueResult(val venue: VenueInfo, val building: BuildingInfo) : SearchResult()
+}
+
+enum class MatchType { NAME, ADDRESS }
+
 class MainActivity : ComponentActivity() {
 
     private lateinit var mapManager: MapManager
@@ -88,6 +107,7 @@ class MainActivity : ComponentActivity() {
             viewModel.init(mapManager)
             viewModel.loadPointsFromAssets(this@MainActivity)
         }
+        location.checkPermission()
         location.pixelsInMeter = viewModel.state.metersPerPixel.toFloat()
 
         setContent {
@@ -171,6 +191,76 @@ fun MapScreen(
 
     val bitmaps = arrayOf(dummyBitmap, roadMask, buildingsMask)
     var shownIndex by remember { mutableIntStateOf(0) }
+    var showSearch by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    val coroutineScope = rememberCoroutineScope()
+
+    val filteredResults: List<SearchResult> = remember(searchQuery) {
+        if (searchQuery.isEmpty()) emptyList()
+        else {
+            val q = searchQuery.lowercase()
+            val results = mutableListOf<SearchResult>()
+            CampusDatabase.getAllBuildings().values.forEach { building ->
+                if (building.name.lowercase().contains(q)) {
+                    results.add(SearchResult.BuildingResult(building, MatchType.NAME))
+                } else if (building.address.lowercase().contains(q)) {
+                    results.add(SearchResult.BuildingResult(building, MatchType.ADDRESS))
+                }
+                building.venues.forEach { venue ->
+                    if (venue.name.lowercase().contains(q)) {
+                        results.add(SearchResult.VenueResult(venue, building))
+                    }
+                }
+            }
+            results
+        }
+    }
+
+    fun buildCentroidForBuilding(buildingInfo: BuildingInfo): Offset? {
+        val colorKey = CampusDatabase.getAllBuildings().entries.find { it.value == buildingInfo }?.key ?: return null
+        val w = buildingsMask.width
+        val h = buildingsMask.height
+        val pixels = IntArray(w * h)
+        buildingsMask.getPixels(pixels, 0, w, 0, 0, w, h)
+        var sumX = 0L
+        var sumY = 0L
+        var count = 0
+        for (i in pixels.indices) {
+            if ((pixels[i] and 0x00FFFFFF) == colorKey) {
+                sumX += i % w
+                sumY += i / w
+                count++
+            }
+        }
+        return if (count > 0) Offset(sumX.toFloat() / count, sumY.toFloat() / count) else null
+    }
+
+    val onSearchResultClick: (SearchResult) -> Unit = { result ->
+        showSearch = false
+        searchQuery = ""
+        coroutineScope.launch(Dispatchers.Default) {
+            val buildingInfo = when (result) {
+                is SearchResult.BuildingResult -> result.info
+                is SearchResult.VenueResult -> result.building
+            }
+            val centroid = buildCentroidForBuilding(buildingInfo) ?: return@launch
+            val snapped = state.findNearestAvailablePoint(centroid)
+            withContext(Dispatchers.Main) {
+                state.addPoint(snapped)
+                state.lastClickContentPoint = snapped
+                when (result) {
+                    is SearchResult.BuildingResult -> {
+                        state.selectedVenueInfo = null
+                        state.selectedBuildingInfo = result.info
+                    }
+                    is SearchResult.VenueResult -> {
+                        state.selectedBuildingInfo = result.building
+                        state.selectedVenueInfo = result.venue
+                    }
+                }
+            }
+        }
+    }
 
     LaunchedEffect(roadMask) {
         state.imageSize = Size(roadMask.width.toFloat(), roadMask.height.toFloat())
@@ -229,10 +319,25 @@ fun MapScreen(
                 .align(Alignment.TopCenter),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            HeaderCard(state, viewModel, 
+            HeaderCard(state, viewModel,
                 onMenuClick = { showAlgoMenu = true },
                 onThemeClick = { showThemeMenu = true }
             )
+            if (!showSearch) {
+                HeaderCard(state, viewModel, onMenuClick = { showAlgoMenu = true })
+
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .size(44.dp)
+                        .background(Color(0xFF0D2137), RoundedCornerShape(10.dp))
+                        .clickable { showSearch = true }
+                        .padding(8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Search, contentDescription = "Поиск", tint = Color.White, modifier = Modifier.size(24.dp))
+                }
+            }
 
             AnimatedVisibility(
                 visible = showRouteMenu,
@@ -499,6 +604,16 @@ fun MapScreen(
                 }
             )
         }
+
+        if (showSearch) {
+            SearchOverlay(
+                query = searchQuery,
+                onQueryChange = { searchQuery = it },
+                results = filteredResults,
+                onDismiss = { showSearch = false; searchQuery = "" },
+                onResultClick = onSearchResultClick
+            )
+        }
     }
 }
 
@@ -513,7 +628,7 @@ fun ThemeSelectionDialog(onDismiss: () -> Unit, onThemeChange: (ThemeMode, Color
         ) {
             Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text("Настройка темы", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                
+
                 Button(
                     onClick = { onThemeChange(ThemeMode.LIGHT, null); onDismiss() },
                     modifier = Modifier.fillMaxWidth(),
@@ -532,23 +647,23 @@ fun ThemeSelectionDialog(onDismiss: () -> Unit, onThemeChange: (ThemeMode, Color
 
                 Divider()
                 Text("Кастомный цвет", style = MaterialTheme.typography.titleMedium)
-                
+
                 val colors = listOf(Color(0xFFE91E63), Color(0xFF9C27B0), Color(0xFF2196F3), Color(0xFF4CAF50), Color(0xFFFF9800), Color(0xFF795548))
-                
+
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     colors.forEach { color ->
                         Box(
                             modifier = Modifier
                                 .size(40.dp)
                                 .background(color, CircleShape)
-                                .clickable { 
+                                .clickable {
                                     onThemeChange(ThemeMode.CUSTOM, color)
                                     onDismiss()
                                 }
                         )
                     }
                 }
-                
+
                 TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
                     Text("Закрыть")
                 }
@@ -589,7 +704,7 @@ fun AlgoDrawer(
             ListItem(
                 headlineContent = { Text(stringResource(R.string.algo_ga_title)) },
                 supportingContent = { Text(stringResource(R.string.algo_ga_desc)) },
-                leadingContent = { Icon(Icons.Default.AutoFixHigh, null, tint = MaterialTheme.colorScheme.primary) },
+                leadingContent = { Icon(Icons.Default.AutoFixHigh, null, tint = Color(0xFF1B72C0)) },
                 trailingContent = {
                     IconButton(onClick = { onConfigureGA() }) {
                         Icon(Icons.Default.Settings, contentDescription = "Настроить")
@@ -601,7 +716,7 @@ fun AlgoDrawer(
             ListItem(
                 headlineContent = { Text(stringResource(R.string.algo_tsp_title)) },
                 supportingContent = { Text(stringResource(R.string.algo_tsp_desc)) },
-                leadingContent = { Icon(Icons.Default.TravelExplore, null, tint = MaterialTheme.colorScheme.primary) },
+                leadingContent = { Icon(Icons.Default.TravelExplore, null, tint = Color(0xFF1B72C0)) },
                 modifier = Modifier.clickable(enabled = !isBusy) { onStartTSP() }
             )
 
@@ -932,7 +1047,7 @@ fun HeaderCard(state: MapState, viewModel: MapViewModel, onMenuClick: () -> Unit
         ) {
             IconButton(onClick = onMenuClick) {
                 Icon(
-                    Icons.Default.Menu, 
+                    Icons.Default.Menu,
                     contentDescription = stringResource(R.string.menu_title),
                     tint = MaterialTheme.colorScheme.onSurface
                 )
@@ -1081,6 +1196,175 @@ fun PointSelectorRow(prefix: String, label: String, points: List<MapPoint>, myLo
                         onClick = { onSelected(point.position, pointLabel); expanded = false }
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun SearchOverlay(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    results: List<SearchResult>,
+    onDismiss: () -> Unit,
+    onResultClick: (SearchResult) -> Unit
+) {
+    val searchFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(150)
+        runCatching { searchFocusRequester.requestFocus() }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.5f))
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ) { onDismiss() }
+        )
+        Column(
+            modifier = Modifier
+                .statusBarsPadding()
+                .padding(top = 8.dp, start = 16.dp, end = 16.dp)
+                .fillMaxWidth()
+        ) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = onQueryChange,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(searchFocusRequester),
+                placeholder = { Text("Поиск зданий и заведений...", color = Color.Gray) },
+                trailingIcon = {
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.Close, null, tint = Color.White)
+                    }
+                },
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    focusedContainerColor = Color(0xFF1A1C1E),
+                    unfocusedContainerColor = Color(0xFF1A1C1E),
+                    focusedBorderColor = Color(0xFF1B72C0),
+                    unfocusedBorderColor = Color(0xFF3C4043),
+                    cursorColor = Color(0xFF1B72C0)
+                ),
+                shape = RoundedCornerShape(16.dp),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = {})
+            )
+
+            if (query.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 420.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    color = Color(0xFF1A1C1E),
+                    shadowElevation = 8.dp
+                ) {
+                    if (results.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(20.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Ничего не найдено", color = Color.Gray)
+                        }
+                    } else {
+                        LazyColumn {
+                            itemsIndexed(results) { index, result ->
+                                SearchResultRow(result, query, onResultClick)
+                                if (index < results.lastIndex) {
+                                    HorizontalDivider(color = Color(0xFF2C2F31), modifier = Modifier.padding(horizontal = 16.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+fun highlightMatches(text: String, query: String): AnnotatedString {
+    if (query.isEmpty()) return AnnotatedString(text)
+    return buildAnnotatedString {
+        val lowerText = text.lowercase()
+        val lowerQuery = query.lowercase()
+        var cursor = 0
+        while (cursor < text.length) {
+            val matchAt = lowerText.indexOf(lowerQuery, cursor)
+            if (matchAt == -1) {
+                append(text.substring(cursor))
+                break
+            }
+            append(text.substring(cursor, matchAt))
+            withStyle(
+                SpanStyle(
+                    color = Color(0xFF5BB8FF),
+                    fontWeight = FontWeight.Bold,
+                    background = Color(0xFF1B72C0).copy(alpha = 0.25f)
+                )
+            ) {
+                append(text.substring(matchAt, matchAt + query.length))
+            }
+            cursor = matchAt + query.length
+        }
+    }
+}
+
+@Composable
+fun SearchResultRow(
+    result: SearchResult,
+    query: String = "",
+    onResultClick: (SearchResult) -> Unit = {}
+) {
+    val icon: ImageVector
+    val title: String
+    val subtitle: String
+    when (result) {
+        is SearchResult.BuildingResult -> {
+            icon = Icons.Default.Business
+            title = result.info.name.ifEmpty { "Здание ТГУ" }
+            subtitle = result.info.address
+        }
+        is SearchResult.VenueResult -> {
+            icon = Icons.Default.Restaurant
+            title = result.venue.name
+            subtitle = "В здании: ${result.building.name.ifEmpty { result.building.address }}"
+        }
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onResultClick(result) }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Icon(icon, contentDescription = null, tint = Color(0xFF1B72C0), modifier = Modifier.size(22.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = highlightMatches(title, query),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                color = Color.White
+            )
+            if (subtitle.isNotEmpty()) {
+                Text(
+                    text = highlightMatches(subtitle, query),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
             }
         }
     }
