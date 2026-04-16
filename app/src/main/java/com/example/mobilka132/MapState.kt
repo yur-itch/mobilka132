@@ -239,6 +239,22 @@ class MapState {
         selectedPoints.clear()
         nextPointId = 1
     }
+
+    fun centerOnContent(contentPoint: Offset) {
+        if (containerSize == IntSize.Zero || imageSize == Size.Zero) return
+        val inFittedX = contentPoint.x * fitScale + extraSpaceX
+        val inFittedY = contentPoint.y * fitScale + extraSpaceY
+        val cx = containerSize.width / 2f
+        val cy = containerSize.height / 2f
+        val newOffsetX = cx / scale - inFittedX
+        val newOffsetY = cy / scale - inFittedY
+        val mapW = imageSize.width * fitScale
+        val mapH = imageSize.height * fitScale
+        offset = Offset(
+            x = newOffsetX.coerceIn(cx / scale - extraSpaceX - mapW, cx / scale - extraSpaceX),
+            y = newOffsetY.coerceIn(cy / scale - extraSpaceY - mapH, cy / scale - extraSpaceY)
+        )
+    }
 }
 
 data class MapPointData(
