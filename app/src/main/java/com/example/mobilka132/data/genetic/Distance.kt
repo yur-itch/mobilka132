@@ -4,7 +4,7 @@ import com.example.mobilka132.data.pathfinding.AStar
 import kotlin.math.pow
 
 interface Distance {
-    suspend operator fun get(i: Int, j: Int): Double
+    operator fun get(i: Int, j: Int): Double
     val size: Int
     fun getPoint(i: Int): Point
 }
@@ -28,7 +28,7 @@ data class Point(
 class EucledianDistance(private val points: List<Point>) : Distance {
     override val size: Int = points.size
 
-    override suspend operator fun get(i: Int, j: Int): Double {
+    override operator fun get(i: Int, j: Int): Double {
         return points[i].distanceTo(points[j])
     }
 
@@ -40,6 +40,8 @@ data class CachedPath(
     val length: Double
 )
 
+private data class PointPair(val p1: Pair<Int, Int>, val p2: Pair<Int, Int>)
+
 class WalkableDistance(
     private val algo: AStar
 ) : Distance {
@@ -47,41 +49,86 @@ class WalkableDistance(
     private var points: List<Point> = emptyList()
     override val size: Int get() = points.size
 
-    private val coordinateCache = mutableMapOf<Pair<Point, Point>, CachedPath>()
+    private var lengthMatrix = DoubleArray(0)
+    private var pathCache = arrayOfNulls<List<Point>>(0)
 
-    fun setPoints(newPoints: List<Point>) {
+    // Persistent cache across setup() calls
+    private val persistentCache = mutableMapOf<PointPair, CachedPath>()
+
+    suspend fun setup(newPoints: List<Point>) {
         this.points = newPoints
+        val n = newPoints.size
+        lengthMatrix = DoubleArray(n * n) { -1.0 }
+        pathCache = arrayOfNulls(n * n)
+
+        for (i in 0 until n) {
+            for (j in 0 until n) {
+                if (i == j) {
+                    lengthMatrix[i * n + j] = 0.0
+                    continue
+                }
+                internalGetOrCompute(i, j)
+            }
+        }
     }
 
     override fun getPoint(i: Int): Point = points[i]
 
-    private fun key(p1: Point, p2: Point): Pair<Point, Point> {
-        return if (p1.x < p2.x || (p1.x == p2.x && p1.y < p2.y)) p1 to p2 else p2 to p1
+    override fun get(i: Int, j: Int): Double {
+        val n = size
+        if (n == 0 || i == j) return 0.0
+        val dist = lengthMatrix[i * n + j]
+        return if (dist < 0) 0.0 else dist
     }
 
-    private suspend fun getCached(p1: Point, p2: Point): CachedPath {
-        val k = key(p1, p2)
-        coordinateCache[k]?.let { return it }
+    private suspend fun internalGetOrCompute(i: Int, j: Int): Double {
+        val n = size
+        val fastIdx = i * n + j
 
-        val path = algo.findPath(k.first.toPair(), k.second.toPair())
-        val length = algo.pathLength(path)
-        val cached = CachedPath(
-            path = path.map { Point(it.first, it.second) }, 
-            length = length
-        )
+        val fastLen = lengthMatrix[fastIdx]
+        if (fastLen >= 0) return fastLen
 
-        coordinateCache[k] = cached
-        return cached
+        val p1 = points[i].toPair()
+        val p2 = points[j].toPair()
+
+        val isReversed = p1.first > p2.first || (p1.first == p2.first && p1.second > p2.second)
+        val key = if (isReversed) PointPair(p2, p1) else PointPair(p1, p2)
+
+        val cached = persistentCache[key]
+        val path: List<Point>
+        val len: Double
+
+        if (cached != null) {
+            path = if (isReversed) cached.path.asReversed() else cached.path
+            len = cached.length
+        } else {
+            val aStarPath = algo.findPath(p1, p2)
+            len = algo.pathLength(aStarPath)
+            val mappedPath = aStarPath.map { Point(it.first, it.second) }
+            
+            val pathToCache = if (isReversed) mappedPath.asReversed() else mappedPath
+            persistentCache[key] = CachedPath(pathToCache, len)
+            path = mappedPath
+        }
+
+        lengthMatrix[fastIdx] = len
+        lengthMatrix[j * n + i] = len
+        pathCache[fastIdx] = path
+        return len
     }
 
-    override suspend operator fun get(i: Int, j: Int): Double =
-        getCached(points[i], points[j]).length
+    fun path(i: Int, j: Int): List<Point> {
+        val n = size
+        if (n == 0) return emptyList()
+        if (i == j) return listOf(points[i])
 
-    suspend fun path(i: Int, j: Int): List<Point> {
-        val p1 = points[i]
-        val p2 = points[j]
-        val res = getCached(p1, p2)
-        val k = key(p1, p2)
-        return if (p1 == k.first) res.path else res.path.reversed()
+        val idx = if (i < j) i * n + j else j * n + i
+        val cached = pathCache[idx] ?: return emptyList()
+        
+        return if (i < j) cached else cached.asReversed()
+    }
+    
+    fun clearPersistentCache() {
+        persistentCache.clear()
     }
 }
