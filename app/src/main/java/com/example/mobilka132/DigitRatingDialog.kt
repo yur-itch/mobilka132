@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -79,12 +80,12 @@ fun DigitRatingDialog(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    "Оцените заведение",
+                    stringResource(R.string.rate_venue_headline),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "Нарисуйте цифру от 0 до 9",
+                    stringResource(R.string.rate_venue_hint),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -117,7 +118,7 @@ fun DigitRatingDialog(
                     key(drawCount) {
                         Image(
                             bitmap = drawingBitmap.asImageBitmap(),
-                            contentDescription = "Drawing Area",
+                            contentDescription = stringResource(R.string.rate_venue_desc),
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.FillBounds
                         )
@@ -128,7 +129,7 @@ fun DigitRatingDialog(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("Ваша оценка:", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.your_rating_label), style = MaterialTheme.typography.titleMedium)
                     Text(
                         text = prediction?.toString() ?: "?",
                         style = MaterialTheme.typography.headlineLarge,
@@ -149,14 +150,14 @@ fun DigitRatingDialog(
                         },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Сброс")
+                        Text(stringResource(R.string.btn_reset))
                     }
                     Button(
                         onClick = { prediction?.let { onRatingSubmitted(it) } },
                         enabled = prediction != null,
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Отправить")
+                        Text(stringResource(R.string.btn_submit))
                     }
                 }
             }
