@@ -1,6 +1,7 @@
 package com.example.mobilka132
 
 import android.graphics.Bitmap
+import android.location.Location
 import androidx.compose.runtime.*
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -252,5 +253,17 @@ class MapState {
             x = newOffsetX.coerceIn(cx / scale - extraSpaceX - mapW, cx / scale - extraSpaceX),
             y = newOffsetY.coerceIn(cy / scale - extraSpaceY - mapH, cy / scale - extraSpaceY)
         )
+    }
+
+    fun getMapLocation(l: Location): Offset? {
+        if (imageSize == Size.Zero) return null
+        val pixelsInMeter = (1.0 / metersPerPixel).toFloat()
+        val loc = Offset(
+            ((l.longitude - 84.944904) * 61400 + 747).toFloat(),
+            (-(l.latitude - 56.468946) * 111000 + 713).toFloat()
+        ) * pixelsInMeter
+
+        if (loc.x < 0 || loc.x > imageSize.width || loc.y < 0 || loc.y > imageSize.height) return null
+        return loc
     }
 }
