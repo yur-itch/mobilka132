@@ -793,6 +793,7 @@ class MapViewModel : ViewModel() {
                     points          = uniquePositions,
                     k               = k,
                     astar           = pathfinder,
+                    obstacles       = obstacles.toList(),
                     onAStarProgress = { progress -> bonusAStarProgress = progress }
                 )
                 bonusClusteringResult = result

@@ -87,10 +87,14 @@ fun MapContainer(
                             ?.let { pt ->
                                 if ((state.contentToScreen(pt.position) - offset).getDistance() < 35f) pt else null
                             }
-                        viewModel.selectedBonusPoint = if (hit == viewModel.selectedBonusPoint) null else hit
-                        return@detectTapGestures
+                        if (hit != null) {
+                            viewModel.selectedBonusPoint = if (hit == viewModel.selectedBonusPoint) null else hit
+                            return@detectTapGestures
+                        }
+                        viewModel.selectedBonusPoint = null
+                    } else {
+                        viewModel.selectedBonusPoint = null
                     }
-                    viewModel.selectedBonusPoint = null
                     if (!state.isProcessing && !viewModel.isObstacleMode && !viewModel.isProcessing) {
                         onPointSelected(offset)
                     }
@@ -313,31 +317,36 @@ fun MapContainer(
         }
 
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val textStyle =
-                TextStyle(color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            state.selectedPoints.forEach { point ->
-                val screenPos = state.contentToScreen(point.position)
+            val textStyle = TextStyle(color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
 
-                if (screenPos.x in 0f..size.width && screenPos.y in 0f..size.height) {
-                    drawCircle(color = primaryColor, radius = 15f, center = screenPos)
-                    drawCircle(color = Color.White, radius = 6f, center = screenPos)
+            val visible = state.selectedPoints.mapNotNull { point ->
+                val sp = state.contentToScreen(point.position)
+                if (sp.x in 0f..size.width && sp.y in 0f..size.height) {
+                    Triple(sp, point, textMeasurer.measure(point.id.toString(), textStyle))
+                } else null
+            }
 
-                    val textLayoutResult = textMeasurer.measure(point.id.toString(), textStyle)
-                    val textWidth = textLayoutResult.size.width.toFloat()
-                    val textHeight = textLayoutResult.size.height.toFloat()
+            visible.forEach { (sp, _, _) ->
+                drawCircle(color = primaryColor, radius = 15f, center = sp)
+                drawCircle(color = Color.White, radius = 6f, center = sp)
+            }
 
-                    drawRoundRect(
-                        color = primaryColor,
-                        topLeft = Offset(screenPos.x - textWidth / 2 - 8f, screenPos.y - 45f),
-                        size = Size(textWidth + 16f, textHeight + 8f),
-                        cornerRadius = CornerRadius(8f, 8f)
-                    )
-                    drawText(
-                        textLayoutResult = textLayoutResult,
-                        color = Color.White,
-                        topLeft = Offset(screenPos.x - textWidth / 2, screenPos.y - 41f)
-                    )
-                }
+            visible.forEach { (sp, _, layout) ->
+                val tw = layout.size.width.toFloat()
+                val th = layout.size.height.toFloat()
+                val labelBottom = sp.y - 19f
+                val labelTop = labelBottom - th - 8f
+                drawRoundRect(
+                    color = primaryColor,
+                    topLeft = Offset(sp.x - tw / 2 - 8f, labelTop),
+                    size = Size(tw + 16f, th + 8f),
+                    cornerRadius = CornerRadius(8f, 8f)
+                )
+                drawText(
+                    textLayoutResult = layout,
+                    color = Color.White,
+                    topLeft = Offset(sp.x - tw / 2, labelTop + 4f)
+                )
             }
         }
     }
