@@ -190,7 +190,7 @@ fun MapContainer(
 
         Canvas(modifier = Modifier.fillMaxSize()) {
             with(overlay) {
-                location.mapLocation?.let { drawPointUnscaled(it, 8f, primaryColor) }
+                viewModel.userMapLocation?.let { drawPointUnscaled(it, 8f, primaryColor) }
                 if (viewModel.currentStep != null) {
                     if (nodeOffsets.isNotEmpty()) drawPointsUnscaled(
                         nodeOffsets,

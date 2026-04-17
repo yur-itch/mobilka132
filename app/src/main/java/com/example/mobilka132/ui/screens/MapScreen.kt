@@ -191,6 +191,10 @@ fun MapScreen(
 
     LaunchedEffect(roadMask) {
         state.imageSize = Size(roadMask.width.toFloat(), roadMask.height.toFloat())
+        // Recalculate map location if world location exists
+        viewModel.userWorldLocation?.let {
+            viewModel.updateLocation(it)
+        }
     }
 
     Box(
@@ -315,7 +319,7 @@ fun MapScreen(
             ) {
                 RouteMenuCard(
                     points = state.selectedPoints,
-                    myLocation = location.mapLocation,
+                    myLocation = viewModel.userMapLocation,
                     startLabel = startLabel,
                     endLabel = endLabel,
                     isVisualized = visualizeRoute,
@@ -533,7 +537,7 @@ fun MapScreen(
                 viewModel = viewModel,
                 onDismiss = { showTspBuildingSelectionDialog = false },
                 onConfirm = { p -> viewModel.findTSPSolution(buildingsMask, p) },
-                myLocation = location.mapLocation,
+                myLocation = viewModel.userMapLocation,
                 points = state.selectedPoints
             )
         }
@@ -543,7 +547,7 @@ fun MapScreen(
                 viewModel = viewModel,
                 onDismiss = { showDishSelectionDialog = false },
                 onConfirm = {
-                    viewModel.startFoodShoppingGA(buildingsMask, location.mapLocation)
+                    viewModel.startFoodShoppingGA(buildingsMask, viewModel.userMapLocation)
                     showDishSelectionDialog = false
                 })
         }
