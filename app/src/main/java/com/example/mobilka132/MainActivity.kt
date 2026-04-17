@@ -21,7 +21,11 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var mapManager: MapManager
     private val viewModel: MapViewModel by viewModels<MapViewModel>()
-    private val location: LocationManager by lazy { LocationManager(this, activityResultRegistry) }
+    private val location: LocationManager by lazy { 
+        LocationManager(this, activityResultRegistry) { loc ->
+            viewModel.updateLocation(loc)
+        }
+    }
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(LocaleHelper.onAttach(newBase))
@@ -37,8 +41,12 @@ class MainActivity : ComponentActivity() {
             mapManager.loadData().await()
             viewModel.init(mapManager)
             viewModel.loadPointsFromAssets(this@MainActivity)
+            
+            // Re-sync location if we already have it from a previous session (ViewModel survives)
+            viewModel.userWorldLocation?.let {
+                viewModel.updateLocation(it)
+            }
         }
-        location.pixelsInMeter = viewModel.state.metersPerPixel.toFloat()
 
         setContent {
             var currentTheme by remember { mutableStateOf(ThemeHelper.getTheme(this)) }
