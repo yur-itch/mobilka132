@@ -165,7 +165,8 @@ private fun calculateNodePositions(
 }
 
 private fun DrawScope.drawTree(position: TreePosition, textMeasurer: TextMeasurer) {
-    val textStyle = TextStyle(color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+    val textStyle =
+        TextStyle(color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
 
     val textLayout = textMeasurer.measure(
         text = position.label,
@@ -193,13 +194,23 @@ private fun DrawScope.drawTree(position: TreePosition, textMeasurer: TextMeasure
 
             val edgeText = textMeasurer.measure(
                 text = childPos.edgeLabel,
-                style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF212529))
+                style = TextStyle(
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF212529)
+                )
             )
 
             drawRoundRect(
                 color = Color.White.copy(alpha = 0.95f),
-                topLeft = Offset(textX - edgeText.size.width/2 - 10f, textY - edgeText.size.height/2 - 4f),
-                size = Size(edgeText.size.width.toFloat() + 20f, edgeText.size.height.toFloat() + 8f),
+                topLeft = Offset(
+                    textX - edgeText.size.width / 2 - 10f,
+                    textY - edgeText.size.height / 2 - 4f
+                ),
+                size = Size(
+                    edgeText.size.width.toFloat() + 20f,
+                    edgeText.size.height.toFloat() + 8f
+                ),
                 cornerRadius = CornerRadius(10f, 10f)
             )
 
@@ -237,7 +248,7 @@ private fun DrawScope.drawTree(position: TreePosition, textMeasurer: TextMeasure
     )
 }
 
-private fun translateKey(context: Context, key: String): String = when(key.trim().lowercase()) {
+private fun translateKey(context: Context, key: String): String = when (key.trim().lowercase()) {
     "budget" -> context.getString(R.string.node_budget)
     "location" -> context.getString(R.string.node_location)
     "time_available" -> context.getString(R.string.node_time)
@@ -249,34 +260,38 @@ private fun translateKey(context: Context, key: String): String = when(key.trim(
 
 private fun translateValue(key: String, value: String): String {
     val k = key.trim().lowercase()
-    return when(k) {
-        "budget" -> when(value) {
+    return when (k) {
+        "budget" -> when (value) {
             "low" -> "Низкий"
             "medium" -> "Средний"
             "high" -> "Высокий"
             else -> value
         }
-        "time_available" -> when(value) {
+
+        "time_available" -> when (value) {
             "very_short" -> "5 мин"
             "short" -> "15 мин"
             "medium" -> "30 мин"
             "long" -> "1 час+"
             else -> value
         }
-        "location" -> when(value) {
+
+        "location" -> when (value) {
             "main_building" -> "Гл. корпус"
             "second_building" -> "2 корпус"
             "campus_center" -> "Центр"
             "bus_stop" -> "Остановка"
             else -> value
         }
-        "food_type" -> when(value) {
+
+        "food_type" -> when (value) {
             "coffee" -> "Кофе"
             "pancakes" -> "Блины"
             "full_meal" -> "Обед"
             "snack" -> "Перекус"
             else -> value
         }
+
         "weather" -> if (value == "good") "Солнце" else "Дождь"
         "queue_tolerance" -> if (value == "high") "Готов" else "Нет"
         else -> value

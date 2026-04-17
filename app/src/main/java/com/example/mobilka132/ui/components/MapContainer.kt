@@ -153,8 +153,13 @@ fun MapContainer(
                         }
                     }
 
-                    viewModel.tspPath?.steps?.let { drawPathScaled(generatePath(it), color = Color(0xFF4CAF50)) }
-                    
+                    viewModel.tspPath?.steps?.let {
+                        drawPathScaled(
+                            generatePath(it),
+                            color = Color(0xFF4CAF50)
+                        )
+                    }
+
                     viewModel.currentGAStep?.path?.let { gaPath ->
                         if (gaPath.segments.isNotEmpty()) {
                             drawPathSegmentsScaled(gaPath.segments, color = Color(0xFFFF9800))
@@ -187,14 +192,19 @@ fun MapContainer(
             with(overlay) {
                 location.mapLocation?.let { drawPointUnscaled(it, 8f, primaryColor) }
                 if (viewModel.currentStep != null) {
-                    if (nodeOffsets.isNotEmpty()) drawPointsUnscaled(nodeOffsets, 3f, Color.Green.copy(alpha = 0.5f))
+                    if (nodeOffsets.isNotEmpty()) drawPointsUnscaled(
+                        nodeOffsets,
+                        3f,
+                        Color.Green.copy(alpha = 0.5f)
+                    )
                     stepOffset?.let { drawPointUnscaled(it, 5f, Color.Yellow) }
                 }
             }
         }
 
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val textStyle = TextStyle(color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            val textStyle =
+                TextStyle(color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             state.selectedPoints.forEach { point ->
                 val screenPos = state.contentToScreen(point.position)
 
