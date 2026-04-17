@@ -41,8 +41,7 @@ class MainActivity : ComponentActivity() {
             mapManager.loadData().await()
             viewModel.init(mapManager)
             viewModel.loadPointsFromAssets(this@MainActivity)
-            
-            // Re-sync location if we already have it from a previous session (ViewModel survives)
+
             viewModel.userWorldLocation?.let {
                 viewModel.updateLocation(it)
             }
