@@ -87,4 +87,30 @@
     <string name="node_queue">Очередь</string>
     <string name="node_weather">Погода</string>
     <string name="node_not_built">Дерево не построено</string>
+
+    <string name="points_list_title">Список точек</string>
+    <string name="no_points">Нет точек</string>
+    <string name="btn_close">Закрыть</string>
+    <string name="obstacles_list_title">Преграды</string>
+    <string name="no_obstacles">Нет преград</string>
+    <string name="obstacle_prefix">Линия №%1$d</string>
+    <string name="venue_selection_title">Выбор заведений</string>
+    <string name="rate_venue_title">Оценка</string>
+    <string name="rate_venue_desc">Поставьте оценку заведению</string>
+    <string name="btn_submit">Отравить</string>
+    <string name="btn_cancel">Отмена</string>
+
+    <string name="theme_selection_title">Настройка темы</string>
+    <string name="theme_light_tsu">Светлая (ТГУ)</string>
+    <string name="theme_dark">Темная</string>
+    <string name="theme_custom_color">Кастомный цвет</string>
+    <string name="btn_done">Готово</string>
+    <string name="ga_points_setup">Настройка точек GA</string>
+    <string name="dish_selection_title">Выберите желаемые блюда</string>
+    <string name="btn_go">Поехали!</string>
+    <string name="rate_venue_headline">Оцените заведение</string>
+    <string name="rate_venue_hint">Нарисуйте цифру от 0 до 9</string>
+    <string name="your_rating_label">Ваша оценка:</string>
+    <string name="btn_reset">Сброс</string>
+    <string name="search_hint">Поиск</string>
 </resources>
