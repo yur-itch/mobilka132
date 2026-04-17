@@ -3,12 +3,6 @@ package com.example.mobilka132.data.genetic
 import kotlinx.coroutines.runBlocking
 import kotlin.random.Random
 
-/*
-fun crossover(a1: MutableList<Int>, a2: MutableList<Int>) {
-    return a1
-}
-*/
-
 fun main() = runBlocking {
     println("=== Genetic Algorithm for TSP with Collection Problem ===\n")
 

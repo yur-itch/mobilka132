@@ -104,6 +104,7 @@
     <string name="theme_light_tsu">Light (TSU)</string>
     <string name="theme_dark">Dark</string>
     <string name="theme_custom_color">Custom Color</string>
+    <string name="theme_dark_mode">Dark mode</string>
     <string name="btn_done">Done</string>
     <string name="ga_points_setup">GA Points Setup</string>
     <string name="dish_selection_title">Choose your dishes</string>
@@ -113,4 +114,16 @@
     <string name="your_rating_label">Your rating:</string>
     <string name="btn_reset">Reset</string>
     <string name="search_hint">Search</string>
+
+    <string name="tsp_dialog_title">Select Buildings for TSP</string>
+    <string name="tsp_start_point">Start Point:</string>
+    <string name="tsp_my_location">My Location</string>
+    <string name="tsp_placed_point">Placed Point</string>
+    <string name="tsp_select_point_hint">Select a point...</string>
+    <string name="tsp_start_prefix">Start</string>
+    <string name="tsp_filter_buildings">Filter Buildings:</string>
+    <string name="tsp_filter_all">All</string>
+    <string name="tsp_select_all">Select All</string>
+    <string name="tsp_clear">Clear</string>
+    <string name="tsp_solve">Solve TSP</string>
 </resources>
