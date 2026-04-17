@@ -55,6 +55,10 @@ fun HeaderCard(
                         viewModel.currentGeneration
                     )
 
+                    viewModel.isBonusClusteringRunning -> stringResource(
+                        R.string.algo_bonus_astar_progress,
+                        (viewModel.bonusAStarProgress * 100).toInt()
+                    )
                     viewModel.isPathProcessing -> stringResource(R.string.searching_path)
                     else -> stringResource(R.string.map_route_title)
                 },

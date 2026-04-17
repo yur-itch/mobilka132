@@ -3,13 +3,24 @@ package com.example.mobilka132.ui.components
 import android.graphics.Bitmap
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.CornerRadius
@@ -29,6 +40,8 @@ import androidx.compose.ui.unit.sp
 import com.example.mobilka132.MapOverlayRenderer
 import com.example.mobilka132.MapState
 import com.example.mobilka132.MapViewModel
+import com.example.mobilka132.data.clustering.BonusViewMode
+import com.example.mobilka132.data.clustering.PointMultiAssignment
 import com.example.mobilka132.data.location.LocationManager
 import com.example.mobilka132.model.ObstacleLine
 
@@ -66,6 +79,18 @@ fun MapContainer(
             .onSizeChanged { state.containerSize = it }
             .pointerInput(state.isSelectionMode, state.isProcessing) {
                 detectTapGestures { offset ->
+                    if (viewModel.bonusViewMode == BonusViewMode.DIFFERENCES &&
+                        viewModel.bonusClusteringResult != null
+                    ) {
+                        val hit = viewModel.bonusClusteringResult!!.assignments
+                            .minByOrNull { pt -> (state.contentToScreen(pt.position) - offset).getDistance() }
+                            ?.let { pt ->
+                                if ((state.contentToScreen(pt.position) - offset).getDistance() < 35f) pt else null
+                            }
+                        viewModel.selectedBonusPoint = if (hit == viewModel.selectedBonusPoint) null else hit
+                        return@detectTapGestures
+                    }
+                    viewModel.selectedBonusPoint = null
                     if (!state.isProcessing && !viewModel.isObstacleMode && !viewModel.isProcessing) {
                         onPointSelected(offset)
                     }
@@ -214,6 +239,75 @@ fun MapContainer(
                         Color.Green.copy(alpha = 0.5f)
                     )
                     stepOffset?.let { drawPointUnscaled(it, 5f, Color.Yellow) }
+                }
+            }
+        }
+
+        val clusterColors = remember {
+            listOf(
+                Color(0xFFE53935), Color(0xFF1E88E5), Color(0xFF43A047), Color(0xFFFF8F00),
+                Color(0xFF8E24AA), Color(0xFF00897B), Color(0xFFD81B60), Color(0xFF6D4C41)
+            )
+        }
+
+        viewModel.bonusClusteringResult?.let { result ->
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                when (viewModel.bonusViewMode) {
+                    BonusViewMode.EUCLIDEAN, BonusViewMode.MANHATTAN, BonusViewMode.ASTAR -> {
+                        val (clusterOf, medoids) = when (viewModel.bonusViewMode) {
+                            BonusViewMode.EUCLIDEAN -> Pair({ a: PointMultiAssignment -> a.euclideanCluster }, result.euclideanMedoids)
+                            BonusViewMode.MANHATTAN -> Pair({ a: PointMultiAssignment -> a.manhattanCluster }, result.manhattanMedoids)
+                            else                    -> Pair({ a: PointMultiAssignment -> a.astarCluster },     result.astarMedoids)
+                        }
+                        result.assignments.forEach { point ->
+                            val sp = state.contentToScreen(point.position)
+                            if (sp.x in 0f..size.width && sp.y in 0f..size.height) {
+                                drawCircle(color = clusterColors.getOrElse(clusterOf(point)) { Color.Gray }.copy(alpha = 0.85f), radius = 9f, center = sp)
+                                drawCircle(color = Color.White, radius = 3f, center = sp)
+                            }
+                        }
+                        medoids.forEachIndexed { i, medoid ->
+                            val sp = state.contentToScreen(medoid)
+                            val color = clusterColors.getOrElse(i) { Color.Gray }
+                            drawCircle(color = Color.White, radius = 20f, center = sp)
+                            drawCircle(color = color,       radius = 15f, center = sp)
+                            drawCircle(color = Color.White, radius =  5f, center = sp)
+                        }
+                    }
+                    BonusViewMode.DIFFERENCES -> {
+                        result.assignments.forEach { point ->
+                            val sp = state.contentToScreen(point.position)
+                            if (sp.x !in -20f..(size.width + 20f) || sp.y !in -20f..(size.height + 20f)) return@forEach
+                            val r = 14f
+                            val arcRect    = Size(r * 2, r * 2)
+                            val arcTopLeft = androidx.compose.ui.geometry.Offset(sp.x - r, sp.y - r)
+                            // Сектор Евклид (верх), Манхэттен (право), A* (лево)
+                            drawArc(color = clusterColors.getOrElse(point.euclideanCluster) { Color.Gray }, startAngle = -90f, sweepAngle = 120f, useCenter = true, topLeft = arcTopLeft, size = arcRect)
+                            drawArc(color = clusterColors.getOrElse(point.manhattanCluster) { Color.Gray }, startAngle =  30f, sweepAngle = 120f, useCenter = true, topLeft = arcTopLeft, size = arcRect)
+                            drawArc(color = clusterColors.getOrElse(point.astarCluster)    { Color.Gray }, startAngle = 150f, sweepAngle = 120f, useCenter = true, topLeft = arcTopLeft, size = arcRect)
+                            drawCircle(color = Color.White, radius = r, center = sp, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5f))
+                            drawCircle(color = Color.White, radius = 3f, center = sp)
+                        }
+                    }
+                }
+            }
+        }
+
+        val selPt = viewModel.selectedBonusPoint
+        if (selPt != null && viewModel.bonusViewMode == BonusViewMode.DIFFERENCES) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surface, shadowElevation = 10.dp, tonalElevation = 4.dp) {
+                    Row(modifier = Modifier.padding(horizontal = 24.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                        @Composable fun MetricChip(label: String, idx: Int) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Box(modifier = Modifier.size(28.dp).background(clusterColors.getOrElse(idx) { Color.Gray }, CircleShape))
+                                Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        MetricChip("Е",  selPt.euclideanCluster)
+                        MetricChip("М",  selPt.manhattanCluster)
+                        MetricChip("A*", selPt.astarCluster)
+                    }
                 }
             }
         }
