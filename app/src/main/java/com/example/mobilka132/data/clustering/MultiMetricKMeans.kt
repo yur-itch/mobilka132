@@ -2,6 +2,7 @@ package com.example.mobilka132.data.clustering
 
 import androidx.compose.ui.geometry.Offset
 import com.example.mobilka132.data.pathfinding.AStar
+import com.example.mobilka132.model.ObstacleLine
 import kotlinx.coroutines.*
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.abs
@@ -40,16 +41,17 @@ object MultiMetricKMeans {
         points: List<Offset>,
         k: Int,
         astar: AStar,
+        obstacles: List<ObstacleLine> = emptyList(),
         onAStarProgress: suspend (Float) -> Unit
     ): MultiMetricResult = withContext(Dispatchers.Default) {
 
         val n = points.size
         val actualK = minOf(k, n)
 
-        val euclidMatrix    = computeEuclideanMatrix(points)
-        val manhattanMatrix = computeManhattanMatrix(points)
-
         val astarMatrix = computeAStarMatrix(points, astar, onAStarProgress)
+
+        val euclidMatrix    = computeEuclideanMatrix(points, obstacles, astarMatrix)
+        val manhattanMatrix = computeManhattanMatrix(points, obstacles, astarMatrix)
 
         val (euclidAssign, euclidMedoidIdx)     = kMedoids(n, actualK, euclidMatrix)
         val (manhattanAssign, manhattanMedoidIdx) = kMedoids(n, actualK, manhattanMatrix)
@@ -78,14 +80,32 @@ object MultiMetricKMeans {
     }
 
 
-    private fun computeEuclideanMatrix(points: List<Offset>): DoubleArray {
+    private fun segmentsIntersect(p1: Offset, p2: Offset, p3: Offset, p4: Offset): Boolean {
+        val d1x = p2.x - p1.x; val d1y = p2.y - p1.y
+        val d2x = p4.x - p3.x; val d2y = p4.y - p3.y
+        val cross = d1x * d2y - d1y * d2x
+        if (cross == 0f) return false
+        val dx = p3.x - p1.x; val dy = p3.y - p1.y
+        val t = (dx * d2y - dy * d2x) / cross
+        val u = (dx * d1y - dy * d1x) / cross
+        return t in 0f..1f && u in 0f..1f
+    }
+
+    private fun isBlocked(a: Offset, b: Offset, obstacles: List<ObstacleLine>): Boolean =
+        obstacles.any { segmentsIntersect(a, b, it.start, it.end) }
+
+    private fun computeEuclideanMatrix(points: List<Offset>, obstacles: List<ObstacleLine>, astarMatrix: DoubleArray): DoubleArray {
         val n = points.size
         val matrix = DoubleArray(n * n)
         for (i in 0 until n) {
             for (j in i + 1 until n) {
-                val dx   = (points[i].x - points[j].x).toDouble()
-                val dy   = (points[i].y - points[j].y).toDouble()
-                val dist = sqrt(dx * dx + dy * dy)
+                val dist = if (obstacles.isNotEmpty() && isBlocked(points[i], points[j], obstacles)) {
+                    astarMatrix[i * n + j]
+                } else {
+                    val dx = (points[i].x - points[j].x).toDouble()
+                    val dy = (points[i].y - points[j].y).toDouble()
+                    sqrt(dx * dx + dy * dy)
+                }
                 matrix[i * n + j] = dist
                 matrix[j * n + i] = dist
             }
@@ -93,14 +113,16 @@ object MultiMetricKMeans {
         return matrix
     }
 
-
-    private fun computeManhattanMatrix(points: List<Offset>): DoubleArray {
+    private fun computeManhattanMatrix(points: List<Offset>, obstacles: List<ObstacleLine>, astarMatrix: DoubleArray): DoubleArray {
         val n = points.size
         val matrix = DoubleArray(n * n)
         for (i in 0 until n) {
             for (j in i + 1 until n) {
-                val dist = (abs(points[i].x - points[j].x) +
-                            abs(points[i].y - points[j].y)).toDouble()
+                val dist = if (obstacles.isNotEmpty() && isBlocked(points[i], points[j], obstacles)) {
+                    astarMatrix[i * n + j]
+                } else {
+                    (abs(points[i].x - points[j].x) + abs(points[i].y - points[j].y)).toDouble()
+                }
                 matrix[i * n + j] = dist
                 matrix[j * n + i] = dist
             }
