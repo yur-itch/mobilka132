@@ -104,6 +104,7 @@
     <string name="theme_light_tsu">浅色 (TSU)</string>
     <string name="theme_dark">深色</string>
     <string name="theme_custom_color">自定义颜色</string>
+    <string name="theme_dark_mode">暗黑模式</string>
     <string name="btn_done">完成</string>
     <string name="ga_points_setup">GA 地点设置</string>
     <string name="dish_selection_title">选择您的菜肴</string>
