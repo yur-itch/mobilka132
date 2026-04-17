@@ -35,3 +35,4 @@ google-services.json
 
 # Project specific
 digit_recognition_python/mnist_train.csv
+/ga_bonus/fib.c
