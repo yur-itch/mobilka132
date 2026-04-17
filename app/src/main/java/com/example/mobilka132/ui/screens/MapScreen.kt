@@ -46,7 +46,7 @@ fun MapScreen(
     viewModel: MapViewModel,
     location: LocationManager,
     onLanguageChange: (String) -> Unit,
-    onThemeChange: (ThemeMode, Color?) -> Unit
+    onThemeChange: (ThemeMode?, Color?) -> Unit
 ) {
     val state = viewModel.state
     val overlay = viewModel.overlay
@@ -63,7 +63,8 @@ fun MapScreen(
         if (window != null) {
             DisposableEffect(view) {
                 val windowInsetsController = WindowCompat.getInsetsController(window, view)
-                windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                windowInsetsController.systemBarsBehavior =
+                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
                 windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
                 onDispose {}
             }
@@ -178,6 +179,7 @@ fun MapScreen(
                         state.selectedVenueInfo = null
                         state.selectedBuildingInfo = result.info
                     }
+
                     is SearchResult.VenueResult -> {
                         state.selectedBuildingInfo = result.building
                         state.selectedVenueInfo = result.venue
@@ -191,9 +193,11 @@ fun MapScreen(
         state.imageSize = Size(roadMask.width.toFloat(), roadMask.height.toFloat())
     }
 
-    Box(modifier = Modifier
-        .fillMaxSize()
-        .background(MaterialTheme.colorScheme.background)) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
         MapContainer(
             state = state,
             bitmap = bitmaps[shownIndex],
@@ -219,7 +223,10 @@ fun MapScreen(
                 Box(
                     modifier = Modifier
                         .size(48.dp)
-                        .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(12.dp))
+                        .background(
+                            MaterialTheme.colorScheme.primaryContainer,
+                            RoundedCornerShape(12.dp)
+                        )
                         .clickable { showSearch = true }
                         .padding(10.dp),
                     contentAlignment = Alignment.Center
@@ -235,23 +242,15 @@ fun MapScreen(
 
             Box(
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(48.dp)
                     .background(
                         MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
-                        RoundedCornerShape(10.dp)
+                        RoundedCornerShape(12.dp)
                     )
-                    .size(48.dp)
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f), RoundedCornerShape(12.dp))
                     .clickable { shownIndex = (shownIndex + 1) % bitmaps.size }
                     .padding(10.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    Icons.Default.Layers,
-                    contentDescription = stringResource(R.string.map_view),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(24.dp)
-                )
                 Icon(
                     Icons.Default.Layers,
                     contentDescription = stringResource(R.string.map_view),
@@ -303,26 +302,6 @@ fun MapScreen(
                     onMenuClick = { showAlgoMenu = true },
                     onThemeClick = { showThemeMenu = true }
                 )
-
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.End)
-                        .size(44.dp)
-                        .background(
-                            MaterialTheme.colorScheme.primaryContainer,
-                            RoundedCornerShape(10.dp)
-                        )
-                        .clickable { showSearch = true }
-                        .padding(8.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.Search,
-                        contentDescription = "Поиск",
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
             } else {
                 SearchBar(
                     query = searchQuery,
@@ -479,13 +458,6 @@ fun MapScreen(
             }
         }
 
-        if (showThemeMenu) ThemeSelectionDialog(onDismiss = { showThemeMenu = false }, onThemeChange = onThemeChange)
-        if (showPointsList) PointsListDialog(points = state.selectedPoints, onDismiss = { showPointsList = false }, onDeletePoint = { viewModel.deletePoint(it) }, onDeleteAll = { viewModel.clear() })
-        if (showObstacleMenu) ObstacleListDialog(obstacles = viewModel.obstacles, onDismiss = { showObstacleMenu = false }, onDelete = { viewModel.removeObstacle(it); viewModel.syncObstacles() }, onClearAll = { viewModel.clearObstacles(); viewModel.syncObstacles(); showObstacleMenu = false })
-        if (showDecisionDialog) DecisionDialog(viewModel = treeViewModel, onDismiss = { showDecisionDialog = false })
-        if (showAlgoMenu) AlgoDrawer(onDismiss = { showAlgoMenu = false }, onStartGA = { viewModel.startFoodShoppingGA(buildingsMask); showAlgoMenu = false }, onStartTSP = { viewModel.findTSPSolution(); showAlgoMenu = false }, onShowAdvice = { showDecisionDialog = true }, onConfigureGA = { showVenueSelectionDialog = true }, onLanguageChange = onLanguageChange, isBusy = viewModel.isAnyAlgoRunning || state.isProcessing)
-        if (showVenueSelectionDialog) VenueSelectionDialog(viewModel = viewModel, onDismiss = { showVenueSelectionDialog = false })
-        if (showRatingDialog) DigitRatingDialog(onDismiss = { showRatingDialog = false }, onRatingSubmitted = { showRatingDialog = false })
         if (showThemeMenu) {
             ThemeSelectionDialog(
                 onDismiss = { showThemeMenu = false },

@@ -14,6 +14,7 @@ import com.example.mobilka132.ui.theme.Mobilka132Theme
 import com.example.mobilka132.data.LocaleHelper
 import com.example.mobilka132.data.ThemeHelper
 import com.example.mobilka132.ui.screens.MapScreen
+import com.example.mobilka132.ui.theme.ThemeMode
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -44,17 +45,24 @@ class MainActivity : ComponentActivity() {
             var customColor by remember { mutableStateOf(ThemeHelper.getCustomColor(this)) }
 
             Mobilka132Theme(themeMode = currentTheme, customColor = customColor) {
-                MapScreen(viewModel = viewModel, location = location, onLanguageChange = { lang ->
-                    LocaleHelper.setLocale(this, lang)
-                    recreate()
-                }, onThemeChange = { theme, color ->
-                    ThemeHelper.setTheme(this, theme)
-                    if (color != null) {
-                        ThemeHelper.setCustomColor(this, color)
-                        customColor = color
+                MapScreen(
+                    viewModel = viewModel, 
+                    location = location, 
+                    onLanguageChange = { lang ->
+                        LocaleHelper.setLocale(this, lang)
+                        recreate()
+                    }, 
+                    onThemeChange = { theme, color ->
+                        if (theme != null) {
+                            ThemeHelper.setTheme(this, theme)
+                            currentTheme = theme
+                        }
+                        if (color != null) {
+                            ThemeHelper.setCustomColor(this, color)
+                            customColor = color
+                        }
                     }
-                    currentTheme = theme
-                })
+                )
             }
         }
     }
