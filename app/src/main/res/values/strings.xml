@@ -30,6 +30,8 @@
     <string name="algo_tsp_title">Муравьиный алгоритм (TSP)</string>
     <string name="algo_tsp_desc">Решение задачи коммивояжера</string>
     <string name="algo_tsp_running">TSP: поиск…</string>
+    <string name="algo_simulation_title">Симуляция кампуса</string>
+    <string name="algo_simulation_desc">Запуск визуализации движения студентов</string>
 
     <string name="btn_route_here">Сюда</string>
     <string name="route_card_title">Маршрут</string>

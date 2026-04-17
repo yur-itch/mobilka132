@@ -9,6 +9,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mobilka132.data.ant.AntAlgorithm
+import com.example.mobilka132.data.ant.CampusSimulation
+import com.example.mobilka132.data.ant.CoworkingSpace
+import com.example.mobilka132.data.ant.IntPoint
+import com.example.mobilka132.model.SimulationFrame
 import com.example.mobilka132.data.genetic.*
 import com.example.mobilka132.data.pathfinding.AStar
 import com.example.mobilka132.data.pathfinding.PathData
@@ -34,6 +38,8 @@ class MapViewModel : ViewModel() {
     var currentGAStep by mutableStateOf<GAStep?>(null)
     var tspPath by mutableStateOf<Path?>(null)
     var activeJobs: MutableList<Job> = mutableStateListOf()
+
+    var currentSimulationFrame by mutableStateOf(SimulationFrame())
 
     var isPathProcessing by mutableStateOf(false)
     var isGARunning by mutableStateOf(false)
@@ -90,6 +96,97 @@ class MapViewModel : ViewModel() {
     fun updateLocation(location: Location) {
         userWorldLocation = location
         userMapLocation = state.getMapLocation(location)
+    }
+
+    fun startCampusSimulation(buildingsMask: Bitmap, startOffset: Offset? = null) {
+        if (activeJobs.isNotEmpty()) return
+        val job = viewModelScope.launch {
+            val coworkingSpaces = withContext(Dispatchers.Default) {
+                extractCoworkingSpaces(buildingsMask)
+            }
+            val startPos = startOffset?.let { off ->
+                IntPoint(
+                    off.x.toInt().coerceIn(0, mapManager.width - 1),
+                    off.y.toInt().coerceIn(0, mapManager.height - 1)
+                )
+            }
+            var iterations = 0L
+            val simulation = CampusSimulation(
+                width = mapManager.width,
+                height = mapManager.height,
+                grid = mapManager.grid,
+                studentCount = 100,
+                customStartPosition = startPos,
+                customSpaces = coworkingSpaces.ifEmpty { null }
+            )
+            val startTime = System.currentTimeMillis()
+            while (isActive) {
+                iterations += 1
+                withContext(Dispatchers.Default) { simulation.update() }
+                if (iterations % 5L == 0L)
+                {
+                    currentSimulationFrame = SimulationFrame(
+                        ants = simulation.ants.toList(),
+                        spaces = simulation.spaces.toList(),
+                        info = "Time: ${(System.currentTimeMillis() - startTime) / 1000.0}s | " +
+                                "Ants: ${simulation.ants.size} | Found: ${simulation.ants.count { it.hasFoundSpace }}"
+                    )
+                    delay(8)
+                }
+            }
+        }
+        activeJobs.add(job)
+        job.invokeOnCompletion {
+            currentSimulationFrame = SimulationFrame()
+            activeJobs.remove(job)
+        }
+    }
+
+    private fun extractCoworkingSpaces(buildingsMask: Bitmap): List<CoworkingSpace> {
+        val bw = buildingsMask.width
+        val bh = buildingsMask.height
+        val pixels = IntArray(bw * bh)
+        buildingsMask.getPixels(pixels, 0, bw, 0, 0, bw, bh)
+        val result = mutableListOf<CoworkingSpace>()
+        var id = 0
+        CampusDatabase.getAllBuildings().forEach { (color, building) ->
+            val coworkingVenues = building.venues.filter { it.isCoworking }
+            if (coworkingVenues.isEmpty()) return@forEach
+            var sumX = 0L; var sumY = 0L; var count = 0
+            for (i in pixels.indices) {
+                if ((pixels[i] and 0x00FFFFFF) == color) {
+                    sumX += (i % bw); sumY += (i / bw); count++
+                }
+            }
+            if (count == 0) return@forEach
+            val walkable = findNearestWalkablePoint((sumX / count).toInt(), (sumY / count).toInt())
+                ?: return@forEach
+            for (venue in coworkingVenues) {
+                result.add(CoworkingSpace(
+                    id = id++,
+                    position = IntPoint(walkable.x.toInt(), walkable.y.toInt()),
+                    capacity = venue.coworkingCapacity,
+                    comfort = venue.coworkingComfort
+                ))
+            }
+        }
+        return result
+    }
+
+    private fun findNearestWalkablePoint(cx: Int, cy: Int): Offset? {
+        val grid = mapManager.grid
+        val w = mapManager.width; val h = mapManager.height
+        for (r in 0..40) {
+            for (dy in -r..r) {
+                for (dx in -r..r) {
+                    if (kotlin.math.abs(dx) != r && kotlin.math.abs(dy) != r) continue
+                    val nx = cx + dx; val ny = cy + dy
+                    if (nx in 0 until w && ny in 0 until h && grid[ny * w + nx] == 1)
+                        return Offset(nx.toFloat(), ny.toFloat())
+                }
+            }
+        }
+        return null
     }
 
     fun toggleVenue(buildingColor: Int, venueName: String) {
