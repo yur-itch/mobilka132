@@ -224,7 +224,7 @@ fun MapScreen(
                     modifier = Modifier
                         .size(48.dp)
                         .background(
-                            MaterialTheme.colorScheme.primaryContainer,
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
                             RoundedCornerShape(12.dp)
                         )
                         .clickable { showSearch = true }
@@ -234,7 +234,7 @@ fun MapScreen(
                     Icon(
                         Icons.Default.Search,
                         contentDescription = "Поиск",
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(28.dp)
                     )
                 }
