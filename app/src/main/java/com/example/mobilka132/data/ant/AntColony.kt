@@ -195,22 +195,32 @@ class CampusSimulation(
     val width: Int,
     val height: Int,
     val grid: IntArray,
-    var studentCount: Int = 30
+    var studentCount: Int = 30,
+    customStartPosition: IntPoint? = null,
+    customSpaces: List<CoworkingSpace>? = null
 ) {
     val pheromones = PheromoneMap(width, height)
     val spaces = mutableListOf<CoworkingSpace>()
     val ants = mutableListOf<Ant>()
-    var startPosition = IntPoint(width / 2, height / 2)
+    var startPosition = customStartPosition ?: IntPoint(width / 2, height / 2)
 
     init {
-        while (grid[startPosition.y * width + startPosition.x] != 1) {
-            startPosition = IntPoint(Random.nextInt(100, (width - 100)),
-                Random.nextInt(100, (width - 100)))
+        if (customStartPosition == null) {
+            while (grid[startPosition.y * width + startPosition.x] != 1) {
+                startPosition = IntPoint(
+                    Random.nextInt(100, (width - 100)),
+                    Random.nextInt(100, (height - 100))
+                )
+            }
         }
         repeat(studentCount) {
             ants.add(Ant(startPosition.x, startPosition.y, width, height, grid))
         }
-        generateRandomSpaces()
+        if (!customSpaces.isNullOrEmpty()) {
+            spaces.addAll(customSpaces)
+        } else {
+            generateRandomSpaces()
+        }
     }
 
     private fun generateRandomSpaces() {
@@ -233,7 +243,7 @@ class CampusSimulation(
 
     fun update() {
         ants.forEach { it.step(pheromones, spaces, startPosition) }
-        pheromones.evaporate(0.00005f)
+        pheromones.evaporate(0.01f)
     }
 }
 

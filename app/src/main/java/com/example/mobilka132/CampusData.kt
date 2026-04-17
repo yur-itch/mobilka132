@@ -42,6 +42,7 @@ object CampusDatabase {
         addBuilding(
             0xFFAED512.toInt(), BuildingInfo(
                 "ТУСУР. Главный корпус", "Проспект Ленина, 40", listOf(
+                    VenueInfo("Коворкинг ТУСУР", "08:00 - 21:00", 0, emptyList(), isCoworking = true, coworkingCapacity = 40, coworkingComfort = 0.85)
                 ), type = BuildingType.LANDMARK
             )
         )
@@ -49,19 +50,25 @@ object CampusDatabase {
             0xFF2BD936.toInt(),
             BuildingInfo(
                 "Студенческий жилой комплекс «Маяк»",
-                "улица Аркадия Иванова, 22, 24",
+                "улица Аркадия Иванова, 22, 24", listOf(
+                    VenueInfo("Коворкинг Маяк", "08:00 - 21:00", 0, emptyList(), isCoworking = true, coworkingCapacity = 15, coworkingComfort = 0.95)
+                ),
                 type = BuildingType.LANDMARK
             )
         )
         addBuilding(
             0xFF9FB824.toInt(),
-            BuildingInfo("6 корпус ТГУ", "улица Аркадия Иванова, 49", type = BuildingType.LANDMARK)
+            BuildingInfo("6 корпус ТГУ", "улица Аркадия Иванова, 49", listOf(
+                VenueInfo("Коворкинг ТГУ", "09:00 - 20:00", 0, emptyList(), isCoworking = true, coworkingCapacity = 25, coworkingComfort = 0.75)
+            ), type = BuildingType.LANDMARK)
         )
         addBuilding(
             0xFF4C24BB.toInt(),
             BuildingInfo(
                 "Студенческий жилой комплекс «Парус»",
-                "Буяновский переулок, 3а",
+                "Буяновский переулок, 3а", listOf(
+                    VenueInfo("Коворкинг Парус", "08:00 - 21:00", 0, emptyList(), isCoworking = true, coworkingCapacity = 20, coworkingComfort = 0.8)
+                ),
                 type = BuildingType.LANDMARK
             )
         )
@@ -97,52 +104,63 @@ object CampusDatabase {
         )
         addBuilding(
             0xFF8F17BB.toInt(),
-            BuildingInfo("1 Корпус ТГУ", "Проспект Ленина, 36", type = BuildingType.LANDMARK)
+            BuildingInfo("1 Корпус ТГУ", "Проспект Ленина, 36", listOf(
+                VenueInfo("Коворкинг 1 корпуса ТГУ", "09:00 - 21:00", 0, emptyList(), isCoworking = true, coworkingCapacity = 30, coworkingComfort = 0.8)
+            ), type = BuildingType.LANDMARK)
         )
         addBuilding(
             0xFFF32167.toInt(), BuildingInfo(
                 "9 корпус ТГУ", "Проспект Ленина, 36, к9", listOf(
-                    VenueInfo(
-                        "Кофейня-библиотека 'Starbooks'",
-                        "08:00 - 20:00",
-                        TIME_SNACK,
-                        COFFEE_MENU
-                    )
+                    VenueInfo("Кофейня-библиотека 'Starbooks'", "08:00 - 20:00", TIME_SNACK, COFFEE_MENU),
+                    VenueInfo("Коворкинг 9 корпуса ТГУ", "09:00 - 21:00", 0, emptyList(), isCoworking = true, coworkingCapacity = 35, coworkingComfort = 0.9)
                 ), type = BuildingType.LANDMARK
             )
         )
         addBuilding(
             0xFF3971D1.toInt(), BuildingInfo(
                 "2 корпус ТГУ", "Проспект Ленина, 36, к2", listOf(
-                    VenueInfo("Кофейня 'XO Bakery'", "08:00 - 20:00", TIME_SNACK, COFFEE_MENU)
+                    VenueInfo("Кофейня 'XO Bakery'", "08:00 - 20:00", TIME_SNACK, COFFEE_MENU),
+                    VenueInfo("Коворкинг 2 корпуса ТГУ", "09:00 - 21:00", 0, emptyList(), isCoworking = true, coworkingCapacity = 28, coworkingComfort = 0.78)
                 ), type = BuildingType.LANDMARK
             )
         )
         addBuilding(
             0xFF1AE7BE.toInt(), BuildingInfo(
                 "Научная библиотека ТГУ", "Проект Ленина, 34а", listOf(
-                    VenueInfo("Кафе 'Научка'", "09:00 - 19:00", TIME_SNACK, COFFEE_MENU)
+                    VenueInfo("Кафе 'Научка'", "09:00 - 19:00", TIME_SNACK, COFFEE_MENU),
+                    VenueInfo("Читальный зал (Коворкинг)", "08:00 - 21:00", 0, emptyList(), isCoworking = true, coworkingCapacity = 50, coworkingComfort = 0.95)
                 ), type = BuildingType.LANDMARK
             )
         )
         addBuilding(
             0xFF2C12D3.toInt(), BuildingInfo(
                 "ТПУ. Главный корпус", "Проспект Ленина, 30", listOf(
-                    VenueInfo("Столовая 'В главном'", "08:00 - 16:00", TIME_MEAL, CANTEEN_MENU)
+                    VenueInfo("Столовая 'В главном'", "08:00 - 16:00", TIME_MEAL, CANTEEN_MENU),
+                    VenueInfo("Коворкинг ТПУ", "08:00 - 22:00", 0, emptyList(), isCoworking = true, coworkingCapacity = 45, coworkingComfort = 0.88)
                 ), type = BuildingType.LANDMARK
             )
         )
 
         addBuilding(
             0xFF98F52D.toInt(),
-            BuildingInfo("14 корпус ТГУ (Дом Спорта ТГУ)", "Проспект Ленина, 36")
+            BuildingInfo("14 корпус ТГУ (Дом Спорта ТГУ)", "Проспект Ленина, 36", listOf(
+                VenueInfo("Коворкинг 14 корпуса ТГУ", "09:00 - 20:00", 0, emptyList(), isCoworking = true, coworkingCapacity = 20, coworkingComfort = 0.7)
+            ))
         )
-        addBuilding(0xFF37BC68.toInt(), BuildingInfo("4 корпус ТГУ", "Московский тракт, 8"))
-        addBuilding(0xFFE5402E.toInt(), BuildingInfo("3 корпус ТГУ", "Проспект Ленина, 34"))
-        addBuilding(0xFF02D9D2.toInt(), BuildingInfo("5 корпус ТГУ", "Проспект Ленина, 36 к5"))
+        addBuilding(0xFF37BC68.toInt(), BuildingInfo("4 корпус ТГУ", "Московский тракт, 8", listOf(
+            VenueInfo("Коворкинг 4 корпуса ТГУ", "09:00 - 20:00", 0, emptyList(), isCoworking = true, coworkingCapacity = 22, coworkingComfort = 0.72)
+        )))
+        addBuilding(0xFFE5402E.toInt(), BuildingInfo("3 корпус ТГУ", "Проспект Ленина, 34", listOf(
+            VenueInfo("Коворкинг 3 корпуса ТГУ", "09:00 - 21:00", 0, emptyList(), isCoworking = true, coworkingCapacity = 18, coworkingComfort = 0.68)
+        )))
+        addBuilding(0xFF02D9D2.toInt(), BuildingInfo("5 корпус ТГУ", "Проспект Ленина, 36 к5", listOf(
+            VenueInfo("Коворкинг 5 корпуса ТГУ", "09:00 - 21:00", 0, emptyList(), isCoworking = true, coworkingCapacity = 24, coworkingComfort = 0.73)
+        )))
         addBuilding(
             0xFF3121C1.toInt(),
-            BuildingInfo("12 корпус ТГУ", "Улица Герцена, 2 / Ново-Соборная площадь, 1 ст2")
+            BuildingInfo("12 корпус ТГУ", "Улица Герцена, 2 / Ново-Соборная площадь, 1 ст2", listOf(
+                VenueInfo("Коворкинг 12 корпуса ТГУ", "09:00 - 21:00", 0, emptyList(), isCoworking = true, coworkingCapacity = 32, coworkingComfort = 0.82)
+            ))
         )
         addBuilding(
             0xFFF6241D.toInt(), BuildingInfo(
@@ -153,7 +171,9 @@ object CampusDatabase {
         )
         addBuilding(
             0xFFB98904.toInt(),
-            BuildingInfo("Сибирский физико-технический институт", "Ново-Соборная площадь, 1")
+            BuildingInfo("Сибирский физико-технический институт", "Ново-Соборная площадь, 1", listOf(
+                VenueInfo("Коворкинг СФТИ", "09:00 - 20:00", 0, emptyList(), isCoworking = true, coworkingCapacity = 15, coworkingComfort = 0.65)
+            ))
         )
         addBuilding(
             0xFF9CC835.toInt(), BuildingInfo(
@@ -183,7 +203,8 @@ object CampusDatabase {
         addBuilding(
             0xFF37D905.toInt(), BuildingInfo(
                 "5 корпус ТПУ", "Проспект Ленина, 30/2", listOf(
-                    VenueInfo("Кафе 'Мини-микс'", "09:00 - 17:00", TIME_QUICK, COFFEE_MENU)
+                    VenueInfo("Кафе 'Мини-микс'", "09:00 - 17:00", TIME_QUICK, COFFEE_MENU),
+                    VenueInfo("Коворкинг 5 корпуса ТПУ", "08:00 - 22:00", 0, emptyList(), isCoworking = true, coworkingCapacity = 30, coworkingComfort = 0.8)
                 )
             )
         )
