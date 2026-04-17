@@ -14,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.state.ToggleableState
@@ -25,6 +26,7 @@ import com.example.mobilka132.CampusDatabase
 import com.example.mobilka132.MapViewModel
 import com.example.mobilka132.R
 import com.example.mobilka132.model.BuildingInfo
+import com.example.mobilka132.model.BuildingType
 import com.example.mobilka132.model.MapPoint
 import com.example.mobilka132.model.ObstacleLine
 import com.example.mobilka132.ui.theme.ThemeMode
@@ -37,31 +39,57 @@ fun ThemeSelectionDialog(onDismiss: () -> Unit, onThemeChange: (ThemeMode, Color
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 8.dp
         ) {
-            Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("Настройка темы", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Column(
+                modifier = Modifier.padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    stringResource(R.string.theme_selection_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
 
                 Button(
                     onClick = { onThemeChange(ThemeMode.LIGHT, null); onDismiss() },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
                 ) {
-                    Text("Светлая (ТГУ)")
+                    Text(stringResource(R.string.theme_light_tsu))
                 }
 
                 Button(
                     onClick = { onThemeChange(ThemeMode.DARK, null); onDismiss() },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
                 ) {
-                    Text("Темная")
+                    Text(stringResource(R.string.theme_dark))
                 }
 
                 HorizontalDivider()
-                Text("Кастомный цвет", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    stringResource(R.string.theme_custom_color),
+                    style = MaterialTheme.typography.titleMedium
+                )
 
-                val colors = listOf(Color(0xFFE91E63), Color(0xFF9C27B0), Color(0xFF2196F3), Color(0xFF4CAF50), Color(0xFFFF9800), Color(0xFF795548))
+                val colors = listOf(
+                    Color(0xFFE91E63),
+                    Color(0xFF9C27B0),
+                    Color(0xFF2196F3),
+                    Color(0xFF4CAF50),
+                    Color(0xFFFF9800),
+                    Color(0xFF795548)
+                )
 
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
                     colors.forEach { color ->
                         Box(
                             modifier = Modifier
@@ -76,7 +104,7 @@ fun ThemeSelectionDialog(onDismiss: () -> Unit, onThemeChange: (ThemeMode, Color
                 }
 
                 TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
-                    Text("Закрыть")
+                    Text(stringResource(R.string.btn_close))
                 }
             }
         }
@@ -84,33 +112,62 @@ fun ThemeSelectionDialog(onDismiss: () -> Unit, onThemeChange: (ThemeMode, Color
 }
 
 @Composable
-fun PointsListDialog(points: List<MapPoint>, onDismiss: () -> Unit, onDeletePoint: (Int) -> Unit, onDeleteAll: () -> Unit) {
+fun PointsListDialog(
+    points: List<MapPoint>,
+    onDismiss: () -> Unit,
+    onDeletePoint: (Int) -> Unit,
+    onDeleteAll: () -> Unit
+) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 8.dp,
-            modifier = Modifier.fillMaxWidth().padding(16.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text(stringResource(R.string.dialog_my_locations), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        stringResource(R.string.dialog_my_locations),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                     if (points.isNotEmpty()) {
                         TextButton(onClick = onDeleteAll) {
-                            Text(stringResource(R.string.dialog_delete_all), color = MaterialTheme.colorScheme.error)
+                            Text(
+                                stringResource(R.string.dialog_delete_all),
+                                color = MaterialTheme.colorScheme.error
+                            )
                         }
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 if (points.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
-                        Text(stringResource(R.string.dialog_empty_list), color = MaterialTheme.colorScheme.outline)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(100.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            stringResource(R.string.dialog_empty_list),
+                            color = MaterialTheme.colorScheme.outline
+                        )
                     }
                 } else {
                     LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
                         itemsIndexed(points) { index, point ->
                             Row(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 12.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -121,17 +178,31 @@ fun PointsListDialog(points: List<MapPoint>, onDismiss: () -> Unit, onDeletePoin
                                         modifier = Modifier.size(32.dp)
                                     ) {
                                         Box(contentAlignment = Alignment.Center) {
-                                            Text("${point.id}", style = MaterialTheme.typography.labelLarge)
+                                            Text(
+                                                "${point.id}",
+                                                style = MaterialTheme.typography.labelLarge
+                                            )
                                         }
                                     }
                                     Spacer(modifier = Modifier.width(12.dp))
-                                    Text(text = stringResource(R.string.point_prefix, point.id), style = MaterialTheme.typography.bodyLarge)
+                                    Text(
+                                        text = stringResource(R.string.point_prefix, point.id),
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
                                 }
                                 IconButton(onClick = { onDeletePoint(index) }) {
-                                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.dialog_delete), tint = MaterialTheme.colorScheme.error)
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = stringResource(R.string.dialog_delete),
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
                                 }
                             }
-                            if (index < points.size - 1) HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                            if (index < points.size - 1) HorizontalDivider(
+                                modifier = Modifier.padding(
+                                    vertical = 4.dp
+                                )
+                            )
                         }
                     }
                 }
@@ -163,7 +234,10 @@ fun ObstacleListDialog(
             LazyColumn {
                 items(obstacles) { line ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.dialog_obstacle_line, line.id), modifier = Modifier.weight(1f))
+                        Text(
+                            stringResource(R.string.dialog_obstacle_line, line.id),
+                            modifier = Modifier.weight(1f)
+                        )
                         IconButton(onClick = { onDelete(line.id) }) {
                             Icon(Icons.Default.Delete, contentDescription = null, tint = Color.Red)
                         }
@@ -172,7 +246,12 @@ fun ObstacleListDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onClearAll) { Text(stringResource(R.string.dialog_clear_all), color = Color.Red) }
+            TextButton(onClick = onClearAll) {
+                Text(
+                    stringResource(R.string.dialog_clear_all),
+                    color = Color.Red
+                )
+            }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_close)) }
@@ -182,7 +261,8 @@ fun ObstacleListDialog(
 
 @Composable
 fun VenueSelectionDialog(viewModel: MapViewModel, onDismiss: () -> Unit) {
-    val buildings = remember { CampusDatabase.getAllBuildings().filter { it.value.venues.isNotEmpty() } }
+    val buildings =
+        remember { CampusDatabase.getAllBuildings().filter { it.value.venues.isNotEmpty() } }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -195,7 +275,7 @@ fun VenueSelectionDialog(viewModel: MapViewModel, onDismiss: () -> Unit) {
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
                 Text(
-                    "Настройка точек GA",
+                    stringResource(R.string.ga_points_setup),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
@@ -220,7 +300,7 @@ fun VenueSelectionDialog(viewModel: MapViewModel, onDismiss: () -> Unit) {
                     modifier = Modifier.align(Alignment.End),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Готово")
+                    Text(stringResource(R.string.btn_done))
                 }
             }
         }
@@ -287,5 +367,271 @@ fun BuildingSelectionItem(building: BuildingInfo, color: Int, viewModel: MapView
             }
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DishSelectionDialog(
+    viewModel: MapViewModel,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    val allDishes = remember {
+        CampusDatabase.getAllBuildings().values
+            .flatMap { it.venues }
+            .flatMap { it.dishes }
+            .distinct()
+            .sorted()
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        modifier = Modifier.fillMaxWidth(0.95f),
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            tonalElevation = 6.dp,
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text(
+                    stringResource(R.string.dish_selection_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    items(allDishes) { dish ->
+                        val isSelected = viewModel.selectedDishes.contains(dish)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.toggleDish(dish) }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = isSelected,
+                                onCheckedChange = { viewModel.toggleDish(dish) }
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = dish,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text(stringResource(R.string.btn_close))
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = onConfirm,
+                        enabled = viewModel.selectedDishes.isNotEmpty()
+                    ) {
+                        Icon(Icons.Default.Check, null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.btn_go))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun TspBuildingSelectionDialog(
+    viewModel: MapViewModel,
+    myLocation: Offset?,
+    points: List<MapPoint>,
+    onDismiss: () -> Unit,
+    onConfirm: (Offset?) -> Unit
+) {
+    var selectedType by remember { mutableStateOf<BuildingType?>(null) }
+
+    var startPointMode by remember { mutableIntStateOf(if (myLocation != null) 1 else 2) }
+
+    var chosenPointOffset by remember { mutableStateOf<Offset?>(null) }
+    var chosenPointLabel by remember { mutableStateOf("Выберите точку...") }
+
+    val buildings = remember { CampusDatabase.getAllBuildings() }
+    val filteredBuildings = remember(selectedType) {
+        if (selectedType == null) buildings
+        else buildings.filter { it.value.type == selectedType }
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.9f)
+                .padding(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text(
+                    "Выбор зданий для TSP",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text("Точка старта:", style = MaterialTheme.typography.labelMedium)
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    if (myLocation != null) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { startPointMode = 1 }) {
+                            RadioButton(selected = startPointMode == 1, onClick = { startPointMode = 1 })
+                            Text("Моя геолокация", style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { startPointMode = 2 }) {
+                        RadioButton(selected = startPointMode == 2, onClick = { startPointMode = 2 })
+                        Text("Поставленная точка", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+
+                if (startPointMode == 2) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    PointSelectorRow(
+                        prefix = "Старт",
+                        label = chosenPointLabel,
+                        points = points,
+                        myLocation = null,
+                        onSelected = { offset, label ->
+                            chosenPointOffset = offset
+                            chosenPointLabel = label
+                        }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text("Фильтр зданий:", style = MaterialTheme.typography.labelMedium)
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    FilterChip(
+                        selected = selectedType == null,
+                        onClick = { selectedType = null },
+                        label = { Text("Все") }
+                    )
+                    BuildingType.entries.forEach { type ->
+                        FilterChip(
+                            selected = selectedType == type,
+                            onClick = { selectedType = type },
+                            label = { Text(type.name.lowercase().replaceFirstChar { it.uppercase() }) }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilledTonalButton(
+                        onClick = { viewModel.selectAllTspBuildings(filteredBuildings.keys) },
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(horizontal = 4.dp)
+                    ) {
+                        Icon(Icons.Default.SelectAll, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Выбрать все", fontSize = 11.sp)
+                    }
+                    FilledTonalButton(
+                        onClick = { viewModel.clearTspBuildings(filteredBuildings.keys) },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.filledTonalButtonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer),
+                        contentPadding = PaddingValues(horizontal = 4.dp)
+                    ) {
+                        Icon(Icons.Default.Deselect, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Очистить", fontSize = 11.sp)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    filteredBuildings.forEach { (color, building) ->
+                        item {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { viewModel.toggleTspBuilding(color) }
+                                    .padding(vertical = 8.dp)
+                            ) {
+                                Checkbox(
+                                    checked = viewModel.selectedTspBuildings.contains(color),
+                                    onCheckedChange = { viewModel.toggleTspBuilding(color) }
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Column {
+                                    Text(
+                                        text = building.name.ifEmpty { building.address },
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                    Text(
+                                        text = building.type.name,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.outline
+                                    )
+                                }
+                            }
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Отмена")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            val startOffset = when(startPointMode) {
+                                1 -> myLocation
+                                2 -> chosenPointOffset
+                                else -> null
+                            }
+                            onConfirm(startOffset)
+                            onDismiss()
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        enabled = viewModel.selectedTspBuildings.size >= 1 && (startPointMode != 2 || chosenPointOffset != null)
+                    ) {
+                        Text("Решить TSP")
+                    }
+                }
+            }
+        }
     }
 }

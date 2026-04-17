@@ -54,7 +54,11 @@ fun main() = runBlocking {
     println("\n=== Problem Statistics ===")
     println("Points: $numPoints")
     println("Items: $numItems")
-    println("Items collected per point (avg): ${items.filter { it.isNotEmpty() }.map { it.size }.average()}")
+    println(
+        "Items collected per point (avg): ${
+            items.filter { it.isNotEmpty() }.map { it.size }.average()
+        }"
+    )
     println("Points with no items: ${items.count { it.isEmpty() }}")
 
     val allPoints = (0 until numPoints).toMutableList()
@@ -82,7 +86,7 @@ fun main() = runBlocking {
     }
 
     println("\n=== Final Results ===")
-    
+
     var bestRoute: MutableList<Int>? = null
     var maxFitnessValue = Double.NEGATIVE_INFINITY
     for (p in population) {
@@ -92,7 +96,7 @@ fun main() = runBlocking {
             bestRoute = p
         }
     }
-    
+
     if (bestRoute != null) {
         printDetailedRoute(bestRoute, ctx, "Final Best Route")
     }

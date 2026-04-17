@@ -10,10 +10,10 @@ import com.example.mobilka132.model.ObstacleLine
 import kotlinx.coroutines.*
 import kotlin.math.abs
 
-class MapManager(val context: Context)  {
+class MapManager(val context: Context) {
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-    lateinit var bitmap : Bitmap
+    lateinit var bitmap: Bitmap
     var loadedPoints: List<Offset> = emptyList()
 
     var width: Int = 0
@@ -21,7 +21,7 @@ class MapManager(val context: Context)  {
     var grid = IntArray(0)
     private var baseGrid = IntArray(0)
 
-    fun loadData() : Deferred<Int> {
+    fun loadData(): Deferred<Int> {
         val deferred = scope.async(Dispatchers.IO)
         {
             try {
@@ -72,19 +72,25 @@ class MapManager(val context: Context)  {
         }
     }
 
-        fun updateObstacles(lines: List<ObstacleLine>) {
-            val newGrid = baseGrid.copyOf()
-            lines.forEach { line ->
-                drawLineOnGrid(newGrid, line.start, line.end, 0)
-            }
-            newGrid.copyInto(grid)
+    fun updateObstacles(lines: List<ObstacleLine>) {
+        val newGrid = baseGrid.copyOf()
+        lines.forEach { line ->
+            drawLineOnGrid(newGrid, line.start, line.end, 0)
         }
+        newGrid.copyInto(grid)
+    }
 
-    private fun drawLineOnGrid(grid: IntArray, start: Offset, end: Offset, value: Int, thickness: Int = 2) {
-        var x0 = start.x.toInt().coerceIn(0, width - 1)
-        var y0 = start.y.toInt().coerceIn(0, height - 1)
-        val x1 = end.x.toInt().coerceIn(0, width - 1)
-        val y1 = end.y.toInt().coerceIn(0, height - 1)
+    private fun drawLineOnGrid(
+        grid: IntArray,
+        start: Offset,
+        end: Offset,
+        value: Int,
+        thickness: Int = 2
+    ) {
+        var x0 = start.x.toInt()
+        var y0 = start.y.toInt()
+        val x1 = end.x.toInt()
+        val y1 = end.y.toInt()
 
         val dx = abs(x1 - x0)
         val dy = abs(y1 - y0)
@@ -99,7 +105,6 @@ class MapManager(val context: Context)  {
                 for (iy in 0 until thickness) {
                     val px = x0 + ix - offset
                     val py = y0 + iy - offset
-
                     if (px in 0 until width && py in 0 until height) {
                         grid[py * width + px] = value
                     }
@@ -108,8 +113,12 @@ class MapManager(val context: Context)  {
 
             if (x0 == x1 && y0 == y1) break
             val e2 = 2 * err
-            if (e2 > -dy) { err -= dy; x0 += sx }
-            if (e2 < dx) { err += dx; y0 += sy }
+            if (e2 > -dy) {
+                err -= dy; x0 += sx
+            }
+            if (e2 < dx) {
+                err += dx; y0 += sy
+            }
         }
     }
 

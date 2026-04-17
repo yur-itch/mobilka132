@@ -87,7 +87,11 @@ class TestActivity : ComponentActivity() {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)
             ) {
-                Text("Draw Digit (Input 50x50)", style = MaterialTheme.typography.headlineSmall, color = Color.Black)
+                Text(
+                    "Draw Digit (Input 50x50)",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = Color.Black
+                )
 
                 Box(
                     modifier = Modifier
@@ -131,7 +135,11 @@ class TestActivity : ComponentActivity() {
                     color = Color.Blue
                 )
 
-                Text("Pipeline Result (28x28)", style = MaterialTheme.typography.titleMedium, color = Color.Black)
+                Text(
+                    "Pipeline Result (28x28)",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.Black
+                )
 
                 Box(
                     modifier = Modifier
