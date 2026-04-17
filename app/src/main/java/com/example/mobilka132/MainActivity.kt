@@ -44,22 +44,17 @@ class MainActivity : ComponentActivity() {
             var customColor by remember { mutableStateOf(ThemeHelper.getCustomColor(this)) }
 
             Mobilka132Theme(themeMode = currentTheme, customColor = customColor) {
-                MapScreen(
-                    viewModel = viewModel,
-                    location = location,
-                    onLanguageChange = { lang ->
-                        LocaleHelper.setLocale(this, lang)
-                        recreate()
-                    },
-                    onThemeChange = { theme, color ->
-                        ThemeHelper.setTheme(this, theme)
-                        if (color != null) {
-                            ThemeHelper.setCustomColor(this, color)
-                            customColor = color
-                        }
-                        currentTheme = theme
+                MapScreen(viewModel = viewModel, location = location, onLanguageChange = { lang ->
+                    LocaleHelper.setLocale(this, lang)
+                    recreate()
+                }, onThemeChange = { theme, color ->
+                    ThemeHelper.setTheme(this, theme)
+                    if (color != null) {
+                        ThemeHelper.setCustomColor(this, color)
+                        customColor = color
                     }
-                )
+                    currentTheme = theme
+                })
             }
         }
     }
