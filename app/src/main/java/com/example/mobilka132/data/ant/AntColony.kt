@@ -44,6 +44,7 @@ class Ant(var x: Int, var y: Int, private val campusWidth: Int, private val camp
 
     var hasFoundSpace: Boolean = false
     private var targetSpace: CoworkingSpace? = null
+    private var stepsFromTarget = 1
 
     private val neighbors = listOf(
         -1 to -1, 0 to -1, 1 to -1,
@@ -52,6 +53,7 @@ class Ant(var x: Int, var y: Int, private val campusWidth: Int, private val camp
     )
 
     fun step(pheromones: PheromoneMap, spaces: List<CoworkingSpace>, startPos: IntPoint) {
+        stepsFromTarget += 1
         val nextMove = chooseNextCell(pheromones)
         if (nextMove != null) {
             prevX = x
@@ -87,7 +89,7 @@ class Ant(var x: Int, var y: Int, private val campusWidth: Int, private val camp
                 if (dirX != 0 || dirY != 0 ) {
                     val dotProduct = dx * dirX + dy * dirY
                     if (dotProduct > 0) {
-                        weight = 20.0
+                        weight = 5.0
                     } else if (dotProduct == 0) {
                     } else {
                         weight = 0.01
@@ -99,7 +101,7 @@ class Ant(var x: Int, var y: Int, private val campusWidth: Int, private val camp
                 } else {
                     pheromones.toSpace[nextY * campusWidth + nextX]
                 }
-                weight += pWeight * 20.0
+                weight += pWeight * 30.0
 
                 candidates.add(IntPoint(nextX, nextY) to weight)
             }
@@ -130,7 +132,7 @@ class Ant(var x: Int, var y: Int, private val campusWidth: Int, private val camp
         startPos: IntPoint
     ) {
         if (!hasFoundSpace) {
-            pheromones.deposit(x, y, PheromoneType.TO_HOME, 0.3f)
+            pheromones.deposit(x, y, PheromoneType.TO_HOME, 1f / stepsFromTarget / stepsFromTarget)
 
             for (space in spaces) {
                 val dist = hypot((x - space.position.x).toDouble(), (y - space.position.y).toDouble())
@@ -142,19 +144,21 @@ class Ant(var x: Int, var y: Int, private val campusWidth: Int, private val camp
 
                         space.currentStudents++
 
+                        stepsFromTarget = 0
                         break
                     }
                 }
             }
         } else {
             val quality = targetSpace?.comfort?.toFloat() ?: 0.5f
-            pheromones.deposit(x, y, PheromoneType.TO_SPACE, quality / 3f)
+            pheromones.deposit(x, y, PheromoneType.TO_SPACE, quality / stepsFromTarget / stepsFromTarget)
 
             val distToHome = hypot((x - startPos.x).toDouble(), (y - startPos.y).toDouble())
 
             if (distToHome < 10.0) {
                 hasFoundSpace = false
                 targetSpace = null
+                stepsFromTarget = 0
             }
         }
     }
@@ -185,8 +189,8 @@ class CampusSimulation(
     private fun generateRandomSpaces() {
         var count = 0
         while (count < 10) {
-            val rx = Random.nextInt(100, (width - 100))
-            val ry = Random.nextInt(300, (height - 300))
+            val rx = Random.nextInt(50, (width - 50))
+            val ry = Random.nextInt(100, (height - 100))
 
             if (grid[ry * width + rx] == 1) {
                 spaces.add(CoworkingSpace(
@@ -203,7 +207,7 @@ class CampusSimulation(
 
     fun update() {
         ants.forEach { it.step(pheromones, spaces, startPosition) }
-        pheromones.evaporate(0.01f)
+        pheromones.evaporate(0.0001f)
     }
 }
 
