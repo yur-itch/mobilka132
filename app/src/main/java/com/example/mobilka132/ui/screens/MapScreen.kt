@@ -224,13 +224,11 @@ fun MapScreen(
                     modifier = Modifier
                         .size(48.dp)
                         .background(
-                            MaterialTheme.colorScheme.primaryContainer,
-                            RoundedCornerShape(12.dp)
+                            MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(12.dp)
                         )
                         .clickable { showSearch = true }
                         .padding(10.dp),
-                    contentAlignment = Alignment.Center
-                ) {
+                    contentAlignment = Alignment.Center) {
                     Icon(
                         Icons.Default.Search,
                         contentDescription = "Поиск",
@@ -249,8 +247,7 @@ fun MapScreen(
                     )
                     .clickable { shownIndex = (shownIndex + 1) % bitmaps.size }
                     .padding(10.dp),
-                contentAlignment = Alignment.Center
-            ) {
+                contentAlignment = Alignment.Center) {
                 Icon(
                     Icons.Default.Layers,
                     contentDescription = stringResource(R.string.map_view),
@@ -268,8 +265,7 @@ fun MapScreen(
                     modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
-                        Icons.Default.Stop,
-                        contentDescription = stringResource(R.string.stop_algo)
+                        Icons.Default.Stop, contentDescription = stringResource(R.string.stop_algo)
                     )
                 }
             }
@@ -298,18 +294,17 @@ fun MapScreen(
         ) {
             if (!showSearch) {
                 HeaderCard(
-                    state, viewModel,
+                    state,
+                    viewModel,
                     onMenuClick = { showAlgoMenu = true },
-                    onThemeClick = { showThemeMenu = true }
-                )
+                    onThemeClick = { showThemeMenu = true })
             } else {
                 SearchBar(
                     query = searchQuery,
                     onQueryChange = { searchQuery = it },
                     results = filteredResults,
                     onResultClick = onSearchResultClick,
-                    onClose = { showSearch = false; searchQuery = "" }
-                )
+                    onClose = { showSearch = false; searchQuery = "" })
             }
 
             AnimatedVisibility(
@@ -339,8 +334,7 @@ fun MapScreen(
                             )
                             showRouteMenu = false
                         }
-                    }
-                )
+                    })
             }
         }
 
@@ -362,8 +356,7 @@ fun MapScreen(
                             venue = venue,
                             onDismiss = { state.selectedVenueInfo = null },
                             onBack = { state.selectedVenueInfo = null },
-                            onLeaveFeedback = { showRatingDialog = true }
-                        )
+                            onLeaveFeedback = { showRatingDialog = true })
                     }
                 }
 
@@ -381,16 +374,14 @@ fun MapScreen(
                                         if (newPoint != null) {
                                             endPoint = newPoint.position
                                             endLabel = context.getString(
-                                                R.string.point_prefix,
-                                                newPoint.id
+                                                R.string.point_prefix, newPoint.id
                                             )
                                             showRouteMenu = true
                                         }
                                     }
                                 }
                                 state.selectedBuildingInfo = null
-                            }
-                        )
+                            })
                     }
                 }
 
@@ -460,8 +451,7 @@ fun MapScreen(
 
         if (showThemeMenu) {
             ThemeSelectionDialog(
-                onDismiss = { showThemeMenu = false },
-                onThemeChange = onThemeChange
+                onDismiss = { showThemeMenu = false }, onThemeChange = onThemeChange
             )
         }
 
@@ -497,8 +487,7 @@ fun MapScreen(
                         endPoint = null
                         endLabel = defaultTo
                     }
-                }
-            )
+                })
         }
 
         if (showObstacleMenu) {
@@ -513,15 +502,12 @@ fun MapScreen(
                     viewModel.clearObstacles()
                     viewModel.syncObstacles()
                     showObstacleMenu = false
-                }
-            )
+                })
         }
 
         if (showDecisionDialog) {
             DecisionDialog(
-                viewModel = treeViewModel,
-                onDismiss = { showDecisionDialog = false }
-            )
+                viewModel = treeViewModel, onDismiss = { showDecisionDialog = false })
         }
 
         if (showAlgoMenu) {
@@ -538,9 +524,7 @@ fun MapScreen(
 
         if (showVenueSelectionDialog) {
             VenueSelectionDialog(
-                viewModel = viewModel,
-                onDismiss = { showVenueSelectionDialog = false }
-            )
+                viewModel = viewModel, onDismiss = { showVenueSelectionDialog = false })
         }
 
         if (showTspBuildingSelectionDialog) {
@@ -560,8 +544,7 @@ fun MapScreen(
                 onConfirm = {
                     viewModel.startFoodShoppingGA(buildingsMask, location.mapLocation)
                     showDishSelectionDialog = false
-                }
-            )
+                })
         }
 
         if (showRatingDialog) {
@@ -571,8 +554,7 @@ fun MapScreen(
                 onRatingSubmitted = { rating ->
                     Toast.makeText(context, thanksMsg.format(rating), Toast.LENGTH_SHORT).show()
                     showRatingDialog = false
-                }
-            )
+                })
         }
     }
 }
