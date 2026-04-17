@@ -39,31 +39,57 @@ fun ThemeSelectionDialog(onDismiss: () -> Unit, onThemeChange: (ThemeMode, Color
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 8.dp
         ) {
-            Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("Настройка темы", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Column(
+                modifier = Modifier.padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    stringResource(R.string.theme_selection_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
 
                 Button(
                     onClick = { onThemeChange(ThemeMode.LIGHT, null); onDismiss() },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
                 ) {
-                    Text("Светлая (ТГУ)")
+                    Text(stringResource(R.string.theme_light_tsu))
                 }
 
                 Button(
                     onClick = { onThemeChange(ThemeMode.DARK, null); onDismiss() },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
                 ) {
-                    Text("Темная")
+                    Text(stringResource(R.string.theme_dark))
                 }
 
                 HorizontalDivider()
-                Text("Кастомный цвет", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    stringResource(R.string.theme_custom_color),
+                    style = MaterialTheme.typography.titleMedium
+                )
 
-                val colors = listOf(Color(0xFFE91E63), Color(0xFF9C27B0), Color(0xFF2196F3), Color(0xFF4CAF50), Color(0xFFFF9800), Color(0xFF795548))
+                val colors = listOf(
+                    Color(0xFFE91E63),
+                    Color(0xFF9C27B0),
+                    Color(0xFF2196F3),
+                    Color(0xFF4CAF50),
+                    Color(0xFFFF9800),
+                    Color(0xFF795548)
+                )
 
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
                     colors.forEach { color ->
                         Box(
                             modifier = Modifier
@@ -78,7 +104,7 @@ fun ThemeSelectionDialog(onDismiss: () -> Unit, onThemeChange: (ThemeMode, Color
                 }
 
                 TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
-                    Text("Закрыть")
+                    Text(stringResource(R.string.btn_close))
                 }
             }
         }
@@ -86,33 +112,62 @@ fun ThemeSelectionDialog(onDismiss: () -> Unit, onThemeChange: (ThemeMode, Color
 }
 
 @Composable
-fun PointsListDialog(points: List<MapPoint>, onDismiss: () -> Unit, onDeletePoint: (Int) -> Unit, onDeleteAll: () -> Unit) {
+fun PointsListDialog(
+    points: List<MapPoint>,
+    onDismiss: () -> Unit,
+    onDeletePoint: (Int) -> Unit,
+    onDeleteAll: () -> Unit
+) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 8.dp,
-            modifier = Modifier.fillMaxWidth().padding(16.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text(stringResource(R.string.dialog_my_locations), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        stringResource(R.string.dialog_my_locations),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                     if (points.isNotEmpty()) {
                         TextButton(onClick = onDeleteAll) {
-                            Text(stringResource(R.string.dialog_delete_all), color = MaterialTheme.colorScheme.error)
+                            Text(
+                                stringResource(R.string.dialog_delete_all),
+                                color = MaterialTheme.colorScheme.error
+                            )
                         }
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 if (points.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
-                        Text(stringResource(R.string.dialog_empty_list), color = MaterialTheme.colorScheme.outline)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(100.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            stringResource(R.string.dialog_empty_list),
+                            color = MaterialTheme.colorScheme.outline
+                        )
                     }
                 } else {
                     LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
                         itemsIndexed(points) { index, point ->
                             Row(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 12.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -123,17 +178,31 @@ fun PointsListDialog(points: List<MapPoint>, onDismiss: () -> Unit, onDeletePoin
                                         modifier = Modifier.size(32.dp)
                                     ) {
                                         Box(contentAlignment = Alignment.Center) {
-                                            Text("${point.id}", style = MaterialTheme.typography.labelLarge)
+                                            Text(
+                                                "${point.id}",
+                                                style = MaterialTheme.typography.labelLarge
+                                            )
                                         }
                                     }
                                     Spacer(modifier = Modifier.width(12.dp))
-                                    Text(text = stringResource(R.string.point_prefix, point.id), style = MaterialTheme.typography.bodyLarge)
+                                    Text(
+                                        text = stringResource(R.string.point_prefix, point.id),
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
                                 }
                                 IconButton(onClick = { onDeletePoint(index) }) {
-                                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.dialog_delete), tint = MaterialTheme.colorScheme.error)
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = stringResource(R.string.dialog_delete),
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
                                 }
                             }
-                            if (index < points.size - 1) HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                            if (index < points.size - 1) HorizontalDivider(
+                                modifier = Modifier.padding(
+                                    vertical = 4.dp
+                                )
+                            )
                         }
                     }
                 }
@@ -165,7 +234,10 @@ fun ObstacleListDialog(
             LazyColumn {
                 items(obstacles) { line ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.dialog_obstacle_line, line.id), modifier = Modifier.weight(1f))
+                        Text(
+                            stringResource(R.string.dialog_obstacle_line, line.id),
+                            modifier = Modifier.weight(1f)
+                        )
                         IconButton(onClick = { onDelete(line.id) }) {
                             Icon(Icons.Default.Delete, contentDescription = null, tint = Color.Red)
                         }
@@ -174,7 +246,12 @@ fun ObstacleListDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onClearAll) { Text(stringResource(R.string.dialog_clear_all), color = Color.Red) }
+            TextButton(onClick = onClearAll) {
+                Text(
+                    stringResource(R.string.dialog_clear_all),
+                    color = Color.Red
+                )
+            }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_close)) }
@@ -184,7 +261,8 @@ fun ObstacleListDialog(
 
 @Composable
 fun VenueSelectionDialog(viewModel: MapViewModel, onDismiss: () -> Unit) {
-    val buildings = remember { CampusDatabase.getAllBuildings().filter { it.value.venues.isNotEmpty() } }
+    val buildings =
+        remember { CampusDatabase.getAllBuildings().filter { it.value.venues.isNotEmpty() } }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -197,7 +275,7 @@ fun VenueSelectionDialog(viewModel: MapViewModel, onDismiss: () -> Unit) {
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
                 Text(
-                    "Настройка точек для GA (Заведения)",
+                    stringResource(R.string.ga_points_setup),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
@@ -222,7 +300,7 @@ fun VenueSelectionDialog(viewModel: MapViewModel, onDismiss: () -> Unit) {
                     modifier = Modifier.align(Alignment.End),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Готово")
+                    Text(stringResource(R.string.btn_done))
                 }
             }
         }
@@ -292,6 +370,86 @@ fun BuildingSelectionItem(building: BuildingInfo, color: Int, viewModel: MapView
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DishSelectionDialog(
+    viewModel: MapViewModel,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    val allDishes = remember {
+        CampusDatabase.getAllBuildings().values
+            .flatMap { it.venues }
+            .flatMap { it.dishes }
+            .distinct()
+            .sorted()
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        modifier = Modifier.fillMaxWidth(0.95f),
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            tonalElevation = 6.dp,
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text(
+                    stringResource(R.string.dish_selection_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    items(allDishes) { dish ->
+                        val isSelected = viewModel.selectedDishes.contains(dish)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.toggleDish(dish) }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = isSelected,
+                                onCheckedChange = { viewModel.toggleDish(dish) }
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = dish,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text(stringResource(R.string.btn_close))
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = onConfirm,
+                        enabled = viewModel.selectedDishes.isNotEmpty()
+                    ) {
+                        Icon(Icons.Default.Check, null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.btn_go))
+                    }
+                }
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TspBuildingSelectionDialog(
@@ -302,9 +460,9 @@ fun TspBuildingSelectionDialog(
     onConfirm: (Offset?) -> Unit
 ) {
     var selectedType by remember { mutableStateOf<BuildingType?>(null) }
-    
+
     var startPointMode by remember { mutableIntStateOf(if (myLocation != null) 1 else 2) }
-    
+
     var chosenPointOffset by remember { mutableStateOf<Offset?>(null) }
     var chosenPointLabel by remember { mutableStateOf("Выберите точку...") }
 
@@ -331,7 +489,7 @@ fun TspBuildingSelectionDialog(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text("Точка старта:", style = MaterialTheme.typography.labelMedium)
@@ -355,7 +513,7 @@ fun TspBuildingSelectionDialog(
                         label = chosenPointLabel,
                         points = points,
                         myLocation = null,
-                        onSelected = { offset, label -> 
+                        onSelected = { offset, label ->
                             chosenPointOffset = offset
                             chosenPointLabel = label
                         }
@@ -365,7 +523,7 @@ fun TspBuildingSelectionDialog(
                 Spacer(modifier = Modifier.height(8.dp))
                 HorizontalDivider()
                 Spacer(modifier = Modifier.height(8.dp))
-                
+
                 Text("Фильтр зданий:", style = MaterialTheme.typography.labelMedium)
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),

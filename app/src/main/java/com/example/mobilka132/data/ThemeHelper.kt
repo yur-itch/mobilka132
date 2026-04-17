@@ -12,7 +12,8 @@ object ThemeHelper {
 
     fun getTheme(context: Context): ThemeMode {
         val preferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val themeName = preferences.getString(THEME_KEY, ThemeMode.LIGHT.name) ?: ThemeMode.LIGHT.name
+        val themeName =
+            preferences.getString(THEME_KEY, ThemeMode.LIGHT.name) ?: ThemeMode.LIGHT.name
         return try {
             ThemeMode.valueOf(themeName)
         } catch (e: Exception) {

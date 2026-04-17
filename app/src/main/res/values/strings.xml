@@ -16,10 +16,10 @@
     <string name="lang_zh">中文</string>
 
     <string name="label_point">Точка</string>
-    <string name="label_obstacle">Препятствие</string>
+    <string name="label_obstacle">Преграда</string>
     <string name="label_path">Путь</string>
     <string name="label_locations">Локации</string>
-    <string name="label_obstacles_list">Препятствия</string>
+    <string name="label_obstacles_list">Преграды</string>
     <string name="point_prefix">Точка №%1$d</string>
 
     <string name="algo_advice_title">Совет (Дерево решений)</string>
@@ -47,7 +47,7 @@
     <string name="dialog_delete_all">Удалить всё</string>
     <string name="dialog_empty_list">Список пуст</string>
     <string name="dialog_close">Закрыть</string>
-    <string name="dialog_obstacles_title">Препятствия</string>
+    <string name="dialog_obstacles_title">Преграды</string>
     <string name="dialog_obstacle_line">Линия #%1$d</string>
     <string name="dialog_clear_all">Очистить все</string>
     <string name="dialog_delete">Удалить</string>
@@ -89,13 +89,29 @@
     <string name="node_weather">Погода</string>
     <string name="node_not_built">Дерево не построено</string>
 
-<!--    <string name="tsp_dialog_title">Выбор зданий для TSP</string>-->
-<!--    <string name="tsp_start_point_label">Точка старта:</string>-->
-<!--    <string name="tsp_start_manual">Поставленная точка</string>-->
-<!--    <string name="tsp_choose_point_placeholder">Выберите точку…</string>-->
-<!--    <string name="tsp_filter_label">Фильтр зданий:</string>-->
-<!--    <string name="tsp_filter_all">Все</string>-->
-<!--    <string name="tsp_select_all">Выбрать все</string>-->
-<!--    <string name="tsp_btn_cancel">Отмена</string>-->
-<!--    <string name="tsp_btn_solve">Решить TSP</string>-->
+    <string name="points_list_title">Список точек</string>
+    <string name="no_points">Нет точек</string>
+    <string name="btn_close">Закрыть</string>
+    <string name="obstacles_list_title">Преграды</string>
+    <string name="no_obstacles">Нет преград</string>
+    <string name="obstacle_prefix">Линия №%1$d</string>
+    <string name="venue_selection_title">Выбор заведений</string>
+    <string name="rate_venue_title">Оценка</string>
+    <string name="rate_venue_desc">Поставьте оценку заведению</string>
+    <string name="btn_submit">Отравить</string>
+    <string name="btn_cancel">Отмена</string>
+
+    <string name="theme_selection_title">Настройка темы</string>
+    <string name="theme_light_tsu">Светлая (ТГУ)</string>
+    <string name="theme_dark">Темная</string>
+    <string name="theme_custom_color">Кастомный цвет</string>
+    <string name="btn_done">Готово</string>
+    <string name="ga_points_setup">Настройка точек GA</string>
+    <string name="dish_selection_title">Выберите желаемые блюда</string>
+    <string name="btn_go">Поехали!</string>
+    <string name="rate_venue_headline">Оцените заведение</string>
+    <string name="rate_venue_hint">Нарисуйте цифру от 0 до 9</string>
+    <string name="your_rating_label">Ваша оценка:</string>
+    <string name="btn_reset">Сброс</string>
+    <string name="search_hint">Поиск</string>
 </resources>

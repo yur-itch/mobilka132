@@ -50,7 +50,11 @@ fun HeaderCard(
             Text(
                 text = when {
                     viewModel.isTSPProcessing -> stringResource(R.string.algo_tsp_running)
-                    viewModel.isGARunning -> stringResource(R.string.algo_ga_running, viewModel.currentGeneration)
+                    viewModel.isGARunning -> stringResource(
+                        R.string.algo_ga_running,
+                        viewModel.currentGeneration
+                    )
+
                     viewModel.isPathProcessing -> stringResource(R.string.searching_path)
                     else -> stringResource(R.string.map_route_title)
                 },

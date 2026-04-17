@@ -87,4 +87,30 @@
     <string name="node_queue">排队</string>
     <string name="node_weather">天气</string>
     <string name="node_not_built">树未构建</string>
+
+    <string name="points_list_title">地点列表</string>
+    <string name="no_points">没有地点</string>
+    <string name="btn_close">关闭</string>
+    <string name="obstacles_list_title">障碍物</string>
+    <string name="no_obstacles">没有障碍物</string>
+    <string name="obstacle_prefix">线条 #%1$d</string>
+    <string name="venue_selection_title">场所选择</string>
+    <string name="rate_venue_title">评分</string>
+    <string name="rate_venue_desc">评价该场所</string>
+    <string name="btn_submit">提交</string>
+    <string name="btn_cancel">取消</string>
+
+    <string name="theme_selection_title">主题设置</string>
+    <string name="theme_light_tsu">浅色 (TSU)</string>
+    <string name="theme_dark">深色</string>
+    <string name="theme_custom_color">自定义颜色</string>
+    <string name="btn_done">完成</string>
+    <string name="ga_points_setup">GA 地点设置</string>
+    <string name="dish_selection_title">选择您的菜肴</string>
+    <string name="btn_go">出发！</string>
+    <string name="rate_venue_headline">为该场所评分</string>
+    <string name="rate_venue_hint">画一个 0 到 9 的数字</string>
+    <string name="your_rating_label">您的评分：</string>
+    <string name="btn_reset">重置</string>
+    <string name="search_hint">搜索</string>
 </resources>

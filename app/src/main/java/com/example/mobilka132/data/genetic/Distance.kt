@@ -51,6 +51,10 @@ class WalkableDistance(
     private val algo: AStar
 ) : Distance {
 
+    companion object {
+        const val UNREACHABLE = 1000000.0
+    }
+
     private var points: List<Point> = emptyList()
     override val size: Int get() = points.size
 
@@ -68,7 +72,7 @@ class WalkableDistance(
 
         coroutineScope {
             val jobs = mutableListOf<kotlinx.coroutines.Deferred<Unit>>()
-            
+
             for (i in 0 until n) {
                 for (j in 0 until n) {
                     if (i == j) {
@@ -113,13 +117,14 @@ class WalkableDistance(
             len = cached.length
         } else {
             val aStarPath = algo.findPath(p1, p2)
-            len = algo.pathLength(aStarPath)
             val mappedPath = aStarPath.map { Point(it.first, it.second) }
+            path = mappedPath
+            len = if (aStarPath.isEmpty() && p1 != p2) UNREACHABLE else algo.pathLength(aStarPath)
+
             val pathToCache = if (isReversed) mappedPath.asReversed() else mappedPath
             synchronized(persistentCache) {
                 persistentCache[key] = CachedPath(pathToCache, len)
             }
-            path = mappedPath
         }
 
         lengthMatrix[fastIdx] = len
@@ -134,10 +139,10 @@ class WalkableDistance(
 
         val idx = if (i < j) i * n + j else j * n + i
         val cached = pathCache[idx] ?: return emptyList()
-        
+
         return if (i < j) cached else cached.asReversed()
     }
-    
+
     fun clearPersistentCache() {
         persistentCache.clear()
     }

@@ -124,76 +124,82 @@ class AStar(
             current = parent
         }
         if (current != null) path.add(current)
-        
+
         val divisor = (10.0 / state.metersPerPixel).toFloat()
         return PathData(path.reversed(), distance / divisor)
     }
 
-    fun findPathAsync(s: Pair<Int, Int>, e: Pair<Int, Int>, delayMs: Long = 16L): Flow<AStarStep> = flow {
-        val allNodes = arrayOfNulls<Node>(width * height)
+    fun findPathAsync(s: Pair<Int, Int>, e: Pair<Int, Int>, delayMs: Long = 16L): Flow<AStarStep> =
+        flow {
+            val allNodes = arrayOfNulls<Node>(width * height)
 
-        val start = getOrCreateNode(s.first, s.second, allNodes)
-        val destination = getOrCreateNode(e.first, e.second, allNodes)
+            val start = getOrCreateNode(s.first, s.second, allNodes)
+            val destination = getOrCreateNode(e.first, e.second, allNodes)
 
-        start.cost = 0
-        val closedSet = mutableSetOf<Node>()
-        val minHeap = PriorityQueue<Node>()
-        minHeap.add(start)
+            start.cost = 0
+            val closedSet = mutableSetOf<Node>()
+            val minHeap = PriorityQueue<Node>()
+            minHeap.add(start)
 
-        while (minHeap.isNotEmpty()) {
-            currentCoroutineContext().ensureActive()
-            val current = minHeap.poll()!!
+            while (minHeap.isNotEmpty()) {
+                currentCoroutineContext().ensureActive()
+                val current = minHeap.poll()!!
 
-            if (closedSet.contains(current)) continue
-            closedSet.add(current)
+                if (closedSet.contains(current)) continue
+                closedSet.add(current)
 
-            emit(
-                AStarStep(
-                    current = Offset(current.x.toFloat(), current.y.toFloat()),
-                    openSet = minHeap.map { Offset(it.x.toFloat(), it.y.toFloat()) },
-                    closedSet = closedSet.map { Offset(it.x.toFloat(), it.y.toFloat()) }
-                )
-            )
-
-            if (current == destination) {
-                val pathData = retrace(start, destination)
                 emit(
                     AStarStep(
                         current = Offset(current.x.toFloat(), current.y.toFloat()),
                         openSet = minHeap.map { Offset(it.x.toFloat(), it.y.toFloat()) },
-                        closedSet = closedSet.map { Offset(it.x.toFloat(), it.y.toFloat()) },
-                        path = Path(
-                            steps = pathData.path.map { node -> Offset(node.x.toFloat(), node.y.toFloat()) },
-                            distance = pathData.distance
-                        )
+                        closedSet = closedSet.map { Offset(it.x.toFloat(), it.y.toFloat()) }
                     )
                 )
-                return@flow
-            }
 
-            for (x in -1..1) {
-                for (y in -1..1) {
-                    if (x == 0 && y == 0) continue
-                    val i = x + current.x
-                    val j = y + current.y
+                if (current == destination) {
+                    val pathData = retrace(start, destination)
+                    emit(
+                        AStarStep(
+                            current = Offset(current.x.toFloat(), current.y.toFloat()),
+                            openSet = minHeap.map { Offset(it.x.toFloat(), it.y.toFloat()) },
+                            closedSet = closedSet.map { Offset(it.x.toFloat(), it.y.toFloat()) },
+                            path = Path(
+                                steps = pathData.path.map { node ->
+                                    Offset(
+                                        node.x.toFloat(),
+                                        node.y.toFloat()
+                                    )
+                                },
+                                distance = pathData.distance
+                            )
+                        )
+                    )
+                    return@flow
+                }
 
-                    if (i in 0 until width && j in 0 until height) {
-                        val node = getOrCreateNode(i, j, allNodes)
-                        if (closedSet.contains(node) || !walkable(node)) continue
+                for (x in -1..1) {
+                    for (y in -1..1) {
+                        if (x == 0 && y == 0) continue
+                        val i = x + current.x
+                        val j = y + current.y
 
-                        val newCost = current.cost + getDistance(current, node) + node.weight
-                        if (newCost < node.cost) {
-                            node.cost = newCost
-                            node.heuristicCost = getDistance(node, destination)
-                            node.parent = current
-                            minHeap.add(node)
+                        if (i in 0 until width && j in 0 until height) {
+                            val node = getOrCreateNode(i, j, allNodes)
+                            if (closedSet.contains(node) || !walkable(node)) continue
+
+                            val newCost = current.cost + getDistance(current, node) + node.weight
+                            if (newCost < node.cost) {
+                                node.cost = newCost
+                                node.heuristicCost = getDistance(node, destination)
+                                node.parent = current
+                                minHeap.add(node)
+                            }
                         }
                     }
                 }
+                delay(delayMs)
             }
-            delay(delayMs)
         }
-    }
 
     fun pathLength(path: List<Pair<Int, Int>>): Double {
         val totalInternal = (1 until path.size).sumOf { x ->
