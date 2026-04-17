@@ -56,6 +56,7 @@ class MapViewModel : ViewModel() {
     private var loadedPointsWithTiming: List<MapPointData> = emptyList()
 
     val selectedVenues = mutableStateMapOf<Int, Set<String>>()
+    val selectedDishes = mutableStateListOf<String>()
 
     fun init(mapManager: MapManager) {
         this.mapManager = mapManager
@@ -92,6 +93,14 @@ class MapViewModel : ViewModel() {
             selectedVenues[buildingColor] = building.venues.map { it.name }.toSet()
         } else {
             selectedVenues[buildingColor] = emptySet()
+        }
+    }
+
+    fun toggleDish(dish: String) {
+        if (selectedDishes.contains(dish)) {
+            selectedDishes.remove(dish)
+        } else {
+            selectedDishes.add(dish)
         }
     }
 
@@ -234,7 +243,7 @@ class MapViewModel : ViewModel() {
         }
     }
 
-    fun startFoodShoppingGA(buildingsMask: Bitmap) {
+    fun startFoodShoppingGA(buildingsMask: Bitmap, userLocation: Offset? = null) {
         if (activeJobs.isNotEmpty()) return
         val job = viewModelScope.launch {
             isGARunning = true
@@ -323,6 +332,11 @@ class MapViewModel : ViewModel() {
                     }
                 }
 
+                userLocation?.let { loc ->
+                    val snapped = state.findNearestAvailablePoint(loc)
+                    state.selectedPoints.add(0, MapPoint(id = 0, position = snapped))
+                }
+
                 val mapPoints = state.selectedPoints.toList()
                 if (mapPoints.size < 2) {
                     isGARunning = false
@@ -331,9 +345,9 @@ class MapViewModel : ViewModel() {
 
                 val numPoints = mapPoints.size
                 
-                val uniqueMenuItems = mapPoints.flatMap { it.items }.distinct()
-                val menuItemToIndex = uniqueMenuItems.withIndex().associate { it.value to it.index }
-                val numItems = uniqueMenuItems.size
+                val targetDishes = if (selectedDishes.isNotEmpty()) selectedDishes.toList() else mapPoints.flatMap { it.items }.distinct()
+                val dishToIndex = targetDishes.withIndex().associate { it.value to it.index }
+                val numItems = targetDishes.size
 
                 val gaPoints = mapPoints.map {
                     Point(
@@ -349,7 +363,7 @@ class MapViewModel : ViewModel() {
 
                 val allItems = (0 until numItems).toMutableList()
                 val items = MutableList(numPoints) { i -> 
-                    mapPoints[i].items.mapNotNull { menuItemToIndex[it] }.toMutableList()
+                    mapPoints[i].items.mapNotNull { dishToIndex[it] }.toMutableList()
                 }
 
                 val calendar = Calendar.getInstance()
@@ -360,7 +374,7 @@ class MapViewModel : ViewModel() {
                     dist = walkableDistance,
                     items = items,
                     allItems = allItems,
-                    initial = Random.nextInt(0, numPoints),
+                    initial = if (userLocation != null) 0 else Random.nextInt(0, numPoints),
                     startTime = currentMinutes,
                     speedKmh = 5.0,
                     metersPerPixel = state.metersPerPixel
