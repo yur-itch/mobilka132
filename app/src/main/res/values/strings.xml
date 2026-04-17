@@ -1,5 +1,6 @@
 <resources>
     <string name="app_name">mobilka132</string>
+    <string name="title_activity_new" translatable="false">New Activity</string>
     <string name="title_activity_test">Test Activity</string>
 
     <string name="menu_title">Меню</string>
