@@ -20,4 +20,4 @@ __seeds = [
 ]
 
 def random():
-    __random.choice(__seeds)
+    return __random.choice(__seeds)
