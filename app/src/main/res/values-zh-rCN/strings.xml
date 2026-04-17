@@ -104,6 +104,7 @@
     <string name="theme_light_tsu">浅色 (TSU)</string>
     <string name="theme_dark">深色</string>
     <string name="theme_custom_color">自定义颜色</string>
+    <string name="theme_dark_mode">暗黑模式</string>
     <string name="btn_done">完成</string>
     <string name="ga_points_setup">GA 地点设置</string>
     <string name="dish_selection_title">选择您的菜肴</string>
@@ -113,4 +114,16 @@
     <string name="your_rating_label">您的评分：</string>
     <string name="btn_reset">重置</string>
     <string name="search_hint">搜索</string>
+
+    <string name="tsp_dialog_title">TSP 建筑选择</string>
+    <string name="tsp_start_point">起点：</string>
+    <string name="tsp_my_location">我的位置</string>
+    <string name="tsp_placed_point">已放置点</string>
+    <string name="tsp_select_point_hint">请选择一个点...</string>
+    <string name="tsp_start_prefix">起点</string>
+    <string name="tsp_filter_buildings">建筑筛选：</string>
+    <string name="tsp_filter_all">全部</string>
+    <string name="tsp_select_all">全选</string>
+    <string name="tsp_clear">清除</string>
+    <string name="tsp_solve">解决 TSP</string>
 </resources>
