@@ -556,7 +556,7 @@ fun MapScreen(
 
         if (showSimulationDialog) {
             SimulationStartDialog(
-                myLocation = location.mapLocation,
+                myLocation = viewModel.userMapLocation,
                 points = state.selectedPoints,
                 onDismiss = { showSimulationDialog = false },
                 onConfirm = { startOffset ->
