@@ -192,7 +192,6 @@ fun MapScreen(
 
     LaunchedEffect(roadMask) {
         state.imageSize = Size(roadMask.width.toFloat(), roadMask.height.toFloat())
-        // Recalculate map location if world location exists
         viewModel.userWorldLocation?.let {
             viewModel.updateLocation(it)
         }
@@ -521,11 +520,17 @@ fun MapScreen(
                 onDismiss = { showAlgoMenu = false },
                 onStartGA = { showDishSelectionDialog = true; showAlgoMenu = false },
                 onStartTSP = { showTspBuildingSelectionDialog = true; showAlgoMenu = false },
+                onStartSimulation = { showSimulationDialog = true; showAlgoMenu = false },
+                onStartBonusClustering = { k -> viewModel.startBonusClustering(buildingsMask, k); showAlgoMenu = false },
+                onClearBonusClustering = { viewModel.bonusClusteringResult = null },
+                currentBonusClusterK   = viewModel.bonusClusteringResult?.k,
+                hasBonusResult         = viewModel.bonusClusteringResult != null,
+                bonusViewMode          = viewModel.bonusViewMode,
+                onBonusViewModeChange  = { viewModel.bonusViewMode = it },
                 onShowAdvice = { showDecisionDialog = true },
                 onConfigureGA = { showVenueSelectionDialog = true },
                 onLanguageChange = onLanguageChange,
-                isBusy = viewModel.isAnyAlgoRunning || state.isProcessing,
-                onStartSimulation = { showSimulationDialog = true; showAlgoMenu = false }
+                isBusy = viewModel.isAnyAlgoRunning || state.isProcessing
             )
         }
 

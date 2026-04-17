@@ -33,6 +33,16 @@
     <string name="algo_simulation_title">Симуляция кампуса</string>
     <string name="algo_simulation_desc">Запуск визуализации движения студентов</string>
 
+    <string name="algo_bonus_cluster_title">Кластеризация K-медоидов</string>
+    <string name="algo_bonus_cluster_desc">Евклид · Манхэттен · A* пешеходное</string>
+    <string name="algo_cluster_k_label">Кластеров: %1$d</string>
+    <string name="algo_cluster_btn">Запустить</string>
+    <string name="algo_bonus_astar_progress">A* пути: %1$d%%</string>
+    <string name="algo_bonus_view_euclidean">Евклид</string>
+    <string name="algo_bonus_view_manhattan">Манхэт.</string>
+    <string name="algo_bonus_view_astar">A*</string>
+    <string name="algo_bonus_view_diff">Различия</string>
+
     <string name="btn_route_here">Сюда</string>
     <string name="route_card_title">Маршрут</string>
     <string name="route_from">От</string>

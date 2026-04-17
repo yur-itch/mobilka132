@@ -30,6 +30,16 @@
     <string name="algo_tsp_desc">解决旅行商问题</string>
     <string name="algo_tsp_running">TSP：正在搜索…</string>
 
+    <string name="algo_bonus_cluster_title">K中心点聚类</string>
+    <string name="algo_bonus_cluster_desc">欧氏 · 曼哈顿 · A* 步行</string>
+    <string name="algo_cluster_k_label">聚类数：%1$d</string>
+    <string name="algo_cluster_btn">开始</string>
+    <string name="algo_bonus_astar_progress">A* 路径: %1$d%%</string>
+    <string name="algo_bonus_view_euclidean">欧氏</string>
+    <string name="algo_bonus_view_manhattan">曼哈顿</string>
+    <string name="algo_bonus_view_astar">A*</string>
+    <string name="algo_bonus_view_diff">差异</string>
+
     <string name="btn_route_here">去这里</string>
     <string name="route_card_title">路线</string>
     <string name="route_from">从</string>
