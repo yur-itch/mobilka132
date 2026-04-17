@@ -8,6 +8,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mobilka132.data.ant.AntAlgorithm
+import com.example.mobilka132.data.ant.CampusSimulation
+import com.example.mobilka132.model.SimulationFrame
 import com.example.mobilka132.data.genetic.*
 import com.example.mobilka132.data.pathfinding.AStar
 import com.example.mobilka132.data.pathfinding.PathData
@@ -33,6 +35,8 @@ class MapViewModel : ViewModel() {
     var currentGAStep by mutableStateOf<GAStep?>(null)
     var tspPath by mutableStateOf<Path?>(null)
     var activeJobs: MutableList<Job> = mutableStateListOf()
+
+    var currentSimulationFrame by mutableStateOf(SimulationFrame())
 
     var isPathProcessing by mutableStateOf(false)
     var isGARunning by mutableStateOf(false)
@@ -79,6 +83,39 @@ class MapViewModel : ViewModel() {
             if (Random.nextDouble() < 0.1) {
                 selectedTspBuildings.add(color)
             }
+        }
+    }
+
+    fun startCampusSimulation() {
+        if (isProcessing) return
+        val simulationJob = viewModelScope.launch {
+            val simulation = CampusSimulation(
+                width = mapManager.width,
+                height = mapManager.height,
+                grid = mapManager.grid,
+                studentCount = 100
+            )
+            val startTime = System.currentTimeMillis()
+            var iterations = 0L
+            while (currentSimulationFrame.spaces.any {cs -> cs.currentStudents < cs.capacity}) {
+                withContext(Dispatchers.Default) { simulation.update() }
+                iterations += 1
+                if (iterations % 5L == 0L) {
+
+                    currentSimulationFrame = SimulationFrame(
+                        ants = simulation.ants.toList(),
+                        spaces = simulation.spaces.toList(),
+                        info = "Time: ${(System.currentTimeMillis() - startTime) / 1000.0}s | Ants: ${simulation.ants.size} | Found: ${simulation.ants.count { it.hasFoundSpace }}"
+                    )
+                    println(currentSimulationFrame.info)
+                    delay(16)
+                }
+            }
+        }
+        activeJobs.add(simulationJob)
+        simulationJob.invokeOnCompletion {
+            currentSimulationFrame = SimulationFrame()
+            activeJobs.remove(simulationJob)
         }
     }
 

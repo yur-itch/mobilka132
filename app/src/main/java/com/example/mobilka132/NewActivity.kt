@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
 import com.example.mobilka132.data.ant.*
+import com.example.mobilka132.model.SimulationFrame
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -108,9 +109,3 @@ fun DebugOverlay(info: String) {
     }
 }
 
-// Внутри NewActivity или в отдельном файле
-data class SimulationFrame(
-    val ants: List<Ant> = emptyList(),
-    val spaces: List<CoworkingSpace> = emptyList(),
-    val info: String = ""
-)

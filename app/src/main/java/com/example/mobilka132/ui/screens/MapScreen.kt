@@ -518,7 +518,8 @@ fun MapScreen(
                 onShowAdvice = { showDecisionDialog = true },
                 onConfigureGA = { showVenueSelectionDialog = true },
                 onLanguageChange = onLanguageChange,
-                isBusy = viewModel.isAnyAlgoRunning || state.isProcessing
+                isBusy = viewModel.isAnyAlgoRunning || state.isProcessing,
+                onStartSimulation = { viewModel.startCampusSimulation(); showAlgoMenu = false }
             )
         }
 
