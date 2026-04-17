@@ -105,6 +105,7 @@
     <string name="theme_light_tsu">Светлая (ТГУ)</string>
     <string name="theme_dark">Темная</string>
     <string name="theme_custom_color">Кастомный цвет</string>
+    <string name="theme_dark_mode">Темный режим</string>
     <string name="btn_done">Готово</string>
     <string name="ga_points_setup">Настройка точек GA</string>
     <string name="dish_selection_title">Выберите желаемые блюда</string>
