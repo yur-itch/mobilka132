@@ -183,6 +183,22 @@ fun MapContainer(
                             drawCircle(Color.Red, radius = 10f / state.scale, center = line.start)
                             drawCircle(Color.Red, radius = 10f / state.scale, center = line.end)
                         }
+
+                        val frame = viewModel.currentSimulationFrame
+                        frame.spaces.forEach { space ->
+                            drawCircle(
+                                color = if (space.currentStudents < space.capacity) Color.Green else Color.Red,
+                                radius = 8f / state.scale,
+                                center = Offset(space.position.x.toFloat(), space.position.y.toFloat())
+                            )
+                        }
+                        frame.ants.forEach { ant ->
+                            drawCircle(
+                                color = if (ant.hasFoundSpace) Color.Yellow else Color.Cyan,
+                                radius = 3f / state.scale,
+                                center = Offset(ant.x.toFloat(), ant.y.toFloat())
+                            )
+                        }
                     }
                 }
             }
