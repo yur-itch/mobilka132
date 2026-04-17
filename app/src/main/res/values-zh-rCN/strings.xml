@@ -29,6 +29,8 @@
     <string name="algo_tsp_title">蚁群算法 (TSP)</string>
     <string name="algo_tsp_desc">解决旅行商问题</string>
     <string name="algo_tsp_running">TSP：正在搜索…</string>
+    <string name="algo_simulation_title">校园模拟</string>
+    <string name="algo_simulation_desc">启动学生运动可视化</string>
 
     <string name="algo_bonus_cluster_title">K中心点聚类</string>
     <string name="algo_bonus_cluster_desc">欧氏 · 曼哈顿 · A* 步行</string>
@@ -136,4 +138,23 @@
     <string name="tsp_select_all">全选</string>
     <string name="tsp_clear">清除</string>
     <string name="tsp_solve">解决 TSP</string>
+
+    <string name="simulation_start_title">启动模拟</string>
+    <string name="simulation_start_point_label">蚂蚁起点：</string>
+    <string name="simulation_random_point">随机点</string>
+    <string name="simulation_my_location">我的位置</string>
+    <string name="simulation_placed_point">已放置点</string>
+    <string name="simulation_select_point_hint">选择一个点...</string>
+    <string name="simulation_start_prefix">起点</string>
+    <string name="simulation_start_btn">启动</string>
+    <string name="back_label">返回</string>
+    <string name="search_placeholder">搜索建筑或场所...</string>
+    <string name="clear_label">清除</string>
+    <string name="configure_label">配置</string>
+    <string name="tbank_ad_desc">最好的移动银行</string>
+    <string name="btn_open">打开</string>
+    <string name="theme_label">主题</string>
+    <string name="metric_euclidean_short">欧</string>
+    <string name="metric_manhattan_short">曼</string>
+    <string name="metric_astar_short">A*</string>
 </resources>

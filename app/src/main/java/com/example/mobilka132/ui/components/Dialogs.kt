@@ -646,23 +646,24 @@ fun SimulationStartDialog(
 ) {
     var startPointMode by remember { mutableIntStateOf(if (myLocation != null) 1 else 0) }
     var chosenPointOffset by remember { mutableStateOf<Offset?>(null) }
-    var chosenPointLabel by remember { mutableStateOf("Выберите точку...") }
+    val selectPointHint = stringResource(R.string.simulation_select_point_hint)
+    var chosenPointLabel by remember { mutableStateOf(selectPointHint) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text("Запуск симуляции", fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.simulation_start_title), fontWeight = FontWeight.Bold)
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Начальная точка муравьёв:", style = MaterialTheme.typography.labelMedium)
+                Text(stringResource(R.string.simulation_start_point_label), style = MaterialTheme.typography.labelMedium)
                 Spacer(Modifier.height(4.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth().clickable { startPointMode = 0 }
                 ) {
                     RadioButton(selected = startPointMode == 0, onClick = { startPointMode = 0 })
-                    Text("Случайная точка", style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.simulation_random_point), style = MaterialTheme.typography.bodyMedium)
                 }
                 if (myLocation != null) {
                     Row(
@@ -670,7 +671,7 @@ fun SimulationStartDialog(
                         modifier = Modifier.fillMaxWidth().clickable { startPointMode = 1 }
                     ) {
                         RadioButton(selected = startPointMode == 1, onClick = { startPointMode = 1 })
-                        Text("Моя геолокация", style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(R.string.simulation_my_location), style = MaterialTheme.typography.bodyMedium)
                     }
                 }
                 Row(
@@ -678,12 +679,12 @@ fun SimulationStartDialog(
                     modifier = Modifier.fillMaxWidth().clickable { startPointMode = 2 }
                 ) {
                     RadioButton(selected = startPointMode == 2, onClick = { startPointMode = 2 })
-                    Text("Поставленная точка", style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.simulation_placed_point), style = MaterialTheme.typography.bodyMedium)
                 }
                 if (startPointMode == 2) {
                     Spacer(Modifier.height(4.dp))
                     PointSelectorRow(
-                        prefix = "Старт",
+                        prefix = stringResource(R.string.simulation_start_prefix),
                         label = chosenPointLabel,
                         points = points,
                         myLocation = null,
@@ -709,11 +710,11 @@ fun SimulationStartDialog(
                 enabled = startPointMode != 2 || chosenPointOffset != null,
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Запустить")
+                Text(stringResource(R.string.simulation_start_btn))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Отмена") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel)) }
         }
     )
 }

@@ -236,7 +236,7 @@ fun MapScreen(
                     contentAlignment = Alignment.Center) {
                     Icon(
                         Icons.Default.Search,
-                        contentDescription = "Поиск",
+                        contentDescription = stringResource(R.string.search_hint),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(28.dp)
                     )
