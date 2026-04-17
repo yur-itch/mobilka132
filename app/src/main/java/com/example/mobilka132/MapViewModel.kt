@@ -2,6 +2,7 @@ package com.example.mobilka132
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.location.Location
 import android.util.Log
 import androidx.compose.runtime.*
 import androidx.compose.ui.geometry.Offset
@@ -54,6 +55,9 @@ class MapViewModel : ViewModel() {
 
     var initialized by mutableStateOf(false)
 
+    var userMapLocation by mutableStateOf<Offset?>(null)
+    var userWorldLocation by mutableStateOf<Location?>(null)
+
     var currentGeneration by mutableIntStateOf(0)
     var totalGenerations by mutableIntStateOf(0)
 
@@ -66,6 +70,7 @@ class MapViewModel : ViewModel() {
     val selectedDishes = mutableStateListOf<String>()
 
     fun init(mapManager: MapManager) {
+        if (initialized) return
         this.mapManager = mapManager
         state.init(mapManager.width, mapManager.height, mapManager.grid)
         pathfinder = AStar(mapManager.width, mapManager.height, mapManager.grid, state)
@@ -86,6 +91,11 @@ class MapViewModel : ViewModel() {
                 selectedTspBuildings.add(color)
             }
         }
+    }
+
+    fun updateLocation(location: Location) {
+        userWorldLocation = location
+        userMapLocation = state.getMapLocation(location)
     }
 
     fun startCampusSimulation(buildingsMask: Bitmap, startOffset: Offset? = null) {

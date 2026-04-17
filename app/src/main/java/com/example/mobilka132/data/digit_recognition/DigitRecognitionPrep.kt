@@ -112,7 +112,7 @@ class DigitRecognitionPrep {
             }
 
             val result = createBitmap(width, height)
-            Canvas(result).drawColor(android.graphics.Color.BLACK)
+            Canvas(result).drawColor(Color.BLACK)
 
             for (y in 0 until height) {
                 for (x in 0 until width) {
@@ -201,7 +201,7 @@ class DigitRecognitionPrep {
             } while (changed)
 
             val result = createBitmap(width, height)
-            Canvas(result).drawColor(android.graphics.Color.BLACK)
+            Canvas(result).drawColor(Color.BLACK)
 
             for (y in 0 until height) {
                 for (x in 0 until width) {
@@ -234,7 +234,7 @@ class DigitRecognitionPrep {
             val width = src.width
             val height = src.height
             val result = createBitmap(width, height)
-            Canvas(result).drawColor(android.graphics.Color.BLACK)
+            Canvas(result).drawColor(Color.BLACK)
             val kernelSize = 2 * radius + 1
             val kernel = FloatArray(kernelSize)
             val sigma2 = 2 * sigma * sigma

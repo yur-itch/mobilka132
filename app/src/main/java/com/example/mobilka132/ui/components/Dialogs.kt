@@ -32,7 +32,7 @@ import com.example.mobilka132.model.ObstacleLine
 import com.example.mobilka132.ui.theme.ThemeMode
 
 @Composable
-fun ThemeSelectionDialog(onDismiss: () -> Unit, onThemeChange: (ThemeMode, Color?) -> Unit) {
+fun ThemeSelectionDialog(onDismiss: () -> Unit, onThemeChange: (ThemeMode?, Color?) -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(24.dp),
@@ -72,6 +72,7 @@ fun ThemeSelectionDialog(onDismiss: () -> Unit, onThemeChange: (ThemeMode, Color
                 }
 
                 HorizontalDivider()
+                
                 Text(
                     stringResource(R.string.theme_custom_color),
                     style = MaterialTheme.typography.titleMedium
@@ -96,7 +97,7 @@ fun ThemeSelectionDialog(onDismiss: () -> Unit, onThemeChange: (ThemeMode, Color
                                 .size(40.dp)
                                 .background(color, CircleShape)
                                 .clickable {
-                                    onThemeChange(ThemeMode.CUSTOM, color)
+                                    onThemeChange(null, color)
                                     onDismiss()
                                 }
                         )
@@ -460,11 +461,11 @@ fun TspBuildingSelectionDialog(
     onConfirm: (Offset?) -> Unit
 ) {
     var selectedType by remember { mutableStateOf<BuildingType?>(null) }
-
     var startPointMode by remember { mutableIntStateOf(if (myLocation != null) 1 else 2) }
 
     var chosenPointOffset by remember { mutableStateOf<Offset?>(null) }
-    var chosenPointLabel by remember { mutableStateOf("Выберите точку...") }
+    val selectPointHint = stringResource(R.string.tsp_select_point_hint)
+    var chosenPointLabel by remember { mutableStateOf(selectPointHint) }
 
     val buildings = remember { CampusDatabase.getAllBuildings() }
     val filteredBuildings = remember(selectedType) {
@@ -484,7 +485,7 @@ fun TspBuildingSelectionDialog(
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
                 Text(
-                    "Выбор зданий для TSP",
+                    stringResource(R.string.tsp_dialog_title),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
@@ -492,24 +493,24 @@ fun TspBuildingSelectionDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Text("Точка старта:", style = MaterialTheme.typography.labelMedium)
+                Text(stringResource(R.string.tsp_start_point), style = MaterialTheme.typography.labelMedium)
                 Column(modifier = Modifier.fillMaxWidth()) {
                     if (myLocation != null) {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { startPointMode = 1 }) {
                             RadioButton(selected = startPointMode == 1, onClick = { startPointMode = 1 })
-                            Text("Моя геолокация", style = MaterialTheme.typography.bodyMedium)
+                            Text(stringResource(R.string.tsp_my_location), style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { startPointMode = 2 }) {
                         RadioButton(selected = startPointMode == 2, onClick = { startPointMode = 2 })
-                        Text("Поставленная точка", style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(R.string.tsp_placed_point), style = MaterialTheme.typography.bodyMedium)
                     }
                 }
 
                 if (startPointMode == 2) {
                     Spacer(modifier = Modifier.height(8.dp))
                     PointSelectorRow(
-                        prefix = "Старт",
+                        prefix = stringResource(R.string.tsp_start_prefix),
                         label = chosenPointLabel,
                         points = points,
                         myLocation = null,
@@ -524,7 +525,7 @@ fun TspBuildingSelectionDialog(
                 HorizontalDivider()
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Text("Фильтр зданий:", style = MaterialTheme.typography.labelMedium)
+                Text(stringResource(R.string.tsp_filter_buildings), style = MaterialTheme.typography.labelMedium)
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -533,7 +534,7 @@ fun TspBuildingSelectionDialog(
                     FilterChip(
                         selected = selectedType == null,
                         onClick = { selectedType = null },
-                        label = { Text("Все") }
+                        label = { Text(stringResource(R.string.tsp_filter_all)) }
                     )
                     BuildingType.entries.forEach { type ->
                         FilterChip(
@@ -557,7 +558,7 @@ fun TspBuildingSelectionDialog(
                     ) {
                         Icon(Icons.Default.SelectAll, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Выбрать все", fontSize = 11.sp)
+                        Text(stringResource(R.string.tsp_select_all), fontSize = 11.sp)
                     }
                     FilledTonalButton(
                         onClick = { viewModel.clearTspBuildings(filteredBuildings.keys) },
@@ -567,7 +568,7 @@ fun TspBuildingSelectionDialog(
                     ) {
                         Icon(Icons.Default.Deselect, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Очистить", fontSize = 11.sp)
+                        Text(stringResource(R.string.tsp_clear), fontSize = 11.sp)
                     }
                 }
 
@@ -612,7 +613,7 @@ fun TspBuildingSelectionDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("Отмена")
+                        Text(stringResource(R.string.btn_cancel))
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
@@ -628,7 +629,7 @@ fun TspBuildingSelectionDialog(
                         shape = RoundedCornerShape(12.dp),
                         enabled = viewModel.selectedTspBuildings.size >= 1 && (startPointMode != 2 || chosenPointOffset != null)
                     ) {
-                        Text("Решить TSP")
+                        Text(stringResource(R.string.tsp_solve))
                     }
                 }
             }

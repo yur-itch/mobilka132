@@ -1,8 +1,11 @@
 package com.example.mobilka132.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Groups
@@ -11,8 +14,10 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.TravelExplore
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -32,10 +37,14 @@ fun AlgoDrawer(
     onLanguageChange: (String) -> Unit,
     isBusy: Boolean
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        dragHandle = { BottomSheetDefaults.DragHandle() }
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .padding(bottom = 32.dp, start = 16.dp, end = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -125,6 +134,71 @@ fun AlgoDrawer(
                     onClick = { onLanguageChange("zh") },
                     modifier = Modifier.weight(1f)
                 )
+            }
+
+            TBankAdBanner()
+        }
+    }
+}
+
+@Composable
+fun TBankAdBanner(modifier: Modifier = Modifier) {
+    val uriHandler = LocalUriHandler.current
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = Color(0xFFFFDD2D),
+        contentColor = Color.Black
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .background(Color.Black, RoundedCornerShape(10.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "T",
+                    color = Color(0xFFFFDD2D),
+                    fontWeight = FontWeight.Black,
+                    fontSize = 26.sp
+                )
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Т-Банк",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp,
+                    letterSpacing = (-0.5).sp
+                )
+                Text(
+                    "Лучший мобильный банк",
+                    fontSize = 12.sp,
+                    lineHeight = 14.sp,
+                    color = Color.Black.copy(alpha = 0.7f)
+                )
+            }
+
+            Button(
+                onClick = { uriHandler.openUri("https://www.tbank.ru") },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.Black,
+                    contentColor = Color.White
+                ),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                modifier = Modifier.height(36.dp),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text("Открыть", fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
