@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
@@ -40,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import com.example.mobilka132.MapOverlayRenderer
 import com.example.mobilka132.MapState
 import com.example.mobilka132.MapViewModel
+import com.example.mobilka132.R
 import com.example.mobilka132.data.clustering.BonusViewMode
 import com.example.mobilka132.data.clustering.PointMultiAssignment
 import com.example.mobilka132.data.location.LocationManager
@@ -308,9 +310,9 @@ fun MapContainer(
                                 Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
-                        MetricChip("Е",  selPt.euclideanCluster)
-                        MetricChip("М",  selPt.manhattanCluster)
-                        MetricChip("A*", selPt.astarCluster)
+                        MetricChip(stringResource(R.string.metric_euclidean_short),  selPt.euclideanCluster)
+                        MetricChip(stringResource(R.string.metric_manhattan_short),  selPt.manhattanCluster)
+                        MetricChip(stringResource(R.string.metric_astar_short), selPt.astarCluster)
                     }
                 }
             }

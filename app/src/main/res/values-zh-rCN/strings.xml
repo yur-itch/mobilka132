@@ -6,7 +6,7 @@
     <string name="map_view">视图</string>
     <string name="stop_algo">停止</string>
     <string name="map_route_title">路线图</string>
-    <string name="searching_path">正在寻找路径…</string>
+    <string name="searching_path">正在寻找路径&#8230;</string>
     <string name="gps_label">GPS</string>
 
     <string name="settings_language">应用语言</string>
@@ -28,7 +28,7 @@
     <string name="algo_ga_running">遗传算法：第 %1$d 代</string>
     <string name="algo_tsp_title">蚁群算法 (TSP)</string>
     <string name="algo_tsp_desc">解决旅行商问题</string>
-    <string name="algo_tsp_running">TSP：正在搜索…</string>
+    <string name="algo_tsp_running">TSP：正在搜索&#8230;</string>
     <string name="algo_simulation_title">校园模拟</string>
     <string name="algo_simulation_desc">启动学生运动可视化</string>
 
@@ -91,13 +91,11 @@
     <string name="tree_apply">应用并重建</string>
     <string name="tree_csv_label">训练集 (CSV)：</string>
     <string name="tree_not_ready">树尚未就绪。请检查 CSV。</string>
+    <string name="tree_visualize_label">可视化</string>
+    <string name="tree_settings_label">设置</string>
+    <string name="tree_csv_placeholder">标头1,标头2,目标&#8230;</string>
+    <string name="tree_question_generic">问题: %1$s</string>
 
-    <string name="node_budget">预算</string>
-    <string name="node_location">地点</string>
-    <string name="node_time">时间</string>
-    <string name="node_food">食物</string>
-    <string name="node_queue">排队</string>
-    <string name="node_weather">天气</string>
     <string name="node_not_built">树未构建</string>
 
     <string name="points_list_title">地点列表</string>
@@ -131,7 +129,7 @@
     <string name="tsp_start_point">起点：</string>
     <string name="tsp_my_location">我的位置</string>
     <string name="tsp_placed_point">已放置点</string>
-    <string name="tsp_select_point_hint">请选择一个点...</string>
+    <string name="tsp_select_point_hint">请选择一个点&#8230;</string>
     <string name="tsp_start_prefix">起点</string>
     <string name="tsp_filter_buildings">建筑筛选：</string>
     <string name="tsp_filter_all">全部</string>
@@ -144,14 +142,15 @@
     <string name="simulation_random_point">随机点</string>
     <string name="simulation_my_location">我的位置</string>
     <string name="simulation_placed_point">已放置点</string>
-    <string name="simulation_select_point_hint">选择一个点...</string>
+    <string name="simulation_select_point_hint">选择一个点&#8230;</string>
     <string name="simulation_start_prefix">起点</string>
     <string name="simulation_start_btn">启动</string>
     <string name="back_label">返回</string>
-    <string name="search_placeholder">搜索建筑或场所...</string>
+    <string name="search_placeholder">搜索建筑或场所&#8230;</string>
     <string name="clear_label">清除</string>
     <string name="configure_label">配置</string>
     <string name="tbank_ad_desc">最好的移动银行</string>
+    <string name="tbank_name">T-Bank</string>
     <string name="btn_open">打开</string>
     <string name="theme_label">主题</string>
     <string name="metric_euclidean_short">欧</string>

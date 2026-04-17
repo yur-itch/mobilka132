@@ -6,7 +6,7 @@
     <string name="map_view">View</string>
     <string name="stop_algo">Stop</string>
     <string name="map_route_title">Route Map</string>
-    <string name="searching_path">Searching path…</string>
+    <string name="searching_path">Searching path&#8230;</string>
     <string name="gps_label">GPS</string>
 
     <string name="settings_language">App Language</string>
@@ -28,7 +28,7 @@
     <string name="algo_ga_running">Genetics: generation %1$d</string>
     <string name="algo_tsp_title">Ant Algorithm (TSP)</string>
     <string name="algo_tsp_desc">Solving the traveling salesman problem</string>
-    <string name="algo_tsp_running">TSP: searching…</string>
+    <string name="algo_tsp_running">TSP: searching&#8230;</string>
     <string name="algo_simulation_title">Campus Simulation</string>
     <string name="algo_simulation_desc">Launch visualization of student movement</string>
 
@@ -91,13 +91,11 @@
     <string name="tree_apply">Apply and rebuild</string>
     <string name="tree_csv_label">Training set (CSV):</string>
     <string name="tree_not_ready">Tree is not ready. Check CSV.</string>
+    <string name="tree_visualize_label">Visualize</string>
+    <string name="tree_settings_label">Settings</string>
+    <string name="tree_csv_placeholder">header1,header2,target&#8230;</string>
+    <string name="tree_question_generic">Question: %1$s</string>
 
-    <string name="node_budget">Budget</string>
-    <string name="node_location">Location</string>
-    <string name="node_time">Time</string>
-    <string name="node_food">Food</string>
-    <string name="node_queue">Queue</string>
-    <string name="node_weather">Weather</string>
     <string name="node_not_built">Tree not built</string>
 
     <string name="points_list_title">Points List</string>
@@ -131,7 +129,7 @@
     <string name="tsp_start_point">Start Point:</string>
     <string name="tsp_my_location">My Location</string>
     <string name="tsp_placed_point">Placed Point</string>
-    <string name="tsp_select_point_hint">Select a point...</string>
+    <string name="tsp_select_point_hint">Select a point&#8230;</string>
     <string name="tsp_start_prefix">Start</string>
     <string name="tsp_filter_buildings">Filter Buildings:</string>
     <string name="tsp_filter_all">All</string>
@@ -144,14 +142,15 @@
     <string name="simulation_random_point">Random point</string>
     <string name="simulation_my_location">My location</string>
     <string name="simulation_placed_point">Placed point</string>
-    <string name="simulation_select_point_hint">Select a point...</string>
+    <string name="simulation_select_point_hint">Select a point&#8230;</string>
     <string name="simulation_start_prefix">Start</string>
     <string name="simulation_start_btn">Launch</string>
     <string name="back_label">Back</string>
-    <string name="search_placeholder">Search buildings or venues...</string>
+    <string name="search_placeholder">Search buildings or venues&#8230;</string>
     <string name="clear_label">Clear</string>
     <string name="configure_label">Configure</string>
     <string name="tbank_ad_desc">Best mobile bank</string>
+    <string name="tbank_name">T-Bank</string>
     <string name="btn_open">Open</string>
     <string name="theme_label">Theme</string>
     <string name="metric_euclidean_short">E</string>

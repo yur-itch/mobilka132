@@ -58,7 +58,6 @@ fun TreeVisualizerScreen(rootNode: DecisionTree.Node?) {
         val leafCount = countLeaves(rootNode)
         val totalWidth = (leafCount * 1200f).coerceAtLeast(3000f)
         calculateNodePositions(
-            context = context,
             node = rootNode,
             depth = 0,
             leftBounds = -totalWidth / 2f,
@@ -116,7 +115,6 @@ private fun countLeaves(node: DecisionTree.Node): Int {
 }
 
 private fun calculateNodePositions(
-    context: Context,
     node: DecisionTree.Node,
     depth: Int,
     leftBounds: Float,
@@ -129,7 +127,7 @@ private fun calculateNodePositions(
 
     val label = when (node) {
         is DecisionTree.Leaf -> node.result
-        is DecisionTree.InternalNode -> translateKey(context, node.problemName) + "?"
+        is DecisionTree.InternalNode -> translateKey(node.problemName) + "?"
     }
 
     val childrenPositions = mutableListOf<TreePosition>()
@@ -144,7 +142,6 @@ private fun calculateNodePositions(
             val childWidth = (childWeight.toFloat() / totalLeaves) * totalWidth
 
             val childPosition = calculateNodePositions(
-                context = context,
                 node = childNode,
                 depth = depth + 1,
                 leftBounds = currentLeft,
@@ -158,7 +155,7 @@ private fun calculateNodePositions(
     }
 
     val translatedEdge = if (edgeValue != null && parentKey != null) {
-        translateValue(context, parentKey, edgeValue)
+        translateValue(edgeValue, parentKey)
     } else null
 
     return TreePosition(node, x, y, label, translatedEdge, childrenPositions)
@@ -248,52 +245,52 @@ private fun DrawScope.drawTree(position: TreePosition, textMeasurer: TextMeasure
     )
 }
 
-private fun translateKey(context: Context, key: String): String = when (key.trim().lowercase()) {
-    "budget" -> context.getString(R.string.node_budget)
-    "location" -> context.getString(R.string.node_location)
-    "time_available" -> context.getString(R.string.node_time)
-    "food_type" -> context.getString(R.string.node_food)
-    "queue_tolerance" -> context.getString(R.string.node_queue)
-    "weather" -> context.getString(R.string.node_weather)
+private fun translateKey(key: String): String = when (key.trim().lowercase()) {
+    "budget" -> "Бюджет"
+    "location" -> "Локация"
+    "time_available" -> "Время"
+    "food_type" -> "Еда"
+    "queue_tolerance" -> "Очередь"
+    "weather" -> "Погода"
     else -> key
 }
 
-private fun translateValue(context: Context, key: String, value: String): String {
+private fun translateValue(value: String, key: String): String {
     val k = key.trim().lowercase()
     return when (k) {
         "budget" -> when (value) {
-            "low" -> context.getString(R.string.budget_low)
-            "medium" -> context.getString(R.string.budget_medium)
-            "high" -> context.getString(R.string.budget_high)
+            "low" -> "Низкий"
+            "medium" -> "Средний"
+            "high" -> "Высокий"
             else -> value
         }
 
         "time_available" -> when (value) {
-            "very_short" -> context.getString(R.string.time_5min)
-            "short" -> context.getString(R.string.time_15min)
-            "medium" -> context.getString(R.string.time_30min)
-            "long" -> context.getString(R.string.time_1h)
+            "very_short" -> "5 мин"
+            "short" -> "15 мин"
+            "medium" -> "30 мин"
+            "long" -> "1 час+"
             else -> value
         }
 
         "location" -> when (value) {
-            "main_building" -> context.getString(R.string.loc_main)
-            "second_building" -> context.getString(R.string.loc_second)
-            "campus_center" -> context.getString(R.string.loc_center)
-            "bus_stop" -> context.getString(R.string.loc_stop)
+            "main_building" -> "Гл. корпус"
+            "second_building" -> "2 корпус"
+            "campus_center" -> "Центр"
+            "bus_stop" -> "Остановка"
             else -> value
         }
 
         "food_type" -> when (value) {
-            "coffee" -> context.getString(R.string.food_coffee)
-            "pancakes" -> context.getString(R.string.food_pancakes)
-            "full_meal" -> context.getString(R.string.food_full)
-            "snack" -> context.getString(R.string.food_snack)
+            "coffee" -> "Кофе"
+            "pancakes" -> "Блины"
+            "full_meal" -> "Обед"
+            "snack" -> "Перекус"
             else -> value
         }
 
-        "weather" -> if (value == "good") context.getString(R.string.weather_sun) else context.getString(R.string.weather_rain)
-        "queue_tolerance" -> if (value == "high") context.getString(R.string.queue_yes) else context.getString(R.string.queue_no)
+        "weather" -> if (value == "good") "Солнце" else "Дождь"
+        "queue_tolerance" -> if (value == "high") "Готов" else "Нет"
         else -> value
     }
 }
