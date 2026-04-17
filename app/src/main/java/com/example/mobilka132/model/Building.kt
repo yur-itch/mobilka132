@@ -9,7 +9,10 @@ data class VenueInfo(
     val name: String,
     val workingHours: String,
     val estimatedVisitTimeMinutes: Int,
-    val dishes: List<String>
+    val dishes: List<String>,
+    val isCoworking: Boolean = false,
+    val coworkingCapacity: Int = 20,
+    val coworkingComfort: Double = 0.7
 )
 
 data class BuildingInfo(

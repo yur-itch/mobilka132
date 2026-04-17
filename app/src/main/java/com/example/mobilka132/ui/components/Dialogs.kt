@@ -635,3 +635,84 @@ fun TspBuildingSelectionDialog(
         }
     }
 }
+
+@Composable
+fun SimulationStartDialog(
+    myLocation: Offset?,
+    points: List<MapPoint>,
+    onDismiss: () -> Unit,
+    onConfirm: (Offset?) -> Unit
+) {
+    var startPointMode by remember { mutableIntStateOf(if (myLocation != null) 1 else 0) }
+    var chosenPointOffset by remember { mutableStateOf<Offset?>(null) }
+    var chosenPointLabel by remember { mutableStateOf("Выберите точку...") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("Запуск симуляции", fontWeight = FontWeight.Bold)
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Начальная точка муравьёв:", style = MaterialTheme.typography.labelMedium)
+                Spacer(Modifier.height(4.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().clickable { startPointMode = 0 }
+                ) {
+                    RadioButton(selected = startPointMode == 0, onClick = { startPointMode = 0 })
+                    Text("Случайная точка", style = MaterialTheme.typography.bodyMedium)
+                }
+                if (myLocation != null) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().clickable { startPointMode = 1 }
+                    ) {
+                        RadioButton(selected = startPointMode == 1, onClick = { startPointMode = 1 })
+                        Text("Моя геолокация", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().clickable { startPointMode = 2 }
+                ) {
+                    RadioButton(selected = startPointMode == 2, onClick = { startPointMode = 2 })
+                    Text("Поставленная точка", style = MaterialTheme.typography.bodyMedium)
+                }
+                if (startPointMode == 2) {
+                    Spacer(Modifier.height(4.dp))
+                    PointSelectorRow(
+                        prefix = "Старт",
+                        label = chosenPointLabel,
+                        points = points,
+                        myLocation = null,
+                        onSelected = { offset, label ->
+                            chosenPointOffset = offset
+                            chosenPointLabel = label
+                        }
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val startOffset = when (startPointMode) {
+                        1 -> myLocation
+                        2 -> chosenPointOffset
+                        else -> null
+                    }
+                    onConfirm(startOffset)
+                    onDismiss()
+                },
+                enabled = startPointMode != 2 || chosenPointOffset != null,
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Запустить")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Отмена") }
+        }
+    )
+}

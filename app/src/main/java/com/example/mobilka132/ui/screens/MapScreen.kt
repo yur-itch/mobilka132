@@ -57,6 +57,7 @@ fun MapScreen(
     var showDishSelectionDialog by remember { mutableStateOf(false) }
     var showTspBuildingSelectionDialog by remember { mutableStateOf(false) }
     var showThemeMenu by remember { mutableStateOf(false) }
+    var showSimulationDialog by remember { mutableStateOf(false) }
 
     val defaultFrom = stringResource(R.string.route_from_placeholder)
     val defaultTo = stringResource(R.string.route_to_placeholder)
@@ -519,7 +520,7 @@ fun MapScreen(
                 onConfigureGA = { showVenueSelectionDialog = true },
                 onLanguageChange = onLanguageChange,
                 isBusy = viewModel.isAnyAlgoRunning || state.isProcessing,
-                onStartSimulation = { viewModel.startCampusSimulation(); showAlgoMenu = false }
+                onStartSimulation = { showSimulationDialog = true; showAlgoMenu = false }
             )
         }
 
@@ -547,6 +548,17 @@ fun MapScreen(
                 onConfirm = {
                     viewModel.startFoodShoppingGA(buildingsMask, location.mapLocation)
                     showDishSelectionDialog = false
+                }
+            )
+        }
+
+        if (showSimulationDialog) {
+            SimulationStartDialog(
+                myLocation = location.mapLocation,
+                points = state.selectedPoints,
+                onDismiss = { showSimulationDialog = false },
+                onConfirm = { startOffset ->
+                    viewModel.startCampusSimulation(buildingsMask, startOffset)
                 }
             )
         }
