@@ -185,7 +185,6 @@ class MapState {
                     } else {
                         null
                     }
-
                 withContext(Dispatchers.Main) {
                     selectedBuildingInfo = buildingInfo
                     selectedVenueInfo = null

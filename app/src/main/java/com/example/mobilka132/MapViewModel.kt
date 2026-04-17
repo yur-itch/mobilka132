@@ -56,6 +56,7 @@ class MapViewModel : ViewModel() {
     private var loadedPointsWithTiming: List<MapPointData> = emptyList()
 
     val selectedVenues = mutableStateMapOf<Int, Set<String>>()
+    val selectedTspBuildings = mutableStateListOf<Int>()
 
     fun init(mapManager: MapManager) {
         this.mapManager = mapManager
@@ -72,6 +73,10 @@ class MapViewModel : ViewModel() {
             
             if (selected.isNotEmpty()) {
                 selectedVenues[color] = selected
+            }
+
+            if (Random.nextDouble() < 0.1) {
+                selectedTspBuildings.add(color)
             }
         }
     }
@@ -93,6 +98,26 @@ class MapViewModel : ViewModel() {
         } else {
             selectedVenues[buildingColor] = emptySet()
         }
+    }
+
+    fun toggleTspBuilding(color: Int) {
+        if (selectedTspBuildings.contains(color)) {
+            selectedTspBuildings.remove(color)
+        } else {
+            selectedTspBuildings.add(color)
+        }
+    }
+
+    fun selectAllTspBuildings(colors: Collection<Int>) {
+        colors.forEach { color ->
+            if (!selectedTspBuildings.contains(color)) {
+                selectedTspBuildings.add(color)
+            }
+        }
+    }
+
+    fun clearTspBuildings(colors: Collection<Int>) {
+        selectedTspBuildings.removeAll(colors)
     }
 
     fun loadPointsFromAssets(context: Context) {
@@ -195,35 +220,95 @@ class MapViewModel : ViewModel() {
         }
     }
 
-    fun findTSPSolution() {
+    private suspend fun getTspBuildingPoints(buildingsMask: Bitmap): List<Offset> = withContext(Dispatchers.Default) {
+        val width = buildingsMask.width
+        val height = buildingsMask.height
+        if (width <= 0 || height <= 0) return@withContext emptyList<Offset>()
+
+        val pixels = IntArray(width * height)
+        buildingsMask.getPixels(pixels, 0, width, 0, 0, width, height)
+
+        val buildingAccumulators = mutableMapOf<Int, CentroidAccumulator>()
+        val registeredColors = CampusDatabase.getAllBuildings().keys
+
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                val color = pixels[y * width + x] and 0x00FFFFFF
+                if (color in registeredColors) {
+                    buildingAccumulators.getOrPut(color) { CentroidAccumulator() }.add(x, y)
+                }
+            }
+        }
+
+        val points = mutableListOf<Offset>()
+        for (color in selectedTspBuildings) {
+            val acc = buildingAccumulators[color] ?: continue
+            val centroid = acc.centroid
+            val walkablePoint = state.findNearestAvailablePoint(centroid)
+            points.add(walkablePoint)
+        }
+        points
+    }
+
+    fun findTSPSolution(buildingsMask: Bitmap, startPoint: Offset? = null) {
         if (activeJobs.isNotEmpty()) return
-        val ant = AntAlgorithm(pathfinder)
-        val n = 10
+        val ant = AntAlgorithm(walkableDistance)
+        
         clear()
         tspPath = Path(emptyList(), 0f)
         isTSPProcessing = true
         val job = viewModelScope.launch {
-            ant.generatePoints(mapManager.width, mapManager.height, n)
+            val buildingPoints = getTspBuildingPoints(buildingsMask).toMutableList()
+            var actualStartIdx = -1
+
             withContext(pathfinderDispatcher) {
-                for (i in 0 until n) {
-                    ant.points[i] = state.findNearestAvailablePoint(ant.points[i])
-                    state.addPoint(ant.points[i])
+                if (buildingPoints.isNotEmpty()) {
+                    if (startPoint != null) {
+                        val snappedStart = state.findNearestAvailablePoint(startPoint)
+                        buildingPoints.add(0, snappedStart)
+                        actualStartIdx = 0
+                    }
+                    buildingPoints.forEach { state.addPoint(it) }
+                    ant.setPoints(buildingPoints)
+                    
+                    walkableDistance.setup(buildingPoints.map { Point(it.x.toInt(), it.y.toInt()) })
+                } else {
+                    val manualPoints = state.selectedPoints.map { it.position }
+                    if (manualPoints.size >= 2) {
+                        ant.setPoints(manualPoints)
+                        walkableDistance.setup(manualPoints.map { Point(it.x.toInt(), it.y.toInt()) })
+                    } else {
+                        val n = 10
+                        ant.generatePoints(mapManager.width, mapManager.height, n)
+                        for (i in 0 until n) {
+                            ant.points[i] = state.findNearestAvailablePoint(ant.points[i])
+                            state.addPoint(ant.points[i])
+                        }
+                        walkableDistance.setup(ant.points.map { Point(it.x.toInt(), it.y.toInt()) })
+                    }
                 }
+
                 ant.solve(
+                    startNodeIndex = actualStartIdx,
                     onIteration = { _, _, dist ->
                         val steps = ant.getFullBestPathSteps()
                         viewModelScope.launch(Dispatchers.Main) {
-                            tspPath = Path(steps, dist.toFloat())
+                            if (steps.isNotEmpty()) {
+                                tspPath = Path(steps, dist.toFloat())
+                            }
                         }
                     }
                 )
             }
 
             withContext(Dispatchers.Main) {
-                val finalPath = Path(tspPath!!.steps, tspPath!!.distance)
+                val finalPath = tspPath?.let { if (it.steps.isNotEmpty()) Path(it.steps, it.distance) else null }
                 isTSPProcessing = false
-                lastPath = finalPath
-                foundPaths.add(finalPath)
+                if (finalPath != null) {
+                    lastPath = finalPath
+                    foundPaths.add(finalPath)
+                }
+                tspPath = null
             }
         }
         activeJobs.add(job)
@@ -454,6 +539,7 @@ class MapViewModel : ViewModel() {
         }
         isGARunning = false
         isPathProcessing = false
+        isTSPProcessing = false
         currentStep = null
     }
 
@@ -465,7 +551,7 @@ class MapViewModel : ViewModel() {
     }
 
     fun clear() {
-        if (activeJobs.isNotEmpty()) return
+        if (isProcessing) return
 
         foundPaths.clear()
         currentStep = null
@@ -475,6 +561,7 @@ class MapViewModel : ViewModel() {
         state.clearPoints()
         isGARunning = false
         isPathProcessing = false
+        isTSPProcessing = false
     }
 
     fun clearResult() {
@@ -483,6 +570,7 @@ class MapViewModel : ViewModel() {
         currentGAStep = null
         lastPath = null
         tspPath = null
+        foundPaths.clear()
     }
 
     fun Pair<Int, Int>.toOffset() = Offset(first.toFloat(), second.toFloat())

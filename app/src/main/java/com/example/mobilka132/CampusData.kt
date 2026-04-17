@@ -1,6 +1,7 @@
 package com.example.mobilka132
 
 import com.example.mobilka132.model.BuildingInfo
+import com.example.mobilka132.model.BuildingType
 import com.example.mobilka132.model.VenueInfo
 
 object CampusDatabase {
@@ -30,28 +31,36 @@ object CampusDatabase {
     private const val TIME_RELAX = 120
 
     init {
-        addBuilding(0xFF2BD936.toInt(), BuildingInfo("Студенческий жилой комплекс «Маяк»", "улица Аркадия Иванова, 22, 24"))
-        addBuilding(0xFF9FB824.toInt(), BuildingInfo("6 корпус ТГУ", "улица Аркадия Иванова, 49"))
-        addBuilding(0xFF4C24BB.toInt(), BuildingInfo("Студенческий жилой комплекс «Парус»", "Буяновский переулок, 3а"))
-        addBuilding(0xFFB43177.toInt(), BuildingInfo("5 общежитие ТГУ", "Проспект Ленина, 49а"))
+        addBuilding(0xFF9511CD.toInt(), BuildingInfo("Новособорная площадь", "Проспект Ленина", listOf(
+        ), type = BuildingType.LANDMARK))
+        addBuilding(0xFFAED512.toInt(), BuildingInfo("ТУСУР. Главный корпус", "Проспект Ленина, 40", listOf(
+        ), type = BuildingType.LANDMARK))
+        addBuilding(0xFF2BD936.toInt(), BuildingInfo("Студенческий жилой комплекс «Маяк»", "улица Аркадия Иванова, 22, 24", type = BuildingType.LANDMARK))
+        addBuilding(0xFF9FB824.toInt(), BuildingInfo("6 корпус ТГУ", "улица Аркадия Иванова, 49", type = BuildingType.LANDMARK))
+        addBuilding(0xFF4C24BB.toInt(), BuildingInfo("Студенческий жилой комплекс «Парус»", "Буяновский переулок, 3а", type = BuildingType.LANDMARK))
+        addBuilding(0xFFB43177.toInt(), BuildingInfo("5 общежитие ТГУ", "Проспект Ленина, 49а", type = BuildingType.LANDMARK))
         addBuilding(0xFFCC203D.toInt(), BuildingInfo("6 общежитие ТГУ", "Советская улица, 59", listOf(
             VenueInfo("Столовая 'Укромное местечко'", "08:00 - 16:00", TIME_SNACK, CANTEEN_MENU)
-        )))
+        ), type = BuildingType.LANDMARK))
         addBuilding(0xFFC65818.toInt(), BuildingInfo("Центр культуры ТГУ", "Проспект Ленина, 36", listOf(
             VenueInfo("Кафе-блинная 'Сибирские блины'", "09:00 - 20:00", TIME_SNACK, BLINY_MENU),
             VenueInfo("Кафе 'Минутка'", "09:00 - 18:00", TIME_QUICK, COFFEE_MENU),
             VenueInfo("Столовая №1", "08:00 - 16:00", TIME_MEAL, CANTEEN_MENU)
-        )))
-        addBuilding(0xFF8F17BB.toInt(), BuildingInfo("1 Корпус ТГУ", "Проспект Ленина, 36"))
+        ), type = BuildingType.LANDMARK))
+        addBuilding(0xFF8F17BB.toInt(), BuildingInfo("1 Корпус ТГУ", "Проспект Ленина, 36", type = BuildingType.LANDMARK))
         addBuilding(0xFFF32167.toInt(), BuildingInfo("9 корпус ТГУ", "Проспект Ленина, 36, к9", listOf(
             VenueInfo("Кофейня-библиотека 'Starbooks'", "08:00 - 20:00", TIME_SNACK, COFFEE_MENU)
-        )))
-        addBuilding(0xFFF74373.toInt(), BuildingInfo("10 корпус ТГУ", "Проспект Ленина, 36, к10", listOf(
-            VenueInfo("НИИ Прикладной математики и механики", "09:00 - 18:00", TIME_RELAX, emptyList())
-        )))
+        ), type = BuildingType.LANDMARK))
         addBuilding(0xFF3971D1.toInt(), BuildingInfo("2 корпус ТГУ", "Проспект Ленина, 36, к2", listOf(
             VenueInfo("Кофейня 'XO Bakery'", "08:00 - 20:00", TIME_SNACK, COFFEE_MENU)
-        )))
+        ), type = BuildingType.LANDMARK))
+        addBuilding(0xFF1AE7BE.toInt(), BuildingInfo("Научная библиотека ТГУ", "Проект Ленина, 34а", listOf(
+            VenueInfo("Кафе 'Научка'", "09:00 - 19:00", TIME_SNACK, COFFEE_MENU)
+        ), type = BuildingType.LANDMARK))
+        addBuilding(0xFF2C12D3.toInt(), BuildingInfo("ТПУ. Главный корпус", "Проспект Ленина, 30", listOf(
+            VenueInfo("Столовая 'В главном'", "08:00 - 16:00", TIME_MEAL, CANTEEN_MENU)
+        ), type = BuildingType.LANDMARK))
+
         addBuilding(0xFF98F52D.toInt(), BuildingInfo("14 корпус ТГУ (Дом Спорта ТГУ)", "Проспект Ленина, 36"))
         addBuilding(0xFF37BC68.toInt(), BuildingInfo("4 корпус ТГУ", "Московский тракт, 8"))
         addBuilding(0xFFE5402E.toInt(), BuildingInfo("3 корпус ТГУ", "Проспект Ленина, 34"))
@@ -61,18 +70,12 @@ object CampusDatabase {
             VenueInfo("Супермаркет 'Ярче'", "08:00 - 23:00", TIME_QUICK, GROCERY_MENU)
         )))
         addBuilding(0xFFB98904.toInt(), BuildingInfo("Сибирский физико-технический институт", "Ново-Соборная площадь, 1"))
-        addBuilding(0xFF1AE7BE.toInt(), BuildingInfo("Научная библиотека ТГУ", "Проект Ленина, 34а", listOf(
-            VenueInfo("Кафе 'Научка'", "09:00 - 19:00", TIME_SNACK, COFFEE_MENU)
-        )))
         addBuilding(0xFF9CC835.toInt(), BuildingInfo("СибГМУ, корпус деканатов", "Московский тракт, 2 ст20", listOf(
             VenueInfo("Столовая 'Укромное местечко'", "08:00 - 16:00", TIME_MEAL, CANTEEN_MENU)
         )))
         addBuilding(0xFF7ACE30.toInt(), BuildingInfo("Томский экономико-юридический техникум", "Московский тракт, 2г", listOf(
             VenueInfo("Кафе 'Сыр-Бор'", "09:00 - 18:00", TIME_MEAL, CANTEEN_MENU),
             VenueInfo("Кофейня - библиотека 'Starbooks'", "08:00 - 18:00", TIME_SNACK, COFFEE_MENU)
-        )))
-        addBuilding(0xFF2C12D3.toInt(), BuildingInfo("ТПУ. Главный корпус", "Проспект Ленина, 30", listOf(
-            VenueInfo("Столовая 'В главном'", "08:00 - 16:00", TIME_MEAL, CANTEEN_MENU)
         )))
         addBuilding(0xFF37D905.toInt(), BuildingInfo("5 корпус ТПУ", "Проспект Ленина, 30/2", listOf(
             VenueInfo("Кафе 'Мини-микс'", "09:00 - 17:00", TIME_QUICK, COFFEE_MENU)

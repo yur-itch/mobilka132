@@ -54,6 +54,7 @@ fun MapScreen(
     var showObstacleMenu by remember { mutableStateOf(false) }
     var showRatingDialog by remember { mutableStateOf(false) }
     var showVenueSelectionDialog by remember { mutableStateOf(false) }
+    var showTspBuildingSelectionDialog by remember { mutableStateOf(false) }
     var showThemeMenu by remember { mutableStateOf(false) }
 
     val defaultFrom = stringResource(R.string.route_from_placeholder)
@@ -484,7 +485,7 @@ fun MapScreen(
             AlgoDrawer(
                 onDismiss = { showAlgoMenu = false },
                 onStartGA = { viewModel.startFoodShoppingGA(buildingsMask); showAlgoMenu = false },
-                onStartTSP = { viewModel.findTSPSolution(); showAlgoMenu = false },
+                onStartTSP = { showTspBuildingSelectionDialog = true; showAlgoMenu = false },
                 onShowAdvice = { showDecisionDialog = true },
                 onConfigureGA = { showVenueSelectionDialog = true },
                 onLanguageChange = onLanguageChange,
@@ -496,6 +497,16 @@ fun MapScreen(
             VenueSelectionDialog(
                 viewModel = viewModel,
                 onDismiss = { showVenueSelectionDialog = false }
+            )
+        }
+
+        if (showTspBuildingSelectionDialog) {
+            TspBuildingSelectionDialog(
+                viewModel = viewModel,
+                onDismiss = { showTspBuildingSelectionDialog = false },
+                onConfirm = { p -> viewModel.findTSPSolution(buildingsMask, p) },
+                myLocation = location.mapLocation,
+                points = state.selectedPoints
             )
         }
 

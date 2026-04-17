@@ -88,4 +88,14 @@
     <string name="node_queue">Очередь</string>
     <string name="node_weather">Погода</string>
     <string name="node_not_built">Дерево не построено</string>
+
+<!--    <string name="tsp_dialog_title">Выбор зданий для TSP</string>-->
+<!--    <string name="tsp_start_point_label">Точка старта:</string>-->
+<!--    <string name="tsp_start_manual">Поставленная точка</string>-->
+<!--    <string name="tsp_choose_point_placeholder">Выберите точку…</string>-->
+<!--    <string name="tsp_filter_label">Фильтр зданий:</string>-->
+<!--    <string name="tsp_filter_all">Все</string>-->
+<!--    <string name="tsp_select_all">Выбрать все</string>-->
+<!--    <string name="tsp_btn_cancel">Отмена</string>-->
+<!--    <string name="tsp_btn_solve">Решить TSP</string>-->
 </resources>
