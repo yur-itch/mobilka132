@@ -54,6 +54,7 @@ fun MapScreen(
     var showObstacleMenu by remember { mutableStateOf(false) }
     var showRatingDialog by remember { mutableStateOf(false) }
     var showVenueSelectionDialog by remember { mutableStateOf(false) }
+    var showDishSelectionDialog by remember { mutableStateOf(false) }
     var showTspBuildingSelectionDialog by remember { mutableStateOf(false) }
     var showThemeMenu by remember { mutableStateOf(false) }
 
@@ -116,7 +117,9 @@ fun MapScreen(
     }
 
     fun buildCentroidForBuilding(buildingInfo: BuildingInfo): Offset? {
-        val colorKey = CampusDatabase.getAllBuildings().entries.find { it.value == buildingInfo }?.key ?: return null
+        val colorKey =
+            CampusDatabase.getAllBuildings().entries.find { it.value == buildingInfo }?.key
+                ?: return null
         val w = buildingsMask.width
         val h = buildingsMask.height
         val pixels = IntArray(w * h)
@@ -165,7 +168,9 @@ fun MapScreen(
         state.imageSize = Size(roadMask.width.toFloat(), roadMask.height.toFloat())
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .background(MaterialTheme.colorScheme.background)) {
         MapContainer(
             state = state,
             bitmap = bitmaps[shownIndex],
@@ -189,12 +194,20 @@ fun MapScreen(
             Box(
                 modifier = Modifier
                     .size(44.dp)
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f), RoundedCornerShape(10.dp))
+                    .background(
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
+                        RoundedCornerShape(10.dp)
+                    )
                     .clickable { shownIndex = (shownIndex + 1) % bitmaps.size }
                     .padding(8.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Layers, contentDescription = stringResource(R.string.map_view), tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
+                Icon(
+                    Icons.Default.Layers,
+                    contentDescription = stringResource(R.string.map_view),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(24.dp)
+                )
             }
 
             if (viewModel.isAnyAlgoRunning) {
@@ -205,7 +218,10 @@ fun MapScreen(
                     shape = CircleShape,
                     modifier = Modifier.size(44.dp)
                 ) {
-                    Icon(Icons.Default.Stop, contentDescription = stringResource(R.string.stop_algo))
+                    Icon(
+                        Icons.Default.Stop,
+                        contentDescription = stringResource(R.string.stop_algo)
+                    )
                 }
             }
         }
@@ -219,7 +235,8 @@ fun MapScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             if (!showSearch) {
-                HeaderCard(state, viewModel,
+                HeaderCard(
+                    state, viewModel,
                     onMenuClick = { showAlgoMenu = true },
                     onThemeClick = { showThemeMenu = true }
                 )
@@ -228,12 +245,20 @@ fun MapScreen(
                     modifier = Modifier
                         .align(Alignment.End)
                         .size(44.dp)
-                        .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(10.dp))
+                        .background(
+                            MaterialTheme.colorScheme.primaryContainer,
+                            RoundedCornerShape(10.dp)
+                        )
                         .clickable { showSearch = true }
                         .padding(8.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Search, contentDescription = "Поиск", tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(24.dp))
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = "Поиск",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             } else {
                 SearchBar(
@@ -341,7 +366,10 @@ fun MapScreen(
                                         val newPoint = state.addPoint(buildingPos)
                                         if (newPoint != null) {
                                             endPoint = newPoint.position
-                                            endLabel = context.getString(R.string.point_prefix, newPoint.id)
+                                            endLabel = context.getString(
+                                                R.string.point_prefix,
+                                                newPoint.id
+                                            )
                                             showRouteMenu = true
                                         }
                                     }
@@ -445,7 +473,8 @@ fun MapScreen(
                 onDeleteAll = {
                     viewModel.clear()
                     val sampleLabel = context.getString(R.string.point_prefix, 0)
-                    val prefixPart = sampleLabel.substring(0, sampleLabel.indexOf("0").coerceAtLeast(0))
+                    val prefixPart =
+                        sampleLabel.substring(0, sampleLabel.indexOf("0").coerceAtLeast(0))
                     if (startLabel.startsWith(prefixPart)) {
                         startPoint = null
                         startLabel = defaultFrom
@@ -484,7 +513,7 @@ fun MapScreen(
         if (showAlgoMenu) {
             AlgoDrawer(
                 onDismiss = { showAlgoMenu = false },
-                onStartGA = { viewModel.startFoodShoppingGA(buildingsMask); showAlgoMenu = false },
+                onStartGA = { showDishSelectionDialog = true; showAlgoMenu = false },
                 onStartTSP = { showTspBuildingSelectionDialog = true; showAlgoMenu = false },
                 onShowAdvice = { showDecisionDialog = true },
                 onConfigureGA = { showVenueSelectionDialog = true },
@@ -507,6 +536,17 @@ fun MapScreen(
                 onConfirm = { p -> viewModel.findTSPSolution(buildingsMask, p) },
                 myLocation = location.mapLocation,
                 points = state.selectedPoints
+            )
+        }
+
+        if (showDishSelectionDialog) {
+            DishSelectionDialog(
+                viewModel = viewModel,
+                onDismiss = { showDishSelectionDialog = false },
+                onConfirm = {
+                    viewModel.startFoodShoppingGA(buildingsMask, location.mapLocation)
+                    showDishSelectionDialog = false
+                }
             )
         }
 

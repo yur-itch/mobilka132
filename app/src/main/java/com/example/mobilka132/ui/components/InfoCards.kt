@@ -109,7 +109,11 @@ fun BuildingInfoCard(
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
-                                Icon(Icons.Default.ChevronRight, null, modifier = Modifier.size(20.dp))
+                                Icon(
+                                    Icons.Default.ChevronRight,
+                                    null,
+                                    modifier = Modifier.size(20.dp)
+                                )
                             }
                         }
                     }
@@ -164,7 +168,10 @@ fun VenueInfoCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
                     IconButton(onClick = onBack, modifier = Modifier.size(32.dp)) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,

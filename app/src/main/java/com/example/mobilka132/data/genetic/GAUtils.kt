@@ -28,7 +28,8 @@ fun fitness(arr: MutableList<Int>, ctx: MutationContext): Double {
 
     val collected = BooleanArray(ctx.allItems.size) { false }
     var currentTime = ctx.startTime.toDouble()
-    
+    var unreachableCount = 0
+
     // First point
     val firstPointIdx = arr[0]
     val firstPoint = ctx.dist.getPoint(firstPointIdx)
@@ -46,11 +47,15 @@ fun fitness(arr: MutableList<Int>, ctx: MutationContext): Double {
         val prevIdx = arr[idx - 1]
         val currIdx = arr[idx]
         val d = ctx.dist[prevIdx, currIdx]
-        
-        // travel time = (pixels * metersPerPixel / 1000) / speedKmh * 60 min
-        val travelTimeMinutes = (d * ctx.metersPerPixel * 60.0) / (ctx.speedKmh * 1000.0)
-        currentTime += travelTimeMinutes
-        
+
+        if (d >= 100000.0 && prevIdx != currIdx) {
+            unreachableCount++
+            currentTime += 1440.0 // Full day penalty
+        } else {
+            val travelTimeMinutes = (d * ctx.metersPerPixel * 60.0) / (ctx.speedKmh * 1000.0)
+            currentTime += travelTimeMinutes
+        }
+
         val currPoint = ctx.dist.getPoint(currIdx)
         val timeOfDay = currentTime % 1440
         if (timeOfDay >= currPoint.workingStart && timeOfDay <= currPoint.workingEnd) {
@@ -67,10 +72,17 @@ fun fitness(arr: MutableList<Int>, ctx: MutationContext): Double {
     val collectedCount = collected.count { it }
     val uncollected = ctx.allItems.size - collectedCount
 
-    return 1.0 / (totalTimeSpent + 1.0) - uncollected
+    val deathPenalty = unreachableCount * 1000000.0
+
+    return 1.0 / (totalTimeSpent + deathPenalty + 1.0) - uncollected
 }
 
-fun performGeneration(pop: Population, index: Int, total: Int, ctx: MutationContext): MutableList<MutableList<Int>> {
+fun performGeneration(
+    pop: Population,
+    index: Int,
+    total: Int,
+    ctx: MutationContext
+): MutableList<MutableList<Int>> {
     val fitnessPairs = mutableListOf<Pair<MutableList<Int>, Double>>()
     for (p in pop) {
         fitnessPairs.add(p to fitness(p, ctx))
@@ -92,13 +104,14 @@ fun performGeneration(pop: Population, index: Int, total: Int, ctx: MutationCont
         val fitnessOne = fitness(pop[one], ctx)
         val fitnessTwo = fitness(pop[two], ctx)
         val bestIndex = if (fitnessOne > fitnessTwo) one else two
-        newPop.add(Mutator(pop[bestIndex], ctx)
-            .copy()
-            .mutate({ invert() }, mutationRate)
-            .mutate({ remove() }, mutationRate)
-            .mutate({ add() }, mutationRate * 0.75)
-            .do2opt()
-            .get()
+        newPop.add(
+            Mutator(pop[bestIndex], ctx)
+                .copy()
+                .mutate({ invert() }, mutationRate)
+                .mutate({ remove() }, mutationRate)
+                .mutate({ add() }, mutationRate * 0.75)
+                .do2opt()
+                .get()
         )
     }
 
@@ -109,13 +122,14 @@ fun newPopulation(size: Int, ctx: MutationContext): Population {
     val nn = Mutator(nearestNeighborAll(ctx), ctx).do2opt().get()
     val res: Population = mutableListOf(nn)
     for (i in 1 until size) {
-        res.add(Mutator(res[0], ctx)
-            .copy()
-            .mutate({ invert() }, 1.0)
-            .mutate({ remove() }, 1.0)
-            .mutate({ add() }, 1.0)
-            .do2opt()
-            .get()
+        res.add(
+            Mutator(res[0], ctx)
+                .copy()
+                .mutate({ invert() }, 1.0)
+                .mutate({ remove() }, 1.0)
+                .mutate({ add() }, 1.0)
+                .do2opt()
+                .get()
         )
     }
     return res
@@ -165,7 +179,7 @@ fun getCollectedItemsCount(route: MutableList<Int>, ctx: MutationContext): Int {
     if (route.isEmpty()) return 0
     val collected = mutableSetOf<Int>()
     var currentTime = ctx.startTime.toDouble()
-    
+
     val firstPointIdx = route[0]
     val firstPoint = ctx.dist.getPoint(firstPointIdx)
     val firstTimeOfDay = currentTime % 1440
@@ -178,7 +192,7 @@ fun getCollectedItemsCount(route: MutableList<Int>, ctx: MutationContext): Int {
         val d = ctx.dist[route[idx - 1], route[idx]]
         val travelTimeMinutes = (d * ctx.metersPerPixel * 60.0) / (ctx.speedKmh * 1000.0)
         currentTime += travelTimeMinutes
-        
+
         val currIdx = route[idx]
         val currPoint = ctx.dist.getPoint(currIdx)
         val timeOfDay = currentTime % 1440
@@ -210,7 +224,7 @@ fun printDetailedRoute(route: MutableList<Int>, ctx: MutationContext, label: Str
             distance += d
             val travelTimeMinutes = (d * ctx.metersPerPixel * 60.0) / (ctx.speedKmh * 1000.0)
             currentTime += travelTimeMinutes
-            
+
             val currIdx = route[idx]
             val currPoint = ctx.dist.getPoint(currIdx)
             val timeOfDay = currentTime % 1440

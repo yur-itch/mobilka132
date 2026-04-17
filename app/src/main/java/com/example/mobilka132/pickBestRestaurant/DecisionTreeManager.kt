@@ -27,7 +27,14 @@ class DecisionTreeManager(application: Application) : AndroidViewModel(applicati
 
     fun reset() {
         val data = parseCsvFromText(userCsvText)
-        val attributes = listOf("location", "budget", "time_available", "food_type", "queue_tolerance", "weather")
+        val attributes = listOf(
+            "location",
+            "budget",
+            "time_available",
+            "food_type",
+            "queue_tolerance",
+            "weather"
+        )
 
         rootNode = treeTool.buildTree(data, attributes, optimize = true, maxDepth = 3)
 

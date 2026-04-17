@@ -12,12 +12,23 @@ class DecisionTree {
     sealed class Node
     data class Leaf(val result: String) : Node()
     data class InternalNode(val problemName: String, val branches: Map<String, Node>) : Node()
-    fun buildTree(rows: List<Row>, problems: List<String>, optimize: Boolean = false, maxDepth: Int = Int.MAX_VALUE): Node {
+
+    fun buildTree(
+        rows: List<Row>,
+        problems: List<String>,
+        optimize: Boolean = false,
+        maxDepth: Int = Int.MAX_VALUE
+    ): Node {
         val root = buildRawTree(rows, problems, 0, maxDepth)
         return if (optimize) optimization(root) else root
     }
 
-    private fun buildRawTree(rows: List<Row>, problems: List<String>, currentDepth: Int, maxDepth: Int): Node {
+    private fun buildRawTree(
+        rows: List<Row>,
+        problems: List<String>,
+        currentDepth: Int,
+        maxDepth: Int
+    ): Node {
         val distinctTargets = rows.map { it.target }.distinct()
 
         if (distinctTargets.size == 1) return Leaf(distinctTargets.first())
@@ -32,7 +43,14 @@ class DecisionTree {
         val remainingAttrs = problems - bestProblem
 
         val branches = rows.groupBy { it.problems[bestProblem] ?: "unknown" }
-            .mapValues { (_, subset) -> buildRawTree(subset, remainingAttrs, currentDepth + 1, maxDepth) }
+            .mapValues { (_, subset) ->
+                buildRawTree(
+                    subset,
+                    remainingAttrs,
+                    currentDepth + 1,
+                    maxDepth
+                )
+            }
 
         return InternalNode(bestProblem, branches)
     }
@@ -41,7 +59,7 @@ class DecisionTree {
         if (node is Leaf) return node
         if (node is InternalNode) {
             val optimizedBranches = node.branches.mapValues { optimization(it.value) }
-            
+
             val firstChild = optimizedBranches.values.firstOrNull()
             if (firstChild is Leaf && optimizedBranches.values.all { it is Leaf && it.result == firstChild.result }) {
                 return firstChild
