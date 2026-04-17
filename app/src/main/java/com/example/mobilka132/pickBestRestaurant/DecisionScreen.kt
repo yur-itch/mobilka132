@@ -62,7 +62,7 @@ fun DecisionDialog(
                         }) {
                             Icon(
                                 Icons.Default.List,
-                                contentDescription = "Visualize",
+                                contentDescription = stringResource(R.string.tree_visualize_label),
                                 tint = if (viewModel.isVisualizerMode) MaterialTheme.colorScheme.primary else Color.Gray
                             )
                         }
@@ -73,7 +73,7 @@ fun DecisionDialog(
                         }) {
                             Icon(
                                 Icons.Default.Settings,
-                                contentDescription = "Settings",
+                                contentDescription = stringResource(R.string.tree_settings_label),
                                 tint = if (viewModel.isSettingsMode) MaterialTheme.colorScheme.primary else Color.Gray
                             )
                         }
@@ -167,7 +167,7 @@ fun SettingsView(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 150.dp),
-            placeholder = { Text("header1,header2,target...") },
+            placeholder = { Text(stringResource(R.string.tree_csv_placeholder)) },
             textStyle = MaterialTheme.typography.bodySmall
         )
         Button(
@@ -195,7 +195,7 @@ fun QuestionView(
         "food_type" -> stringResource(R.string.tree_question_food)
         "queue_tolerance" -> stringResource(R.string.tree_question_queue)
         "weather" -> stringResource(R.string.tree_question_weather)
-        else -> "Question: ${node.problemName}"
+        else -> stringResource(R.string.tree_question_generic, node.problemName)
     }
 
     Text(text = questionTitle, style = MaterialTheme.typography.titleMedium)

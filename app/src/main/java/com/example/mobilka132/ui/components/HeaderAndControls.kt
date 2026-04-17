@@ -71,7 +71,7 @@ fun HeaderCard(
             IconButton(onClick = onThemeClick) {
                 Icon(
                     Icons.Default.Palette,
-                    contentDescription = "Theme",
+                    contentDescription = stringResource(R.string.theme_label),
                     tint = MaterialTheme.colorScheme.primary
                 )
             }

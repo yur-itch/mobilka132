@@ -175,7 +175,7 @@ fun VenueInfoCard(
                     IconButton(onClick = onBack, modifier = Modifier.size(32.dp)) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.back_label),
                             modifier = Modifier.size(20.dp)
                         )
                     }

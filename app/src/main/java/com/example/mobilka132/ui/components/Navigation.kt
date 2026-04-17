@@ -84,7 +84,10 @@ fun AlgoDrawer(
                 },
                 trailingContent = {
                     IconButton(onClick = { onConfigureGA() }) {
-                        Icon(Icons.Default.Settings, contentDescription = "Настроить")
+                        Icon(
+                            Icons.Default.Settings,
+                            contentDescription = stringResource(R.string.configure_label)
+                        )
                     }
                 },
                 modifier = Modifier.clickable(enabled = !isBusy) { onStartGA() }
@@ -265,7 +268,7 @@ fun TBankAdBanner(modifier: Modifier = Modifier) {
                     letterSpacing = (-0.5).sp
                 )
                 Text(
-                    "Лучший мобильный банк",
+                    stringResource(R.string.tbank_ad_desc),
                     fontSize = 12.sp,
                     lineHeight = 14.sp,
                     color = Color.Black.copy(alpha = 0.7f)
@@ -282,7 +285,7 @@ fun TBankAdBanner(modifier: Modifier = Modifier) {
                 modifier = Modifier.height(36.dp),
                 shape = RoundedCornerShape(10.dp)
             ) {
-                Text("Открыть", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.btn_open), fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         }
     }

@@ -29,6 +29,8 @@
     <string name="algo_tsp_title">Ant Algorithm (TSP)</string>
     <string name="algo_tsp_desc">Solving the traveling salesman problem</string>
     <string name="algo_tsp_running">TSP: searching…</string>
+    <string name="algo_simulation_title">Campus Simulation</string>
+    <string name="algo_simulation_desc">Launch visualization of student movement</string>
 
     <string name="algo_bonus_cluster_title">K-Medoids Clustering</string>
     <string name="algo_bonus_cluster_desc">Euclidean · Manhattan · A* Pedestrian</string>
@@ -136,4 +138,23 @@
     <string name="tsp_select_all">Select All</string>
     <string name="tsp_clear">Clear</string>
     <string name="tsp_solve">Solve TSP</string>
+
+    <string name="simulation_start_title">Launch Simulation</string>
+    <string name="simulation_start_point_label">Ants start point:</string>
+    <string name="simulation_random_point">Random point</string>
+    <string name="simulation_my_location">My location</string>
+    <string name="simulation_placed_point">Placed point</string>
+    <string name="simulation_select_point_hint">Select a point...</string>
+    <string name="simulation_start_prefix">Start</string>
+    <string name="simulation_start_btn">Launch</string>
+    <string name="back_label">Back</string>
+    <string name="search_placeholder">Search buildings or venues...</string>
+    <string name="clear_label">Clear</string>
+    <string name="configure_label">Configure</string>
+    <string name="tbank_ad_desc">Best mobile bank</string>
+    <string name="btn_open">Open</string>
+    <string name="theme_label">Theme</string>
+    <string name="metric_euclidean_short">E</string>
+    <string name="metric_manhattan_short">M</string>
+    <string name="metric_astar_short">A*</string>
 </resources>

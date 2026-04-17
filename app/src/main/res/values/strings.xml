@@ -92,6 +92,10 @@
     <string name="tree_apply">Применить и перестроить</string>
     <string name="tree_csv_label">Обучающая выборка (CSV):</string>
     <string name="tree_not_ready">Дерево не готово. Проверьте CSV.</string>
+    <string name="tree_visualize_label">Визуализировать</string>
+    <string name="tree_settings_label">Настройки</string>
+    <string name="tree_csv_placeholder">заголовок1,заголовок2,цель...</string>
+    <string name="tree_question_generic">Вопрос: %1$s</string>
 
     <string name="node_budget">Бюджет</string>
     <string name="node_location">Локация</string>
@@ -139,4 +143,43 @@
     <string name="tsp_select_all">Выбрать все</string>
     <string name="tsp_clear">Очистить</string>
     <string name="tsp_solve">Решить TSP</string>
+
+    <string name="simulation_start_title">Запуск симуляции</string>
+    <string name="simulation_start_point_label">Начальная точка муравьёв:</string>
+    <string name="simulation_random_point">Случайная точка</string>
+    <string name="simulation_my_location">Моя геолокация</string>
+    <string name="simulation_placed_point">Поставленная точка</string>
+    <string name="simulation_select_point_hint">Выберите точку...</string>
+    <string name="simulation_start_prefix">Старт</string>
+    <string name="simulation_start_btn">Запустить</string>
+    <string name="back_label">Назад</string>
+    <string name="search_placeholder">Поиск зданий или заведений...</string>
+    <string name="clear_label">Очистить</string>
+    <string name="configure_label">Настроить</string>
+    <string name="tbank_ad_desc">Лучший мобильный банк</string>
+    <string name="btn_open">Открыть</string>
+    <string name="theme_label">Тема</string>
+    <string name="metric_euclidean_short">Е</string>
+    <string name="metric_manhattan_short">М</string>
+    <string name="metric_astar_short">A*</string>
+
+    <string name="budget_low">Низкий</string>
+    <string name="budget_medium">Средний</string>
+    <string name="budget_high">Высокий</string>
+    <string name="time_5min">5 мин</string>
+    <string name="time_15min">15 мин</string>
+    <string name="time_30min">30 мин</string>
+    <string name="time_1h">1 час+</string>
+    <string name="loc_main">Гл. корпус</string>
+    <string name="loc_second">2 корпус</string>
+    <string name="loc_center">Центр</string>
+    <string name="loc_stop">Остановка</string>
+    <string name="food_coffee">Кофе</string>
+    <string name="food_pancakes">Блины</string>
+    <string name="food_full">Обед</string>
+    <string name="food_snack">Перекус</string>
+    <string name="weather_sun">Солнце</string>
+    <string name="weather_rain">Дождь</string>
+    <string name="queue_yes">Готов</string>
+    <string name="queue_no">Нет</string>
 </resources>
