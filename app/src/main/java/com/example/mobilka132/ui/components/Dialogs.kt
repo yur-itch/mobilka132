@@ -32,7 +32,7 @@ import com.example.mobilka132.model.ObstacleLine
 import com.example.mobilka132.ui.theme.ThemeMode
 
 @Composable
-fun ThemeSelectionDialog(onDismiss: () -> Unit, onThemeChange: (ThemeMode, Color?) -> Unit) {
+fun ThemeSelectionDialog(onDismiss: () -> Unit, onThemeChange: (ThemeMode?, Color?) -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(24.dp),
@@ -72,6 +72,7 @@ fun ThemeSelectionDialog(onDismiss: () -> Unit, onThemeChange: (ThemeMode, Color
                 }
 
                 HorizontalDivider()
+                
                 Text(
                     stringResource(R.string.theme_custom_color),
                     style = MaterialTheme.typography.titleMedium
@@ -96,7 +97,7 @@ fun ThemeSelectionDialog(onDismiss: () -> Unit, onThemeChange: (ThemeMode, Color
                                 .size(40.dp)
                                 .background(color, CircleShape)
                                 .clickable {
-                                    onThemeChange(ThemeMode.CUSTOM, color)
+                                    onThemeChange(null, color)
                                     onDismiss()
                                 }
                         )

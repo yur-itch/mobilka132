@@ -104,6 +104,7 @@
     <string name="theme_light_tsu">Light (TSU)</string>
     <string name="theme_dark">Dark</string>
     <string name="theme_custom_color">Custom Color</string>
+    <string name="theme_dark_mode">Dark mode</string>
     <string name="btn_done">Done</string>
     <string name="ga_points_setup">GA Points Setup</string>
     <string name="dish_selection_title">Choose your dishes</string>
