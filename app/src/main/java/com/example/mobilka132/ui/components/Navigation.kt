@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.TravelExplore
@@ -30,6 +31,7 @@ fun AlgoDrawer(
     onDismiss: () -> Unit,
     onStartGA: () -> Unit,
     onStartTSP: () -> Unit,
+    onStartSimulation: () -> Unit,
     onShowAdvice: () -> Unit,
     onConfigureGA: () -> Unit,
     onLanguageChange: (String) -> Unit,
@@ -90,6 +92,19 @@ fun AlgoDrawer(
                     )
                 },
                 modifier = Modifier.clickable(enabled = !isBusy) { onStartTSP() }
+            )
+
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.algo_simulation_title)) },
+                supportingContent = { Text(stringResource(R.string.algo_simulation_desc)) },
+                leadingContent = {
+                    Icon(
+                        Icons.Default.Groups,
+                        null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
+                modifier = Modifier.clickable(enabled = !isBusy) { onStartSimulation() }
             )
 
             HorizontalDivider()
