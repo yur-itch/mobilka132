@@ -14,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.state.ToggleableState
@@ -25,6 +26,7 @@ import com.example.mobilka132.CampusDatabase
 import com.example.mobilka132.MapViewModel
 import com.example.mobilka132.R
 import com.example.mobilka132.model.BuildingInfo
+import com.example.mobilka132.model.BuildingType
 import com.example.mobilka132.model.MapPoint
 import com.example.mobilka132.model.ObstacleLine
 import com.example.mobilka132.ui.theme.ThemeMode
@@ -195,7 +197,7 @@ fun VenueSelectionDialog(viewModel: MapViewModel, onDismiss: () -> Unit) {
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
                 Text(
-                    "Настройка точек GA",
+                    "Настройка точек для GA (Заведения)",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
@@ -287,5 +289,191 @@ fun BuildingSelectionItem(building: BuildingInfo, color: Int, viewModel: MapView
             }
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun TspBuildingSelectionDialog(
+    viewModel: MapViewModel,
+    myLocation: Offset?,
+    points: List<MapPoint>,
+    onDismiss: () -> Unit,
+    onConfirm: (Offset?) -> Unit
+) {
+    var selectedType by remember { mutableStateOf<BuildingType?>(null) }
+    
+    var startPointMode by remember { mutableIntStateOf(if (myLocation != null) 1 else 2) }
+    
+    var chosenPointOffset by remember { mutableStateOf<Offset?>(null) }
+    var chosenPointLabel by remember { mutableStateOf("Выберите точку...") }
+
+    val buildings = remember { CampusDatabase.getAllBuildings() }
+    val filteredBuildings = remember(selectedType) {
+        if (selectedType == null) buildings
+        else buildings.filter { it.value.type == selectedType }
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.9f)
+                .padding(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text(
+                    "Выбор зданий для TSP",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text("Точка старта:", style = MaterialTheme.typography.labelMedium)
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    if (myLocation != null) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { startPointMode = 1 }) {
+                            RadioButton(selected = startPointMode == 1, onClick = { startPointMode = 1 })
+                            Text("Моя геолокация", style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { startPointMode = 2 }) {
+                        RadioButton(selected = startPointMode == 2, onClick = { startPointMode = 2 })
+                        Text("Поставленная точка", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+
+                if (startPointMode == 2) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    PointSelectorRow(
+                        prefix = "Старт",
+                        label = chosenPointLabel,
+                        points = points,
+                        myLocation = null,
+                        onSelected = { offset, label -> 
+                            chosenPointOffset = offset
+                            chosenPointLabel = label
+                        }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Text("Фильтр зданий:", style = MaterialTheme.typography.labelMedium)
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    FilterChip(
+                        selected = selectedType == null,
+                        onClick = { selectedType = null },
+                        label = { Text("Все") }
+                    )
+                    BuildingType.entries.forEach { type ->
+                        FilterChip(
+                            selected = selectedType == type,
+                            onClick = { selectedType = type },
+                            label = { Text(type.name.lowercase().replaceFirstChar { it.uppercase() }) }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilledTonalButton(
+                        onClick = { viewModel.selectAllTspBuildings(filteredBuildings.keys) },
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(horizontal = 4.dp)
+                    ) {
+                        Icon(Icons.Default.SelectAll, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Выбрать все", fontSize = 11.sp)
+                    }
+                    FilledTonalButton(
+                        onClick = { viewModel.clearTspBuildings(filteredBuildings.keys) },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.filledTonalButtonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer),
+                        contentPadding = PaddingValues(horizontal = 4.dp)
+                    ) {
+                        Icon(Icons.Default.Deselect, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Очистить", fontSize = 11.sp)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    filteredBuildings.forEach { (color, building) ->
+                        item {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { viewModel.toggleTspBuilding(color) }
+                                    .padding(vertical = 8.dp)
+                            ) {
+                                Checkbox(
+                                    checked = viewModel.selectedTspBuildings.contains(color),
+                                    onCheckedChange = { viewModel.toggleTspBuilding(color) }
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Column {
+                                    Text(
+                                        text = building.name.ifEmpty { building.address },
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                    Text(
+                                        text = building.type.name,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.outline
+                                    )
+                                }
+                            }
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Отмена")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            val startOffset = when(startPointMode) {
+                                1 -> myLocation
+                                2 -> chosenPointOffset
+                                else -> null
+                            }
+                            onConfirm(startOffset)
+                            onDismiss()
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        enabled = viewModel.selectedTspBuildings.size >= 1 && (startPointMode != 2 || chosenPointOffset != null)
+                    ) {
+                        Text("Решить TSP")
+                    }
+                }
+            }
+        }
     }
 }
