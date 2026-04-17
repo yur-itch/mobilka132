@@ -13,6 +13,10 @@ import com.example.mobilka132.data.ant.CampusSimulation
 import com.example.mobilka132.data.ant.CoworkingSpace
 import com.example.mobilka132.data.ant.IntPoint
 import com.example.mobilka132.model.SimulationFrame
+import com.example.mobilka132.data.clustering.BonusViewMode
+import com.example.mobilka132.data.clustering.MultiMetricKMeans
+import com.example.mobilka132.data.clustering.MultiMetricResult
+import com.example.mobilka132.data.clustering.PointMultiAssignment
 import com.example.mobilka132.data.genetic.*
 import com.example.mobilka132.data.pathfinding.AStar
 import com.example.mobilka132.data.pathfinding.PathData
@@ -44,6 +48,13 @@ class MapViewModel : ViewModel() {
     var isPathProcessing by mutableStateOf(false)
     var isGARunning by mutableStateOf(false)
     var isTSPProcessing by mutableStateOf(false)
+
+    var isBonusClusteringRunning by mutableStateOf(false)
+    var bonusAStarProgress by mutableStateOf(0f)
+    var bonusClusteringResult by mutableStateOf<MultiMetricResult?>(null)
+    var bonusViewMode by mutableStateOf(BonusViewMode.EUCLIDEAN)
+    var selectedBonusPoint by mutableStateOf<PointMultiAssignment?>(null)
+
     val isProcessing: Boolean
         get() = activeJobs.isNotEmpty() || !initialized
 
@@ -100,6 +111,12 @@ class MapViewModel : ViewModel() {
 
     fun startCampusSimulation(buildingsMask: Bitmap, startOffset: Offset? = null) {
         if (activeJobs.isNotEmpty()) return
+        foundPaths.clear()
+        tspPath = null
+        lastPath = null
+        currentGAStep = null
+        bonusClusteringResult = null
+        selectedBonusPoint = null
         val job = viewModelScope.launch {
             val coworkingSpaces = withContext(Dispatchers.Default) {
                 extractCoworkingSpaces(buildingsMask)
@@ -379,6 +396,8 @@ class MapViewModel : ViewModel() {
         val ant = AntAlgorithm(walkableDistance)
 
         clear()
+        bonusClusteringResult = null
+        selectedBonusPoint = null
         tspPath = Path(emptyList(), 0f)
         isTSPProcessing = true
         val job = viewModelScope.launch {
@@ -456,6 +475,8 @@ class MapViewModel : ViewModel() {
             lastPath = null
             currentStep = null
             currentGAStep = null
+            bonusClusteringResult = null
+            selectedBonusPoint = null
 
             val width = buildingsMask.width
             val height = buildingsMask.height
@@ -606,7 +627,6 @@ class MapViewModel : ViewModel() {
                                 val dist = walkableDistance[p1Idx, p2Idx]
 
                                 if (dist >= WalkableDistance.UNREACHABLE && p1Idx != p2Idx) {
-                                    // Unreachable
                                     val start = walkableDistance.getPoint(p1Idx)
                                     val end = walkableDistance.getPoint(p2Idx)
                                     segments.add(
@@ -727,6 +747,64 @@ class MapViewModel : ViewModel() {
             ) else Offset.Zero
     }
 
+    fun startBonusClustering(buildingsMask: Bitmap, k: Int) {
+        if (activeJobs.isNotEmpty()) return
+        foundPaths.clear()
+        tspPath = null
+        lastPath = null
+        currentGAStep = null
+        selectedBonusPoint = null
+        isBonusClusteringRunning = true
+        bonusAStarProgress = 0f
+        bonusClusteringResult = null
+
+        val job = viewModelScope.launch {
+            try {
+                val uniquePositions = withContext(Dispatchers.Default) {
+                    val width  = buildingsMask.width
+                    val height = buildingsMask.height
+                    val pixels = IntArray(width * height)
+                    buildingsMask.getPixels(pixels, 0, width, 0, 0, width, height)
+
+                    val accumulators     = mutableMapOf<Int, CentroidAccumulator>()
+                    val registeredColors = CampusDatabase.getAllBuildings().keys
+
+                    for (y in 0 until height) {
+                        for (x in 0 until width) {
+                            val color = pixels[y * width + x] and 0x00FFFFFF
+                            if (color in registeredColors) {
+                                accumulators.getOrPut(color) { CentroidAccumulator() }.add(x, y)
+                            }
+                        }
+                    }
+
+                    val positions = mutableListOf<Offset>()
+                    for ((color, acc) in accumulators) {
+                        val building = CampusDatabase.getBuildingByColor(color) ?: continue
+                        if (building.venues.isEmpty()) continue
+                        positions.add(state.findNearestAvailablePoint(acc.centroid))
+                    }
+                    positions
+                }
+
+                if (uniquePositions.size < k) return@launch
+
+                val result = MultiMetricKMeans.run(
+                    points          = uniquePositions,
+                    k               = k,
+                    astar           = pathfinder,
+                    onAStarProgress = { progress -> bonusAStarProgress = progress }
+                )
+                bonusClusteringResult = result
+            } finally {
+                isBonusClusteringRunning = false
+            }
+        }
+
+        activeJobs.add(job)
+        job.invokeOnCompletion { activeJobs.remove(job) }
+    }
+
     fun cancelAll() {
         for (j in activeJobs) {
             j.cancel()
@@ -734,6 +812,9 @@ class MapViewModel : ViewModel() {
         isGARunning = false
         isPathProcessing = false
         isTSPProcessing = false
+        isBonusClusteringRunning = false
+        bonusAStarProgress = 0f
+        selectedBonusPoint = null
         currentStep = null
     }
 
@@ -752,6 +833,9 @@ class MapViewModel : ViewModel() {
         currentGAStep = null
         lastPath = null
         tspPath = null
+        bonusClusteringResult = null
+        bonusAStarProgress = 0f
+        selectedBonusPoint = null
         state.clearPoints()
         isGARunning = false
         isPathProcessing = false

@@ -10,10 +10,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.TravelExplore
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -24,6 +25,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mobilka132.R
+import com.example.mobilka132.data.clustering.BonusViewMode
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,6 +35,12 @@ fun AlgoDrawer(
     onStartGA: () -> Unit,
     onStartTSP: () -> Unit,
     onStartSimulation: () -> Unit,
+    onStartBonusClustering: (Int) -> Unit,
+    onClearBonusClustering: () -> Unit,
+    currentBonusClusterK: Int?,
+    hasBonusResult: Boolean,
+    bonusViewMode: BonusViewMode,
+    onBonusViewModeChange: (BonusViewMode) -> Unit,
     onShowAdvice: () -> Unit,
     onConfigureGA: () -> Unit,
     onLanguageChange: (String) -> Unit,
@@ -106,6 +115,81 @@ fun AlgoDrawer(
                 },
                 modifier = Modifier.clickable(enabled = !isBusy) { onStartSimulation() }
             )
+
+            HorizontalDivider()
+
+            var bonusK by remember { mutableIntStateOf(currentBonusClusterK ?: 5) }
+            val hasActiveBonusResult = currentBonusClusterK != null && bonusK == currentBonusClusterK
+
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.algo_bonus_cluster_title)) },
+                supportingContent = { Text(stringResource(R.string.algo_bonus_cluster_desc)) },
+                leadingContent = {
+                    Icon(Icons.Default.Science, null, tint = Color(0xFF00897B))
+                }
+            )
+
+            Slider(
+                value = bonusK.toFloat(),
+                onValueChange = { bonusK = it.roundToInt().coerceIn(2, 8) },
+                valueRange = 2f..8f,
+                steps = 5,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = stringResource(R.string.algo_cluster_k_label, bonusK),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                if (hasActiveBonusResult) {
+                    Button(
+                        onClick = { onClearBonusClustering(); onDismiss() },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                            contentColor   = MaterialTheme.colorScheme.onError
+                        )
+                    ) { Text(stringResource(R.string.dialog_delete)) }
+                } else {
+                    Button(
+                        onClick  = { onStartBonusClustering(bonusK); onDismiss() },
+                        enabled  = !isBusy
+                    ) { Text(stringResource(R.string.algo_cluster_btn)) }
+                }
+            }
+
+            if (hasBonusResult) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    @Composable
+                    fun ModeBtn(mode: BonusViewMode, label: String) {
+                        val active = bonusViewMode == mode
+                        if (active) {
+                            Button(
+                                onClick = { onBonusViewModeChange(mode) },
+                                modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
+                            ) { Text(label, fontSize = 10.sp, maxLines = 1) }
+                        } else {
+                            OutlinedButton(
+                                onClick = { onBonusViewModeChange(mode) },
+                                modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
+                            ) { Text(label, fontSize = 10.sp, maxLines = 1) }
+                        }
+                    }
+                    ModeBtn(BonusViewMode.EUCLIDEAN,   stringResource(R.string.algo_bonus_view_euclidean))
+                    ModeBtn(BonusViewMode.MANHATTAN,   stringResource(R.string.algo_bonus_view_manhattan))
+                    ModeBtn(BonusViewMode.ASTAR,       stringResource(R.string.algo_bonus_view_astar))
+                    ModeBtn(BonusViewMode.DIFFERENCES, stringResource(R.string.algo_bonus_view_diff))
+                }
+            }
 
             HorizontalDivider()
 

@@ -30,6 +30,16 @@
     <string name="algo_tsp_desc">Solving the traveling salesman problem</string>
     <string name="algo_tsp_running">TSP: searching…</string>
 
+    <string name="algo_bonus_cluster_title">K-Medoids Clustering</string>
+    <string name="algo_bonus_cluster_desc">Euclidean · Manhattan · A* Pedestrian</string>
+    <string name="algo_cluster_k_label">Clusters: %1$d</string>
+    <string name="algo_cluster_btn">Start</string>
+    <string name="algo_bonus_astar_progress">A* paths: %1$d%%</string>
+    <string name="algo_bonus_view_euclidean">Euclidean</string>
+    <string name="algo_bonus_view_manhattan">Manhattan</string>
+    <string name="algo_bonus_view_astar">A*</string>
+    <string name="algo_bonus_view_diff">Differences</string>
+
     <string name="btn_route_here">Route Here</string>
     <string name="route_card_title">Route</string>
     <string name="route_from">From</string>
