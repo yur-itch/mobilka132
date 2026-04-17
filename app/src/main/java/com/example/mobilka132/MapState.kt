@@ -1,15 +1,14 @@
 package com.example.mobilka132
 
 import android.graphics.Bitmap
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.unit.IntSize
 import com.example.mobilka132.model.MapPoint
+import com.example.mobilka132.model.BuildingInfo
+import com.example.mobilka132.model.VenueInfo
+import com.example.mobilka132.model.MapPointData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.min
@@ -239,12 +238,20 @@ class MapState {
         selectedPoints.clear()
         nextPointId = 1
     }
-}
 
-data class MapPointData(
-    val position: Offset,
-    val start: Int,
-    val end: Int,
-    val delay: Int,
-    val items: List<String> = emptyList()
-)
+    fun centerOnContent(contentPoint: Offset) {
+        if (containerSize == IntSize.Zero || imageSize == Size.Zero) return
+        val inFittedX = contentPoint.x * fitScale + extraSpaceX
+        val inFittedY = contentPoint.y * fitScale + extraSpaceY
+        val cx = containerSize.width / 2f
+        val cy = containerSize.height / 2f
+        val newOffsetX = cx / scale - inFittedX
+        val newOffsetY = cy / scale - inFittedY
+        val mapW = imageSize.width * fitScale
+        val mapH = imageSize.height * fitScale
+        offset = Offset(
+            x = newOffsetX.coerceIn(cx / scale - extraSpaceX - mapW, cx / scale - extraSpaceX),
+            y = newOffsetY.coerceIn(cy / scale - extraSpaceY - mapH, cy / scale - extraSpaceY)
+        )
+    }
+}

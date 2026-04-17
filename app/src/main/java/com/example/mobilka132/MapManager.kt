@@ -81,10 +81,10 @@ class MapManager(val context: Context)  {
         }
 
     private fun drawLineOnGrid(grid: IntArray, start: Offset, end: Offset, value: Int, thickness: Int = 2) {
-        var x0 = start.x.toInt().coerceIn(0, width - 1)
-        var y0 = start.y.toInt().coerceIn(0, height - 1)
-        val x1 = end.x.toInt().coerceIn(0, width - 1)
-        val y1 = end.y.toInt().coerceIn(0, height - 1)
+        var x0 = start.x.toInt()
+        var y0 = start.y.toInt()
+        val x1 = end.x.toInt()
+        val y1 = end.y.toInt()
 
         val dx = abs(x1 - x0)
         val dy = abs(y1 - y0)
@@ -99,7 +99,6 @@ class MapManager(val context: Context)  {
                 for (iy in 0 until thickness) {
                     val px = x0 + ix - offset
                     val py = y0 + iy - offset
-
                     if (px in 0 until width && py in 0 until height) {
                         grid[py * width + px] = value
                     }

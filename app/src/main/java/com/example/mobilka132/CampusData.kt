@@ -1,17 +1,7 @@
 package com.example.mobilka132
 
-data class VenueInfo(
-    val name: String,
-    val workingHours: String,
-    val estimatedVisitTimeMinutes: Int,
-    val dishes: List<String>
-)
-
-data class BuildingInfo(
-    val name: String,
-    val address: String,
-    val venues: List<VenueInfo> = emptyList()
-)
+import com.example.mobilka132.model.BuildingInfo
+import com.example.mobilka132.model.VenueInfo
 
 object CampusDatabase {
     private val buildingRegistry = mutableMapOf<Int, BuildingInfo>()
@@ -114,7 +104,6 @@ object CampusDatabase {
         addBuilding(0xFF4229E4.toInt(), BuildingInfo("", "Буяновский переулок, 11а", listOf(
             VenueInfo("Шаурмечная 'Black grill'", "10:00 - 23:00", TIME_SNACK, SHAWARMA_MENU)
         )))
-
         addBuilding(0xFF1E77DE.toInt(), BuildingInfo("", "Буяновский переулок, 12", listOf(
             VenueInfo("Продуктовый магазин 'Подкова'", "08:00 - 22:00", TIME_QUICK, GROCERY_MENU)
         )))
