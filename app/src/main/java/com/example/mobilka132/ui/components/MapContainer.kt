@@ -46,8 +46,8 @@ fun MapContainer(
 
     var draggingLine by remember { mutableStateOf<Pair<Int, Boolean>?>(null) }
 
-    val paths = remember(viewModel.foundPaths.size) {
-        viewModel.foundPaths.map { overlay.generatePath(it.steps) }
+    val pathObjects = remember(viewModel.foundPaths.size) {
+        viewModel.foundPaths.map { if (it.segments.isEmpty()) overlay.generatePath(it.steps) else null }
     }
 
     val stepOffset = remember(viewModel.currentStep) {
@@ -145,11 +145,23 @@ fun MapContainer(
 
             Canvas(modifier = Modifier.fillMaxSize()) {
                 with(overlay) {
-                    for (p in paths) {
-                        drawPathScaled(p)
+                    viewModel.foundPaths.forEachIndexed { index, path ->
+                        if (path.segments.isNotEmpty()) {
+                            drawPathSegmentsScaled(path.segments)
+                        } else {
+                            pathObjects.getOrNull(index)?.let { drawPathScaled(it) }
+                        }
                     }
+
                     viewModel.tspPath?.steps?.let { drawPathScaled(generatePath(it), color = Color(0xFF4CAF50)) }
-                    viewModel.currentGAStep?.path?.steps?.let { drawPathScaled(generatePath(it), color = Color(0xFFFF9800)) }
+                    
+                    viewModel.currentGAStep?.path?.let { gaPath ->
+                        if (gaPath.segments.isNotEmpty()) {
+                            drawPathSegmentsScaled(gaPath.segments, color = Color(0xFFFF9800))
+                        } else {
+                            drawPathScaled(generatePath(gaPath.steps), color = Color(0xFFFF9800))
+                        }
+                    }
 
                     withTransform({
                         translate(state.extraSpaceX, state.extraSpaceY)

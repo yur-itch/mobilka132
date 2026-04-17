@@ -51,6 +51,10 @@ class WalkableDistance(
     private val algo: AStar
 ) : Distance {
 
+    companion object {
+        const val UNREACHABLE = 1000000.0
+    }
+
     private var points: List<Point> = emptyList()
     override val size: Int get() = points.size
 
@@ -113,13 +117,14 @@ class WalkableDistance(
             len = cached.length
         } else {
             val aStarPath = algo.findPath(p1, p2)
-            len = algo.pathLength(aStarPath)
             val mappedPath = aStarPath.map { Point(it.first, it.second) }
+            path = mappedPath
+            len = if (aStarPath.isEmpty() && p1 != p2) UNREACHABLE else algo.pathLength(aStarPath)
+            
             val pathToCache = if (isReversed) mappedPath.asReversed() else mappedPath
             synchronized(persistentCache) {
                 persistentCache[key] = CachedPath(pathToCache, len)
             }
-            path = mappedPath
         }
 
         lengthMatrix[fastIdx] = len
