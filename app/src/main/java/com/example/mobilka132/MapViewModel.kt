@@ -242,6 +242,8 @@ class MapViewModel : ViewModel() {
             totalGenerations = 200
 
             state.clearPoints()
+            foundPaths.clear()
+            tspPath = null
             lastPath = null
             currentStep = null
             currentGAStep = null
@@ -253,6 +255,8 @@ class MapViewModel : ViewModel() {
                 isGARunning = false
                 return@launch
             }
+
+            var finalBestPath: Path? = null
 
             try {
                 val venuePoints = withContext(Dispatchers.Default) {
@@ -372,15 +376,41 @@ class MapViewModel : ViewModel() {
                         val best = population.maxByOrNull { fitness(it, ctx) }
                         if (best != null) {
                             val actualPath = mutableListOf<Offset>()
-                            var distance = 0.0f
+                            val segments = mutableListOf<PathSegment>()
+                            var totalDistance = 0.0
                             for (i in 0 until best.size - 1) {
-                                val segment = walkableDistance.path(best[i], best[i + 1])
-                                actualPath.addAll(segment.map { Offset(it.x.toFloat(), it.y.toFloat()) })
-                                distance += walkableDistance[best[i], best[i + 1]].toFloat()
+                                val p1Idx = best[i]
+                                val p2Idx = best[i+1]
+                                val segmentPoints = walkableDistance.path(p1Idx, p2Idx)
+                                val dist = walkableDistance[p1Idx, p2Idx]
+                                
+                                if (dist >= WalkableDistance.UNREACHABLE && p1Idx != p2Idx) {
+                                    // Unreachable
+                                    val start = walkableDistance.getPoint(p1Idx)
+                                    val end = walkableDistance.getPoint(p2Idx)
+                                    segments.add(PathSegment(
+                                        Offset(start.x.toFloat(), start.y.toFloat()),
+                                        Offset(end.x.toFloat(), end.y.toFloat()),
+                                        false
+                                    ))
+                                } else {
+                                    actualPath.addAll(segmentPoints.map { Offset(it.x.toFloat(), it.y.toFloat()) })
+                                    totalDistance += dist
+                                    if (segmentPoints.size >= 2) {
+                                        for (j in 0 until segmentPoints.size - 1) {
+                                            segments.add(PathSegment(
+                                                Offset(segmentPoints[j].x.toFloat(), segmentPoints[j].y.toFloat()),
+                                                Offset(segmentPoints[j+1].x.toFloat(), segmentPoints[j+1].y.toFloat()),
+                                                true
+                                            ))
+                                        }
+                                    }
+                                }
                             }
 
+                            val path = Path(actualPath, totalDistance.toFloat(), segments)
+                            finalBestPath = path
                             withContext(Dispatchers.Main) {
-                                val path = Path(actualPath, distance)
                                 currentGAStep = GAStep(gen, path)
                                 currentGeneration = gen
                             }
@@ -389,10 +419,15 @@ class MapViewModel : ViewModel() {
                     }
                 }
             } finally {
-                isGARunning = false
-                currentGAStep?.let {
-                    lastPath = it.path
-                    foundPaths.add(it.path)
+                withContext(Dispatchers.Main) {
+                    isGARunning = false
+                    finalBestPath?.let { path ->
+                        lastPath = path
+                        foundPaths.add(path)
+                        Log.d("GA_FINISH", "Saved path with ${path.segments.size} segments to foundPaths")
+                    } ?: run {
+                        Log.e("GA_FINISH", "No best path found to save")
+                    }
                 }
             }
         }

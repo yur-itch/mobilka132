@@ -28,6 +28,7 @@ fun fitness(arr: MutableList<Int>, ctx: MutationContext): Double {
 
     val collected = BooleanArray(ctx.allItems.size) { false }
     var currentTime = ctx.startTime.toDouble()
+    var unreachableCount = 0
     
     // First point
     val firstPointIdx = arr[0]
@@ -46,10 +47,14 @@ fun fitness(arr: MutableList<Int>, ctx: MutationContext): Double {
         val prevIdx = arr[idx - 1]
         val currIdx = arr[idx]
         val d = ctx.dist[prevIdx, currIdx]
-        
-        // travel time = (pixels * metersPerPixel / 1000) / speedKmh * 60 min
-        val travelTimeMinutes = (d * ctx.metersPerPixel * 60.0) / (ctx.speedKmh * 1000.0)
-        currentTime += travelTimeMinutes
+
+        if (d >= 100000.0 && prevIdx != currIdx) {
+            unreachableCount++
+            currentTime += 1440.0 // Full day penalty
+        } else {
+            val travelTimeMinutes = (d * ctx.metersPerPixel * 60.0) / (ctx.speedKmh * 1000.0)
+            currentTime += travelTimeMinutes
+        }
         
         val currPoint = ctx.dist.getPoint(currIdx)
         val timeOfDay = currentTime % 1440
@@ -67,7 +72,9 @@ fun fitness(arr: MutableList<Int>, ctx: MutationContext): Double {
     val collectedCount = collected.count { it }
     val uncollected = ctx.allItems.size - collectedCount
 
-    return 1.0 / (totalTimeSpent + 1.0) - uncollected
+    val deathPenalty = unreachableCount * 1000000.0
+
+    return 1.0 / (totalTimeSpent + deathPenalty + 1.0) - uncollected
 }
 
 fun performGeneration(pop: Population, index: Int, total: Int, ctx: MutationContext): MutableList<MutableList<Int>> {
