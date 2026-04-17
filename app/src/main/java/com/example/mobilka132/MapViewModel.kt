@@ -56,6 +56,8 @@ class MapViewModel : ViewModel() {
     private var loadedPointsWithTiming: List<MapPointData> = emptyList()
 
     val selectedVenues = mutableStateMapOf<Int, Set<String>>()
+    val selectedTspBuildings = mutableStateListOf<Int>()
+    val selectedDishes = mutableStateListOf<String>()
 
     fun init(mapManager: MapManager) {
         this.mapManager = mapManager
@@ -69,9 +71,13 @@ class MapViewModel : ViewModel() {
                 .filter { Random.nextDouble() < 0.25 }
                 .map { it.name }
                 .toSet()
-            
+
             if (selected.isNotEmpty()) {
                 selectedVenues[color] = selected
+            }
+
+            if (Random.nextDouble() < 0.1) {
+                selectedTspBuildings.add(color)
             }
         }
     }
@@ -95,6 +101,34 @@ class MapViewModel : ViewModel() {
         }
     }
 
+    fun toggleDish(dish: String) {
+        if (selectedDishes.contains(dish)) {
+            selectedDishes.remove(dish)
+        } else {
+            selectedDishes.add(dish)
+        }
+    }
+
+    fun toggleTspBuilding(color: Int) {
+        if (selectedTspBuildings.contains(color)) {
+            selectedTspBuildings.remove(color)
+        } else {
+            selectedTspBuildings.add(color)
+        }
+    }
+
+    fun selectAllTspBuildings(colors: Collection<Int>) {
+        colors.forEach { color ->
+            if (!selectedTspBuildings.contains(color)) {
+                selectedTspBuildings.add(color)
+            }
+        }
+    }
+
+    fun clearTspBuildings(colors: Collection<Int>) {
+        selectedTspBuildings.removeAll(colors)
+    }
+
     fun loadPointsFromAssets(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -105,8 +139,10 @@ class MapViewModel : ViewModel() {
                         if (parts.size >= 2) {
                             val x = parts[0].trim().toFloatOrNull()
                             val y = parts[1].trim().toFloatOrNull()
-                            val start = if (parts.size >= 4) parts[2].trim().toIntOrNull() ?: 0 else 0
-                            val end = if (parts.size >= 4) parts[3].trim().toIntOrNull() ?: 1440 else 1440
+                            val start =
+                                if (parts.size >= 4) parts[2].trim().toIntOrNull() ?: 0 else 0
+                            val end =
+                                if (parts.size >= 4) parts[3].trim().toIntOrNull() ?: 1440 else 1440
                             val d = if (parts.size >= 5) parts[4].trim().toIntOrNull() ?: 0 else 0
 
                             if (x != null && y != null) {
@@ -149,7 +185,13 @@ class MapViewModel : ViewModel() {
         visualizeSteps: Boolean = false,
         stepDelay: Long = 5L,
         onPathFound: ((Boolean, Path) -> Unit)? = null
-    ) = requestPathfinding(p1.toPair(), p2.toPair(), visualizeSteps, stepDelay, onPathFound ?: ::onPathFoundCallback)
+    ) = requestPathfinding(
+        p1.toPair(),
+        p2.toPair(),
+        visualizeSteps,
+        stepDelay,
+        onPathFound ?: ::onPathFoundCallback
+    )
 
     private fun requestPathfinding(
         start: Pair<Int, Int>,
@@ -195,35 +237,95 @@ class MapViewModel : ViewModel() {
         }
     }
 
-    fun findTSPSolution() {
+    private suspend fun getTspBuildingPoints(buildingsMask: Bitmap): List<Offset> = withContext(Dispatchers.Default) {
+        val width = buildingsMask.width
+        val height = buildingsMask.height
+        if (width <= 0 || height <= 0) return@withContext emptyList<Offset>()
+
+        val pixels = IntArray(width * height)
+        buildingsMask.getPixels(pixels, 0, width, 0, 0, width, height)
+
+        val buildingAccumulators = mutableMapOf<Int, CentroidAccumulator>()
+        val registeredColors = CampusDatabase.getAllBuildings().keys
+
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                val color = pixels[y * width + x] and 0x00FFFFFF
+                if (color in registeredColors) {
+                    buildingAccumulators.getOrPut(color) { CentroidAccumulator() }.add(x, y)
+                }
+            }
+        }
+
+        val points = mutableListOf<Offset>()
+        for (color in selectedTspBuildings) {
+            val acc = buildingAccumulators[color] ?: continue
+            val centroid = acc.centroid
+            val walkablePoint = state.findNearestAvailablePoint(centroid)
+            points.add(walkablePoint)
+        }
+        points
+    }
+
+    fun findTSPSolution(buildingsMask: Bitmap, startPoint: Offset? = null) {
         if (activeJobs.isNotEmpty()) return
-        val ant = AntAlgorithm(pathfinder)
-        val n = 10
+        val ant = AntAlgorithm(walkableDistance)
+
         clear()
         tspPath = Path(emptyList(), 0f)
         isTSPProcessing = true
         val job = viewModelScope.launch {
-            ant.generatePoints(mapManager.width, mapManager.height, n)
+            val buildingPoints = getTspBuildingPoints(buildingsMask).toMutableList()
+            var actualStartIdx = -1
+
             withContext(pathfinderDispatcher) {
-                for (i in 0 until n) {
-                    ant.points[i] = state.findNearestAvailablePoint(ant.points[i])
-                    state.addPoint(ant.points[i])
+                if (buildingPoints.isNotEmpty()) {
+                    if (startPoint != null) {
+                        val snappedStart = state.findNearestAvailablePoint(startPoint)
+                        buildingPoints.add(0, snappedStart)
+                        actualStartIdx = 0
+                    }
+                    buildingPoints.forEach { state.addPoint(it) }
+                    ant.setPoints(buildingPoints)
+
+                    walkableDistance.setup(buildingPoints.map { Point(it.x.toInt(), it.y.toInt()) })
+                } else {
+                    val manualPoints = state.selectedPoints.map { it.position }
+                    if (manualPoints.size >= 2) {
+                        ant.setPoints(manualPoints)
+                        walkableDistance.setup(manualPoints.map { Point(it.x.toInt(), it.y.toInt()) })
+                    } else {
+                        val n = 10
+                        ant.generatePoints(mapManager.width, mapManager.height, n)
+                        for (i in 0 until n) {
+                            ant.points[i] = state.findNearestAvailablePoint(ant.points[i])
+                            state.addPoint(ant.points[i])
+                        }
+                        walkableDistance.setup(ant.points.map { Point(it.x.toInt(), it.y.toInt()) })
+                    }
                 }
+
                 ant.solve(
+                    startNodeIndex = actualStartIdx,
                     onIteration = { _, _, dist ->
                         val steps = ant.getFullBestPathSteps()
                         viewModelScope.launch(Dispatchers.Main) {
-                            tspPath = Path(steps, dist.toFloat())
+                            if (steps.isNotEmpty()) {
+                                tspPath = Path(steps, dist.toFloat())
+                            }
                         }
                     }
                 )
             }
 
             withContext(Dispatchers.Main) {
-                val finalPath = Path(tspPath!!.steps, tspPath!!.distance)
+                val finalPath = tspPath?.let { if (it.steps.isNotEmpty()) Path(it.steps, it.distance) else null }
                 isTSPProcessing = false
-                lastPath = finalPath
-                foundPaths.add(finalPath)
+                if (finalPath != null) {
+                    lastPath = finalPath
+                    foundPaths.add(finalPath)
+                }
+                tspPath = null
             }
         }
         activeJobs.add(job)
@@ -234,7 +336,7 @@ class MapViewModel : ViewModel() {
         }
     }
 
-    fun startFoodShoppingGA(buildingsMask: Bitmap) {
+    fun startFoodShoppingGA(buildingsMask: Bitmap, userLocation: Offset? = null) {
         if (activeJobs.isNotEmpty()) return
         val job = viewModelScope.launch {
             isGARunning = true
@@ -242,6 +344,8 @@ class MapViewModel : ViewModel() {
             totalGenerations = 200
 
             state.clearPoints()
+            foundPaths.clear()
+            tspPath = null
             lastPath = null
             currentStep = null
             currentGAStep = null
@@ -253,6 +357,8 @@ class MapViewModel : ViewModel() {
                 isGARunning = false
                 return@launch
             }
+
+            var finalBestPath: Path? = null
 
             try {
                 val venuePoints = withContext(Dispatchers.Default) {
@@ -266,7 +372,8 @@ class MapViewModel : ViewModel() {
                         for (x in 0 until width) {
                             val color = pixels[y * width + x] and 0x00FFFFFF
                             if (color in registeredColors) {
-                                buildingAccumulators.getOrPut(color) { CentroidAccumulator() }.add(x, y)
+                                buildingAccumulators.getOrPut(color) { CentroidAccumulator() }
+                                    .add(x, y)
                             }
                         }
                     }
@@ -304,7 +411,10 @@ class MapViewModel : ViewModel() {
 
                 if (venuePoints.isNotEmpty()) {
                     state.addPointsWithTiming(venuePoints)
-                    Log.d("GA_POINTS", "Loaded ${venuePoints.size} venue points from CampusDatabase")
+                    Log.d(
+                        "GA_POINTS",
+                        "Loaded ${venuePoints.size} venue points from CampusDatabase"
+                    )
                 } else {
                     if (loadedPointsWithTiming.isNotEmpty()) {
                         state.addPointsWithTiming(loadedPointsWithTiming)
@@ -319,6 +429,11 @@ class MapViewModel : ViewModel() {
                     }
                 }
 
+                userLocation?.let { loc ->
+                    val snapped = state.findNearestAvailablePoint(loc)
+                    state.selectedPoints.add(0, MapPoint(id = 0, position = snapped))
+                }
+
                 val mapPoints = state.selectedPoints.toList()
                 if (mapPoints.size < 2) {
                     isGARunning = false
@@ -326,10 +441,12 @@ class MapViewModel : ViewModel() {
                 }
 
                 val numPoints = mapPoints.size
-                
-                val uniqueMenuItems = mapPoints.flatMap { it.items }.distinct()
-                val menuItemToIndex = uniqueMenuItems.withIndex().associate { it.value to it.index }
-                val numItems = uniqueMenuItems.size
+
+                val targetDishes =
+                    if (selectedDishes.isNotEmpty()) selectedDishes.toList() else mapPoints.flatMap { it.items }
+                        .distinct()
+                val dishToIndex = targetDishes.withIndex().associate { it.value to it.index }
+                val numItems = targetDishes.size
 
                 val gaPoints = mapPoints.map {
                     Point(
@@ -340,23 +457,24 @@ class MapViewModel : ViewModel() {
                         delay = it.delay
                     )
                 }
-                
+
                 walkableDistance.setup(gaPoints)
 
                 val allItems = (0 until numItems).toMutableList()
-                val items = MutableList(numPoints) { i -> 
-                    mapPoints[i].items.mapNotNull { menuItemToIndex[it] }.toMutableList()
+                val items = MutableList(numPoints) { i ->
+                    mapPoints[i].items.mapNotNull { dishToIndex[it] }.toMutableList()
                 }
 
                 val calendar = Calendar.getInstance()
-                val currentMinutes = calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE)
+                val currentMinutes =
+                    calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE)
 
                 val ctx = MutationContext(
                     allPoints = (0 until numPoints).toMutableList(),
                     dist = walkableDistance,
                     items = items,
                     allItems = allItems,
-                    initial = Random.nextInt(0, numPoints),
+                    initial = if (userLocation != null) 0 else Random.nextInt(0, numPoints),
                     startTime = currentMinutes,
                     speedKmh = 5.0,
                     metersPerPixel = state.metersPerPixel
@@ -372,15 +490,56 @@ class MapViewModel : ViewModel() {
                         val best = population.maxByOrNull { fitness(it, ctx) }
                         if (best != null) {
                             val actualPath = mutableListOf<Offset>()
-                            var distance = 0.0f
+                            val segments = mutableListOf<PathSegment>()
+                            var totalDistance = 0.0
                             for (i in 0 until best.size - 1) {
-                                val segment = walkableDistance.path(best[i], best[i + 1])
-                                actualPath.addAll(segment.map { Offset(it.x.toFloat(), it.y.toFloat()) })
-                                distance += walkableDistance[best[i], best[i + 1]].toFloat()
+                                val p1Idx = best[i]
+                                val p2Idx = best[i + 1]
+                                val segmentPoints = walkableDistance.path(p1Idx, p2Idx)
+                                val dist = walkableDistance[p1Idx, p2Idx]
+
+                                if (dist >= WalkableDistance.UNREACHABLE && p1Idx != p2Idx) {
+                                    // Unreachable
+                                    val start = walkableDistance.getPoint(p1Idx)
+                                    val end = walkableDistance.getPoint(p2Idx)
+                                    segments.add(
+                                        PathSegment(
+                                            Offset(start.x.toFloat(), start.y.toFloat()),
+                                            Offset(end.x.toFloat(), end.y.toFloat()),
+                                            false
+                                        )
+                                    )
+                                } else {
+                                    actualPath.addAll(segmentPoints.map {
+                                        Offset(
+                                            it.x.toFloat(),
+                                            it.y.toFloat()
+                                        )
+                                    })
+                                    totalDistance += dist
+                                    if (segmentPoints.size >= 2) {
+                                        for (j in 0 until segmentPoints.size - 1) {
+                                            segments.add(
+                                                PathSegment(
+                                                    Offset(
+                                                        segmentPoints[j].x.toFloat(),
+                                                        segmentPoints[j].y.toFloat()
+                                                    ),
+                                                    Offset(
+                                                        segmentPoints[j + 1].x.toFloat(),
+                                                        segmentPoints[j + 1].y.toFloat()
+                                                    ),
+                                                    true
+                                                )
+                                            )
+                                        }
+                                    }
+                                }
                             }
 
+                            val path = Path(actualPath, totalDistance.toFloat(), segments)
+                            finalBestPath = path
                             withContext(Dispatchers.Main) {
-                                val path = Path(actualPath, distance)
                                 currentGAStep = GAStep(gen, path)
                                 currentGeneration = gen
                             }
@@ -389,10 +548,18 @@ class MapViewModel : ViewModel() {
                     }
                 }
             } finally {
-                isGARunning = false
-                currentGAStep?.let {
-                    lastPath = it.path
-                    foundPaths.add(it.path)
+                withContext(Dispatchers.Main) {
+                    isGARunning = false
+                    finalBestPath?.let { path ->
+                        lastPath = path
+                        foundPaths.add(path)
+                        Log.d(
+                            "GA_FINISH",
+                            "Saved path with ${path.segments.size} segments to foundPaths"
+                        )
+                    } ?: run {
+                        Log.e("GA_FINISH", "No best path found to save")
+                    }
                 }
             }
         }
@@ -445,7 +612,12 @@ class MapViewModel : ViewModel() {
             sumY += y.toLong()
             count++
         }
-        val centroid: Offset get() = if (count > 0) Offset(sumX.toFloat() / count, sumY.toFloat() / count) else Offset.Zero
+
+        val centroid: Offset
+            get() = if (count > 0) Offset(
+                sumX.toFloat() / count,
+                sumY.toFloat() / count
+            ) else Offset.Zero
     }
 
     fun cancelAll() {
@@ -454,6 +626,7 @@ class MapViewModel : ViewModel() {
         }
         isGARunning = false
         isPathProcessing = false
+        isTSPProcessing = false
         currentStep = null
     }
 
@@ -465,7 +638,7 @@ class MapViewModel : ViewModel() {
     }
 
     fun clear() {
-        if (activeJobs.isNotEmpty()) return
+        if (isProcessing) return
 
         foundPaths.clear()
         currentStep = null
@@ -475,6 +648,7 @@ class MapViewModel : ViewModel() {
         state.clearPoints()
         isGARunning = false
         isPathProcessing = false
+        isTSPProcessing = false
     }
 
     fun clearResult() {
@@ -483,9 +657,11 @@ class MapViewModel : ViewModel() {
         currentGAStep = null
         lastPath = null
         tspPath = null
+        foundPaths.clear()
     }
 
     fun Pair<Int, Int>.toOffset() = Offset(first.toFloat(), second.toFloat())
     fun Offset.toPair() = Pair(x.toInt(), y.toInt())
-    fun PathData.toPath(): Path = Path(path.map { n -> Offset(n.x.toFloat(), n.y.toFloat()) }, distance)
+    fun PathData.toPath(): Path =
+        Path(path.map { n -> Offset(n.x.toFloat(), n.y.toFloat()) }, distance)
 }

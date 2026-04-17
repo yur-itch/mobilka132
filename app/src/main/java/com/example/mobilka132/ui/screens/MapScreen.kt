@@ -53,7 +53,7 @@ fun MapScreen(
     val context = LocalContext.current
     val treeViewModel: DecisionTreeManager = viewModel()
     val scope = rememberCoroutineScope()
-    
+
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
@@ -77,6 +77,8 @@ fun MapScreen(
     var showObstacleMenu by remember { mutableStateOf(false) }
     var showRatingDialog by remember { mutableStateOf(false) }
     var showVenueSelectionDialog by remember { mutableStateOf(false) }
+    var showDishSelectionDialog by remember { mutableStateOf(false) }
+    var showTspBuildingSelectionDialog by remember { mutableStateOf(false) }
     var showThemeMenu by remember { mutableStateOf(false) }
 
     val defaultFrom = stringResource(R.string.route_from_placeholder)
@@ -138,7 +140,9 @@ fun MapScreen(
     }
 
     fun buildCentroidForBuilding(buildingInfo: BuildingInfo): Offset? {
-        val colorKey = CampusDatabase.getAllBuildings().entries.find { it.value == buildingInfo }?.key ?: return null
+        val colorKey =
+            CampusDatabase.getAllBuildings().entries.find { it.value == buildingInfo }?.key
+                ?: return null
         val w = buildingsMask.width
         val h = buildingsMask.height
         val pixels = IntArray(w * h)
@@ -187,7 +191,9 @@ fun MapScreen(
         state.imageSize = Size(roadMask.width.toFloat(), roadMask.height.toFloat())
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .background(MaterialTheme.colorScheme.background)) {
         MapContainer(
             state = state,
             bitmap = bitmaps[shownIndex],
@@ -229,12 +235,23 @@ fun MapScreen(
 
             Box(
                 modifier = Modifier
+                    .size(44.dp)
+                    .background(
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
+                        RoundedCornerShape(10.dp)
+                    )
                     .size(48.dp)
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f), RoundedCornerShape(12.dp))
                     .clickable { shownIndex = (shownIndex + 1) % bitmaps.size }
                     .padding(10.dp),
                 contentAlignment = Alignment.Center
             ) {
+                Icon(
+                    Icons.Default.Layers,
+                    contentDescription = stringResource(R.string.map_view),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(24.dp)
+                )
                 Icon(
                     Icons.Default.Layers,
                     contentDescription = stringResource(R.string.map_view),
@@ -251,7 +268,10 @@ fun MapScreen(
                     shape = CircleShape,
                     modifier = Modifier.size(48.dp)
                 ) {
-                    Icon(Icons.Default.Stop, contentDescription = stringResource(R.string.stop_algo))
+                    Icon(
+                        Icons.Default.Stop,
+                        contentDescription = stringResource(R.string.stop_algo)
+                    )
                 }
             }
 
@@ -278,10 +298,31 @@ fun MapScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             if (!showSearch) {
-                HeaderCard(state, viewModel,
+                HeaderCard(
+                    state, viewModel,
                     onMenuClick = { showAlgoMenu = true },
                     onThemeClick = { showThemeMenu = true }
                 )
+
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .size(44.dp)
+                        .background(
+                            MaterialTheme.colorScheme.primaryContainer,
+                            RoundedCornerShape(10.dp)
+                        )
+                        .clickable { showSearch = true }
+                        .padding(8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = "Поиск",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             } else {
                 SearchBar(
                     query = searchQuery,
@@ -360,7 +401,10 @@ fun MapScreen(
                                         val newPoint = state.addPoint(buildingPos)
                                         if (newPoint != null) {
                                             endPoint = newPoint.position
-                                            endLabel = context.getString(R.string.point_prefix, newPoint.id)
+                                            endLabel = context.getString(
+                                                R.string.point_prefix,
+                                                newPoint.id
+                                            )
                                             showRouteMenu = true
                                         }
                                     }
@@ -442,5 +486,121 @@ fun MapScreen(
         if (showAlgoMenu) AlgoDrawer(onDismiss = { showAlgoMenu = false }, onStartGA = { viewModel.startFoodShoppingGA(buildingsMask); showAlgoMenu = false }, onStartTSP = { viewModel.findTSPSolution(); showAlgoMenu = false }, onShowAdvice = { showDecisionDialog = true }, onConfigureGA = { showVenueSelectionDialog = true }, onLanguageChange = onLanguageChange, isBusy = viewModel.isAnyAlgoRunning || state.isProcessing)
         if (showVenueSelectionDialog) VenueSelectionDialog(viewModel = viewModel, onDismiss = { showVenueSelectionDialog = false })
         if (showRatingDialog) DigitRatingDialog(onDismiss = { showRatingDialog = false }, onRatingSubmitted = { showRatingDialog = false })
+        if (showThemeMenu) {
+            ThemeSelectionDialog(
+                onDismiss = { showThemeMenu = false },
+                onThemeChange = onThemeChange
+            )
+        }
+
+        if (showPointsList) {
+            PointsListDialog(
+                points = state.selectedPoints,
+                onDismiss = { showPointsList = false },
+                onDeletePoint = { index ->
+                    val pointToDelete = state.selectedPoints.getOrNull(index)
+                    viewModel.deletePoint(index)
+                    if (pointToDelete != null) {
+                        val prefix = context.getString(R.string.point_prefix, pointToDelete.id)
+                        if (startPoint == pointToDelete.position && startLabel == prefix) {
+                            startPoint = null
+                            startLabel = defaultFrom
+                        }
+                        if (endPoint == pointToDelete.position && endLabel == prefix) {
+                            endPoint = null
+                            endLabel = defaultTo
+                        }
+                    }
+                },
+                onDeleteAll = {
+                    viewModel.clear()
+                    val sampleLabel = context.getString(R.string.point_prefix, 0)
+                    val prefixPart =
+                        sampleLabel.substring(0, sampleLabel.indexOf("0").coerceAtLeast(0))
+                    if (startLabel.startsWith(prefixPart)) {
+                        startPoint = null
+                        startLabel = defaultFrom
+                    }
+                    if (endLabel.startsWith(prefixPart)) {
+                        endPoint = null
+                        endLabel = defaultTo
+                    }
+                }
+            )
+        }
+
+        if (showObstacleMenu) {
+            ObstacleListDialog(
+                obstacles = viewModel.obstacles,
+                onDismiss = { showObstacleMenu = false },
+                onDelete = { id ->
+                    viewModel.removeObstacle(id)
+                    viewModel.syncObstacles()
+                },
+                onClearAll = {
+                    viewModel.clearObstacles()
+                    viewModel.syncObstacles()
+                    showObstacleMenu = false
+                }
+            )
+        }
+
+        if (showDecisionDialog) {
+            DecisionDialog(
+                viewModel = treeViewModel,
+                onDismiss = { showDecisionDialog = false }
+            )
+        }
+
+        if (showAlgoMenu) {
+            AlgoDrawer(
+                onDismiss = { showAlgoMenu = false },
+                onStartGA = { showDishSelectionDialog = true; showAlgoMenu = false },
+                onStartTSP = { showTspBuildingSelectionDialog = true; showAlgoMenu = false },
+                onShowAdvice = { showDecisionDialog = true },
+                onConfigureGA = { showVenueSelectionDialog = true },
+                onLanguageChange = onLanguageChange,
+                isBusy = viewModel.isAnyAlgoRunning || state.isProcessing
+            )
+        }
+
+        if (showVenueSelectionDialog) {
+            VenueSelectionDialog(
+                viewModel = viewModel,
+                onDismiss = { showVenueSelectionDialog = false }
+            )
+        }
+
+        if (showTspBuildingSelectionDialog) {
+            TspBuildingSelectionDialog(
+                viewModel = viewModel,
+                onDismiss = { showTspBuildingSelectionDialog = false },
+                onConfirm = { p -> viewModel.findTSPSolution(buildingsMask, p) },
+                myLocation = location.mapLocation,
+                points = state.selectedPoints
+            )
+        }
+
+        if (showDishSelectionDialog) {
+            DishSelectionDialog(
+                viewModel = viewModel,
+                onDismiss = { showDishSelectionDialog = false },
+                onConfirm = {
+                    viewModel.startFoodShoppingGA(buildingsMask, location.mapLocation)
+                    showDishSelectionDialog = false
+                }
+            )
+        }
+
+        if (showRatingDialog) {
+            val thanksMsg = stringResource(R.string.feedback_thanks, "%s")
+            DigitRatingDialog(
+                onDismiss = { showRatingDialog = false },
+                onRatingSubmitted = { rating ->
+                    Toast.makeText(context, thanksMsg.format(rating), Toast.LENGTH_SHORT).show()
+                    showRatingDialog = false
+                }
+            )
+        }
     }
 }

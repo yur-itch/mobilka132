@@ -46,8 +46,8 @@ fun MapContainer(
 
     var draggingLine by remember { mutableStateOf<Pair<Int, Boolean>?>(null) }
 
-    val paths = remember(viewModel.foundPaths.size) {
-        viewModel.foundPaths.map { overlay.generatePath(it.steps) }
+    val pathObjects = remember(viewModel.foundPaths.size) {
+        viewModel.foundPaths.map { if (it.segments.isEmpty()) overlay.generatePath(it.steps) else null }
     }
 
     val stepOffset = remember(viewModel.currentStep) {
@@ -76,7 +76,7 @@ fun MapContainer(
                     detectDragGestures(
                         onDragStart = { touchOffset ->
                             val contentPos = state.screenToContent(touchOffset)
-                            val threshold = 25f / state.scale
+                            val threshold = 50f / state.scale
                             val hit = viewModel.obstacles.firstNotNullOfOrNull { line ->
                                 when {
                                     (contentPos - line.start).getDistance() < threshold -> line.id to true
@@ -145,11 +145,28 @@ fun MapContainer(
 
             Canvas(modifier = Modifier.fillMaxSize()) {
                 with(overlay) {
-                    for (p in paths) {
-                        drawPathScaled(p)
+                    viewModel.foundPaths.forEachIndexed { index, path ->
+                        if (path.segments.isNotEmpty()) {
+                            drawPathSegmentsScaled(path.segments)
+                        } else {
+                            pathObjects.getOrNull(index)?.let { drawPathScaled(it) }
+                        }
                     }
-                    viewModel.tspPath?.steps?.let { drawPathScaled(generatePath(it), color = Color(0xFF4CAF50)) }
-                    viewModel.currentGAStep?.path?.steps?.let { drawPathScaled(generatePath(it), color = Color(0xFFFF9800)) }
+
+                    viewModel.tspPath?.steps?.let {
+                        drawPathScaled(
+                            generatePath(it),
+                            color = Color(0xFF4CAF50)
+                        )
+                    }
+
+                    viewModel.currentGAStep?.path?.let { gaPath ->
+                        if (gaPath.segments.isNotEmpty()) {
+                            drawPathSegmentsScaled(gaPath.segments, color = Color(0xFFFF9800))
+                        } else {
+                            drawPathScaled(generatePath(gaPath.steps), color = Color(0xFFFF9800))
+                        }
+                    }
 
                     withTransform({
                         translate(state.extraSpaceX, state.extraSpaceY)
@@ -175,14 +192,19 @@ fun MapContainer(
             with(overlay) {
                 location.mapLocation?.let { drawPointUnscaled(it, 8f, primaryColor) }
                 if (viewModel.currentStep != null) {
-                    if (nodeOffsets.isNotEmpty()) drawPointsUnscaled(nodeOffsets, 3f, Color.Green.copy(alpha = 0.5f))
+                    if (nodeOffsets.isNotEmpty()) drawPointsUnscaled(
+                        nodeOffsets,
+                        3f,
+                        Color.Green.copy(alpha = 0.5f)
+                    )
                     stepOffset?.let { drawPointUnscaled(it, 5f, Color.Yellow) }
                 }
             }
         }
 
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val textStyle = TextStyle(color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            val textStyle =
+                TextStyle(color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             state.selectedPoints.forEach { point ->
                 val screenPos = state.contentToScreen(point.position)
 
