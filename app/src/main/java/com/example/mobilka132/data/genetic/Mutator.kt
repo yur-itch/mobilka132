@@ -60,7 +60,8 @@ class Mutator(private val path: MutableList<Int>, private val ctx: MutationConte
     }
 
     fun do2opt(): Mutator {
-        while (this.path.apply2OptPass(this.ctx)) {}
+        while (this.path.apply2OptPass(this.ctx)) {
+        }
         return this
     }
 

@@ -54,26 +54,26 @@ fun DecisionDialog(
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.weight(1f)
                     )
-                    
+
                     Row {
-                        IconButton(onClick = { 
-                            viewModel.isVisualizerMode = !viewModel.isVisualizerMode 
+                        IconButton(onClick = {
+                            viewModel.isVisualizerMode = !viewModel.isVisualizerMode
                             viewModel.isSettingsMode = false
                         }) {
                             Icon(
-                                Icons.Default.List, 
+                                Icons.Default.List,
                                 contentDescription = "Visualize",
                                 tint = if (viewModel.isVisualizerMode) MaterialTheme.colorScheme.primary else Color.Gray
                             )
                         }
 
-                        IconButton(onClick = { 
-                            viewModel.isSettingsMode = !viewModel.isSettingsMode 
+                        IconButton(onClick = {
+                            viewModel.isSettingsMode = !viewModel.isSettingsMode
                             viewModel.isVisualizerMode = false
                         }) {
                             Icon(
-                                Icons.Default.Settings, 
-                                contentDescription = "Settings", 
+                                Icons.Default.Settings,
+                                contentDescription = "Settings",
                                 tint = if (viewModel.isSettingsMode) MaterialTheme.colorScheme.primary else Color.Gray
                             )
                         }
@@ -87,6 +87,7 @@ fun DecisionDialog(
                         viewModel.isVisualizerMode -> {
                             TreeVisualizerScreen(viewModel.rootNode)
                         }
+
                         viewModel.isSettingsMode -> {
                             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                                 SettingsView(
@@ -96,6 +97,7 @@ fun DecisionDialog(
                                 )
                             }
                         }
+
                         viewModel.recommendation.isNotEmpty() -> {
                             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                                 ResultView(
@@ -105,6 +107,7 @@ fun DecisionDialog(
                                 )
                             }
                         }
+
                         else -> {
                             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                                 when (val node = viewModel.currentNode) {
@@ -118,9 +121,14 @@ fun DecisionDialog(
                                             onQuickPrediction = { viewModel.stopAndGetCurrentPrediction() }
                                         )
                                     }
+
                                     is DecisionTree.Leaf -> {
-                                        ResultView(node.result, viewModel.decisionPath, onRestart = { viewModel.reset() })
+                                        ResultView(
+                                            node.result,
+                                            viewModel.decisionPath,
+                                            onRestart = { viewModel.reset() })
                                     }
+
                                     else -> {
                                         Text(stringResource(R.string.tree_not_ready))
                                     }
@@ -148,7 +156,11 @@ fun SettingsView(
     onApply: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(stringResource(R.string.tree_csv_label), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        Text(
+            stringResource(R.string.tree_csv_label),
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium
+        )
         OutlinedTextField(
             value = csvText,
             onValueChange = onCsvChange,
@@ -176,7 +188,7 @@ fun QuestionView(
     onAnswerSelect: (String) -> Unit,
     onQuickPrediction: () -> Unit
 ) {
-    val questionTitle = when(node.problemName) {
+    val questionTitle = when (node.problemName) {
         "budget" -> stringResource(R.string.tree_question_budget)
         "location" -> stringResource(R.string.tree_question_location)
         "time_available" -> stringResource(R.string.tree_question_time)
@@ -197,11 +209,18 @@ fun QuestionView(
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
-        Button(onClick = onBudgetSubmit, modifier = Modifier.fillMaxWidth(), enabled = budgetInput.isNotEmpty()) {
+        Button(
+            onClick = onBudgetSubmit,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = budgetInput.isNotEmpty()
+        ) {
             Text(stringResource(R.string.tree_next))
         }
     } else {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
             node.branches.keys.forEach { answer ->
                 OutlinedButton(
                     onClick = { onAnswerSelect(answer) },
@@ -214,7 +233,7 @@ fun QuestionView(
     }
 
     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-    
+
     TextButton(onClick = onQuickPrediction) {
         Text(stringResource(R.string.tree_skip_and_advice), fontSize = 12.sp)
     }
@@ -222,26 +241,50 @@ fun QuestionView(
 
 @Composable
 fun ResultView(result: String, path: List<Pair<String, String>>, onRestart: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         Card(
             colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(stringResource(R.string.tree_recommendation), fontSize = 12.sp, fontWeight = FontWeight.Light)
-                Text(text = result, style = MaterialTheme.typography.headlineMedium, color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold)
+            Column(
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    stringResource(R.string.tree_recommendation),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Light
+                )
+                Text(
+                    text = result,
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = Color(0xFF2E7D32),
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
 
         if (path.isNotEmpty()) {
-            Text(stringResource(R.string.tree_decision_path), fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Start))
+            Text(
+                stringResource(R.string.tree_decision_path),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.Start)
+            )
             Column(modifier = Modifier.fillMaxWidth()) {
                 path.forEachIndexed { index, pair ->
-                    Text("${index + 1}. ${pair.first} -> ${pair.second}", fontSize = 13.sp, color = Color.Gray)
+                    Text(
+                        "${index + 1}. ${pair.first} -> ${pair.second}",
+                        fontSize = 13.sp,
+                        color = Color.Gray
+                    )
                 }
             }
         }
-        
+
         Button(onClick = onRestart, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.tree_reset))
         }

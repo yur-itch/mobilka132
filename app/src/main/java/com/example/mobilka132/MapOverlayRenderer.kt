@@ -64,7 +64,10 @@ class MapOverlayRenderer(private val state: MapState) {
                             width = thickness / state.fitScale,
                             cap = StrokeCap.Round,
                             join = StrokeJoin.Round,
-                            pathEffect = if (currentIsWalkable) null else PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                            pathEffect = if (currentIsWalkable) null else PathEffect.dashPathEffect(
+                                floatArrayOf(10f, 10f),
+                                0f
+                            )
                         )
                     )
                     currentPath = Path()
@@ -81,7 +84,10 @@ class MapOverlayRenderer(private val state: MapState) {
                     width = thickness / state.fitScale,
                     cap = StrokeCap.Round,
                     join = StrokeJoin.Round,
-                    pathEffect = if (currentIsWalkable) null else PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                    pathEffect = if (currentIsWalkable) null else PathEffect.dashPathEffect(
+                        floatArrayOf(10f, 10f),
+                        0f
+                    )
                 )
             )
         }
@@ -96,13 +102,21 @@ class MapOverlayRenderer(private val state: MapState) {
     fun DrawScope.drawMarkersUnscaled(points: List<Offset>) =
         points.forEach { drawMarkerUnscaled(it) }
 
-    fun DrawScope.drawPointUnscaled(point: Offset, radius : Float = 5f, color : Color = Color.Yellow) {
+    fun DrawScope.drawPointUnscaled(
+        point: Offset,
+        radius: Float = 5f,
+        color: Color = Color.Yellow
+    ) {
         val screenPos = state.contentToScreen(point)
         drawCircle(color = color, radius = 2 * radius, center = screenPos)
         drawCircle(color = Color.White, radius = radius, center = screenPos)
     }
 
-    fun DrawScope.drawPointsUnscaled(points: List<Offset>, radius : Float = 5f, color : Color = Color.Yellow) {
+    fun DrawScope.drawPointsUnscaled(
+        points: List<Offset>,
+        radius: Float = 5f,
+        color: Color = Color.Yellow
+    ) {
         points.forEach { drawPointUnscaled(it, radius, color) }
     }
 }

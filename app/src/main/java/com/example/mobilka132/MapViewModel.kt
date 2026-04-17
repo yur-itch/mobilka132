@@ -70,7 +70,7 @@ class MapViewModel : ViewModel() {
                 .filter { Random.nextDouble() < 0.25 }
                 .map { it.name }
                 .toSet()
-            
+
             if (selected.isNotEmpty()) {
                 selectedVenues[color] = selected
             }
@@ -114,8 +114,10 @@ class MapViewModel : ViewModel() {
                         if (parts.size >= 2) {
                             val x = parts[0].trim().toFloatOrNull()
                             val y = parts[1].trim().toFloatOrNull()
-                            val start = if (parts.size >= 4) parts[2].trim().toIntOrNull() ?: 0 else 0
-                            val end = if (parts.size >= 4) parts[3].trim().toIntOrNull() ?: 1440 else 1440
+                            val start =
+                                if (parts.size >= 4) parts[2].trim().toIntOrNull() ?: 0 else 0
+                            val end =
+                                if (parts.size >= 4) parts[3].trim().toIntOrNull() ?: 1440 else 1440
                             val d = if (parts.size >= 5) parts[4].trim().toIntOrNull() ?: 0 else 0
 
                             if (x != null && y != null) {
@@ -158,7 +160,13 @@ class MapViewModel : ViewModel() {
         visualizeSteps: Boolean = false,
         stepDelay: Long = 5L,
         onPathFound: ((Boolean, Path) -> Unit)? = null
-    ) = requestPathfinding(p1.toPair(), p2.toPair(), visualizeSteps, stepDelay, onPathFound ?: ::onPathFoundCallback)
+    ) = requestPathfinding(
+        p1.toPair(),
+        p2.toPair(),
+        visualizeSteps,
+        stepDelay,
+        onPathFound ?: ::onPathFoundCallback
+    )
 
     private fun requestPathfinding(
         start: Pair<Int, Int>,
@@ -279,7 +287,8 @@ class MapViewModel : ViewModel() {
                         for (x in 0 until width) {
                             val color = pixels[y * width + x] and 0x00FFFFFF
                             if (color in registeredColors) {
-                                buildingAccumulators.getOrPut(color) { CentroidAccumulator() }.add(x, y)
+                                buildingAccumulators.getOrPut(color) { CentroidAccumulator() }
+                                    .add(x, y)
                             }
                         }
                     }
@@ -317,7 +326,10 @@ class MapViewModel : ViewModel() {
 
                 if (venuePoints.isNotEmpty()) {
                     state.addPointsWithTiming(venuePoints)
-                    Log.d("GA_POINTS", "Loaded ${venuePoints.size} venue points from CampusDatabase")
+                    Log.d(
+                        "GA_POINTS",
+                        "Loaded ${venuePoints.size} venue points from CampusDatabase"
+                    )
                 } else {
                     if (loadedPointsWithTiming.isNotEmpty()) {
                         state.addPointsWithTiming(loadedPointsWithTiming)
@@ -344,8 +356,10 @@ class MapViewModel : ViewModel() {
                 }
 
                 val numPoints = mapPoints.size
-                
-                val targetDishes = if (selectedDishes.isNotEmpty()) selectedDishes.toList() else mapPoints.flatMap { it.items }.distinct()
+
+                val targetDishes =
+                    if (selectedDishes.isNotEmpty()) selectedDishes.toList() else mapPoints.flatMap { it.items }
+                        .distinct()
                 val dishToIndex = targetDishes.withIndex().associate { it.value to it.index }
                 val numItems = targetDishes.size
 
@@ -358,16 +372,17 @@ class MapViewModel : ViewModel() {
                         delay = it.delay
                     )
                 }
-                
+
                 walkableDistance.setup(gaPoints)
 
                 val allItems = (0 until numItems).toMutableList()
-                val items = MutableList(numPoints) { i -> 
+                val items = MutableList(numPoints) { i ->
                     mapPoints[i].items.mapNotNull { dishToIndex[it] }.toMutableList()
                 }
 
                 val calendar = Calendar.getInstance()
-                val currentMinutes = calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE)
+                val currentMinutes =
+                    calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE)
 
                 val ctx = MutationContext(
                     allPoints = (0 until numPoints).toMutableList(),
@@ -394,29 +409,44 @@ class MapViewModel : ViewModel() {
                             var totalDistance = 0.0
                             for (i in 0 until best.size - 1) {
                                 val p1Idx = best[i]
-                                val p2Idx = best[i+1]
+                                val p2Idx = best[i + 1]
                                 val segmentPoints = walkableDistance.path(p1Idx, p2Idx)
                                 val dist = walkableDistance[p1Idx, p2Idx]
-                                
+
                                 if (dist >= WalkableDistance.UNREACHABLE && p1Idx != p2Idx) {
                                     // Unreachable
                                     val start = walkableDistance.getPoint(p1Idx)
                                     val end = walkableDistance.getPoint(p2Idx)
-                                    segments.add(PathSegment(
-                                        Offset(start.x.toFloat(), start.y.toFloat()),
-                                        Offset(end.x.toFloat(), end.y.toFloat()),
-                                        false
-                                    ))
+                                    segments.add(
+                                        PathSegment(
+                                            Offset(start.x.toFloat(), start.y.toFloat()),
+                                            Offset(end.x.toFloat(), end.y.toFloat()),
+                                            false
+                                        )
+                                    )
                                 } else {
-                                    actualPath.addAll(segmentPoints.map { Offset(it.x.toFloat(), it.y.toFloat()) })
+                                    actualPath.addAll(segmentPoints.map {
+                                        Offset(
+                                            it.x.toFloat(),
+                                            it.y.toFloat()
+                                        )
+                                    })
                                     totalDistance += dist
                                     if (segmentPoints.size >= 2) {
                                         for (j in 0 until segmentPoints.size - 1) {
-                                            segments.add(PathSegment(
-                                                Offset(segmentPoints[j].x.toFloat(), segmentPoints[j].y.toFloat()),
-                                                Offset(segmentPoints[j+1].x.toFloat(), segmentPoints[j+1].y.toFloat()),
-                                                true
-                                            ))
+                                            segments.add(
+                                                PathSegment(
+                                                    Offset(
+                                                        segmentPoints[j].x.toFloat(),
+                                                        segmentPoints[j].y.toFloat()
+                                                    ),
+                                                    Offset(
+                                                        segmentPoints[j + 1].x.toFloat(),
+                                                        segmentPoints[j + 1].y.toFloat()
+                                                    ),
+                                                    true
+                                                )
+                                            )
                                         }
                                     }
                                 }
@@ -438,7 +468,10 @@ class MapViewModel : ViewModel() {
                     finalBestPath?.let { path ->
                         lastPath = path
                         foundPaths.add(path)
-                        Log.d("GA_FINISH", "Saved path with ${path.segments.size} segments to foundPaths")
+                        Log.d(
+                            "GA_FINISH",
+                            "Saved path with ${path.segments.size} segments to foundPaths"
+                        )
                     } ?: run {
                         Log.e("GA_FINISH", "No best path found to save")
                     }
@@ -494,7 +527,12 @@ class MapViewModel : ViewModel() {
             sumY += y.toLong()
             count++
         }
-        val centroid: Offset get() = if (count > 0) Offset(sumX.toFloat() / count, sumY.toFloat() / count) else Offset.Zero
+
+        val centroid: Offset
+            get() = if (count > 0) Offset(
+                sumX.toFloat() / count,
+                sumY.toFloat() / count
+            ) else Offset.Zero
     }
 
     fun cancelAll() {
@@ -536,5 +574,6 @@ class MapViewModel : ViewModel() {
 
     fun Pair<Int, Int>.toOffset() = Offset(first.toFloat(), second.toFloat())
     fun Offset.toPair() = Pair(x.toInt(), y.toInt())
-    fun PathData.toPath(): Path = Path(path.map { n -> Offset(n.x.toFloat(), n.y.toFloat()) }, distance)
+    fun PathData.toPath(): Path =
+        Path(path.map { n -> Offset(n.x.toFloat(), n.y.toFloat()) }, distance)
 }
