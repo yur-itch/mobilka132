@@ -76,7 +76,7 @@ fun MapContainer(
                     detectDragGestures(
                         onDragStart = { touchOffset ->
                             val contentPos = state.screenToContent(touchOffset)
-                            val threshold = 25f / state.scale
+                            val threshold = 50f / state.scale
                             val hit = viewModel.obstacles.firstNotNullOfOrNull { line ->
                                 when {
                                     (contentPos - line.start).getDistance() < threshold -> line.id to true
