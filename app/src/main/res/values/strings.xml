@@ -15,10 +15,10 @@
     <string name="lang_zh">中文</string>
 
     <string name="label_point">Точка</string>
-    <string name="label_obstacle">Препятствие</string>
+    <string name="label_obstacle">Преграда</string>
     <string name="label_path">Путь</string>
     <string name="label_locations">Локации</string>
-    <string name="label_obstacles_list">Препятствия</string>
+    <string name="label_obstacles_list">Преграды</string>
     <string name="point_prefix">Точка №%1$d</string>
 
     <string name="algo_advice_title">Совет (Дерево решений)</string>
@@ -46,7 +46,7 @@
     <string name="dialog_delete_all">Удалить всё</string>
     <string name="dialog_empty_list">Список пуст</string>
     <string name="dialog_close">Закрыть</string>
-    <string name="dialog_obstacles_title">Препятствия</string>
+    <string name="dialog_obstacles_title">Преграды</string>
     <string name="dialog_obstacle_line">Линия #%1$d</string>
     <string name="dialog_clear_all">Очистить все</string>
     <string name="dialog_delete">Удалить</string>
