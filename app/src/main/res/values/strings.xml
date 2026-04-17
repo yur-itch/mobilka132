@@ -98,7 +98,7 @@
     <string name="venue_selection_title">Выбор заведений</string>
     <string name="rate_venue_title">Оценка</string>
     <string name="rate_venue_desc">Поставьте оценку заведению</string>
-    <string name="btn_submit">Отравить</string>
+    <string name="btn_submit">Отправить</string>
     <string name="btn_cancel">Отмена</string>
 
     <string name="theme_selection_title">Настройка темы</string>
@@ -115,4 +115,16 @@
     <string name="your_rating_label">Ваша оценка:</string>
     <string name="btn_reset">Сброс</string>
     <string name="search_hint">Поиск</string>
+
+    <string name="tsp_dialog_title">Выбор зданий для TSP</string>
+    <string name="tsp_start_point">Точка старта:</string>
+    <string name="tsp_my_location">Моя геолокация</string>
+    <string name="tsp_placed_point">Поставленная точка</string>
+    <string name="tsp_select_point_hint">Выберите точку...</string>
+    <string name="tsp_start_prefix">Старт</string>
+    <string name="tsp_filter_buildings">Фильтр зданий:</string>
+    <string name="tsp_filter_all">Все</string>
+    <string name="tsp_select_all">Выбрать все</string>
+    <string name="tsp_clear">Очистить</string>
+    <string name="tsp_solve">Решить TSP</string>
 </resources>
