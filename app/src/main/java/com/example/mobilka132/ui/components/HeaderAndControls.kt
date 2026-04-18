@@ -60,6 +60,8 @@ fun HeaderCard(
                         (viewModel.bonusAStarProgress * 100).toInt()
                     )
                     viewModel.isPathProcessing -> stringResource(R.string.searching_path)
+                    viewModel.lastPath != null -> stringResource(R.string.path_found,
+                        viewModel.lastPath!!.distance.toInt())
                     else -> stringResource(R.string.map_route_title)
                 },
                 style = MaterialTheme.typography.titleMedium,

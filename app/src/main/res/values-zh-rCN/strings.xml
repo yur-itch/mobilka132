@@ -7,6 +7,7 @@
     <string name="stop_algo">停止</string>
     <string name="map_route_title">路线图</string>
     <string name="searching_path">正在寻找路径&#8230;</string>
+    <string name="path_found">路线已规划：%1$d%% 米</string>
     <string name="gps_label">GPS</string>
 
     <string name="settings_language">应用语言</string>

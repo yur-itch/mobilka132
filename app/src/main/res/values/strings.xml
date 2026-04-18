@@ -8,6 +8,7 @@
     <string name="stop_algo">Стоп</string>
     <string name="map_route_title">Карта маршрутов</string>
     <string name="searching_path">Поиск пути&#8230;</string>
+    <string name="path_found">Маршрут построен: %1$d м</string>
     <string name="gps_label">GPS</string>
 
     <string name="settings_language">Язык приложения</string>
